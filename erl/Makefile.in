@@ -1,25 +1,55 @@
-app = babysitter
-appdir = $(ERLANG_INSTALL_LIB_DIR)/$(app)-$(VERSION)
+PACKAGE_NAME = @PACKAGE_NAME@
+PACKAGE_VERSION = @PACKAGE_VERSION@
+ERLC_FLAGS := -W
+EBIN_DIR := ../ebin
+EMULATOR := beam
+ERL_SOURCES := $(wildcard *.erl)
+TEST_SOURCES := $(wildcard ../etest/test_*.erl)
+MOD := $(patsubst ../etest/test_%.erl,%,$(TEST_SOURCES))
+ERL_TEST_DIRECTIVES := $(MOD:%=-run % test)
+ERL_HEADERS := $(wildcard *.hrl) $(wildcard ../include/*.hrl)
+ERL_OBJECTS := $(ERL_SOURCES:$.erl=$(EBIN_DIR)/%.$(EMULATOR))
+MODULES := $(patsubst %.erl,%,$(ERL_SOURCES))
+EBIN_FILES := $(MODULES:%=$(EBIN_DIR)/%.$(EMULATOR))
+ERLDIR = @ERLDIR@
  
-erl_files = $(wildcard *.erl)
-hrl_files = $(wildcard *.hrl)
-beam_files = $(erl_files:%.erl=../ebin/%.beam)
-ebindir = $(appdir)/ebin
-ebin_DATA = $(beam_files)
+$(EBIN_DIR)/%.$(EMULATOR):: %.erl ../etest/test_%.erl
+	mkdir -p $(EBIN_DIR)
+	erlc $(ERLC_FLAGS) $(TEST) -I./include -I../etest -o $(EBIN_DIR) $<
  
-driverdir = $(appdir)/priv/lib
-erl_root_dir = @ERLANG_ROOT_DIR@
-erl_ei_dir = @ERLANG_LIB_DIR_erl_interface@
-
-babysitter_SOURCES = babysitter.cpp babysitter.h ei++.cpp ei++.h exec.cpp help.h privilege.cpp privilege.h
-babysitter_CFLAGS  = -DHAVE_CONFIG_H -I ./ -O -Wall -I$(erl_ei_dir)/include -I$(erl_root_dir)/usr/include
-babysitter_LDFLAGS = -fPIC -shared -module -avoid-version -L$(erl_ei_dir)/lib -lerl_interface -lei -lexpat -lcap
+$(EBIN_DIR)/%.$(EMULATOR):: %.erl
+	mkdir -p $(EBIN_DIR)
+	erlc $(ERLC_FLAGS) $(TEST) -I./include -I../etest -o $(EBIN_DIR) $<
  
-CLEANFILES = $(ebin_DATA)
-EXTRA_DIST = $(erl_files) $(hrl_files)
+all: $(EBIN_FILES)
  
-ERLCFLAGS = @ERLCFLAGS@ +warn_obsolete_guard +warn_unused_import \
-	+warn_shadow_vars +warn_export_vars +debug_info
+debug:
+	$(MAKE) DEBUG=-DDEBUG
  
-../ebin/%.beam: %.erl
-	$(ERLC) $(ERLCFLAGS) -b beam -o ../ebin $<
+ROOTDIR := /p/lib/erlang/
+BINDIR := $(ROOTDIR)/erts-5.6.3/bin
+EMU := beam
+PROGNAME := erl
+ARGS := "-boot start_sasl +K true -smp enable -pa ../ebin -sname local_test -noshell $(ERL_TEST_DIRECTIVES) -run erlang halt"
+ 
+test-dbg:
+	export ROOTDIR
+	export BINDIR
+	export EMU
+	export PROGNAME
+	gdb $(BINDIR)/erlexec
+ 
+test:
+	$(MAKE) TEST=-DTEST
+	erl -boot start_sasl +K true -smp enable -pa ../ebin -sname local_test -noshell $(ERL_TEST_DIRECTIVES) -run erlang halt
+ 
+clean:
+	-rm -rf $(EBIN_FILES)
+ 
+install:
+	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)
+	cp -r `pwd`/../ebin $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)
+ 
+package:
+	install -d `pwd`/../.pkgtmp/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/ebin
+	cp -r `pwd`/../ebin/* `pwd`/../.pkgtmp/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/ebin

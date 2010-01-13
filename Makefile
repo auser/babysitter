@@ -9,7 +9,7 @@ else
 endif
  
 all:
-	(cd c;$(MAKE))
+  # (cd c;$(MAKE))
 	(cd erl;$(MAKE))
  
 clean:
