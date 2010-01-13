@@ -10,6 +10,8 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) @CFLAGS@ @ELF_CFLAGS@
+INC_LIBS = -lerl_interface -lei -lelf -lcap
+EXECUTABLE = ../priv/bin/babysitter
 
 ifeq ($(shell uname),Linux)
 	ARCH = linux
@@ -28,8 +30,9 @@ TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
 UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
- 
-OUTPUTFILES := $(patsubst %.cpp, %.o, $(wildcard *.cpp))
+
+INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
+OUTPUTFILES := $(INTERMEDIATES) babysitter
  
 DEFS = -DHAVE_CONFIG_H
  
@@ -57,8 +60,12 @@ test_%.o: test_%.c %.o
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
  
 .cpp.o:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lerl_interface -lei -lelf -lcap -c $<
- 
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) $(INC_LIBS) -c $<
+
+babysitter:
+	mkdir -p `dirname $(EXECUTABLE)`
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(INC_LIBS)
+
 clean:
 	rm -rf *.o *.a $(OUTPUTFILES)
  

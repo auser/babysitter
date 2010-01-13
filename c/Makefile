@@ -10,6 +10,7 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include/include
+INC_LIBS = -lerl_interface -lei -lelf -lcap
 
 ifeq ($(shell uname),Linux)
 	ARCH = linux
@@ -29,7 +30,7 @@ UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
 PACKAGE_NAME = babysitter
 PACKAGE_VERSION = 0.1
  
-OUTPUTFILES := $(patsubst %.cpp, %.o, $(wildcard *.cpp))
+OUTPUTFILES := $(patsubst %.cpp, %.o, $(wildcard *.cpp)) babysitter
  
 DEFS = -DHAVE_CONFIG_H
  
@@ -57,8 +58,11 @@ test_%.o: test_%.c %.o
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
  
 .cpp.o:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lerl_interface -lei -lelf -lcap -c $<
- 
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) $(INC_LIBS) -c $<
+
+babysitter:
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) babysitter $(wildcard *.o)
+
 clean:
 	rm -rf *.o *.a $(OUTPUTFILES)
  

@@ -227,7 +227,7 @@ static void make_path(const string & path) {
             if (lngth - 1 == i || '/' == path[i]) {
                   string p = path.substr(0, i + 1);
                   if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
-                        throw runtime_error("Could not create " + p + ": " + strerror(errno));
+                        throw runtime_error("Could not create path (make_path:230) " + p + ": " + strerror(errno));
                   }
             }
       }
@@ -259,7 +259,7 @@ static void create_confinement_root() throw (runtime_error) {
             setegid(0);
 
             if (mkdir(CONFINEMENT_ROOT.c_str(), CONFINEMENT_ROOT_MODE)) {
-                  throw runtime_error("Could not create " + CONFINEMENT_ROOT);
+                  throw runtime_error("Could not create confinement_root " + CONFINEMENT_ROOT);
             }
 
             setegid(egid);
@@ -875,6 +875,11 @@ int babysit(const char *cmd, char* const* env) {
     lmt_tm = min(static_cast<rlim_t>(10), get_resource_limit(RLIMIT_CPU));
   
   string confinement_root = DEFAULT_CONFINEMENT_ROOT;
+  
+  // Add ability to change this from env
+  if(!confinement_root.empty())
+    CONFINEMENT_ROOT = confinement_root;
+  
   string skel_dir; // A skeleton directory to use (save some time building the chroot)
   
   /** 
@@ -912,15 +917,16 @@ int babysit(const char *cmd, char* const* env) {
    * Create the chroot
    **/
   create_confinement_root();
+  
   confinement_path = CONFINEMENT_ROOT + '/' + to_string(isolator, 16);
   if (mkdir(confinement_path.c_str(), CONFINEMENT_ROOT_MODE)) {
-    throw runtime_error("Could not create " + confinement_path + ":" + strerror(errno));
+    throw runtime_error("Could not create confinement_path" + confinement_path + ":" + strerror(errno));
   }
 
   string cmnd;
   
   if (chown(confinement_path.c_str(), isolator, isolator)) {
-    throw runtime_error("Could not create " + confinement_path + ":" + strerror(errno));
+    throw runtime_error("Could not chown confinement_path " + confinement_path + ":" + strerror(errno));
   }
   
   /**

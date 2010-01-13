@@ -9,7 +9,7 @@ else
 endif
  
 all:
-  # (cd c;$(MAKE))
+	(cd c;$(MAKE))
 	(cd erl;$(MAKE))
  
 clean:
@@ -27,15 +27,3 @@ install: all
 debug:
 	(cd c;$(MAKE) debug)
 	(cd erl;$(MAKE) debug)
- 
-release: all
-	mkdir -p $(RELDIR)
-	cp -r ebin $(RELDIR)/
-	cp -r priv $(RELDIR)/
-	mkdir -p $(RELDIR)/src
-	cp -r erl/*.erl $(RELDIR)/src/
-	cp -r c/*.c $(RELDIR)/src
-	cp -r c/*.h $(RELDIR)/src
-	sed s/?VERSION/$(PACKAGE_VERSION)/ releases/cherly.rel > $(RELDIR)/cherly.rel
-	sed s/?VERSION/$(PACKAGE_VERSION)/ ebin/cherly.app > $(RELDIR)/ebin/cherly.app
-	cd $(RELDIR); erl -pa ./ebin -eval "systools:make_script(\"cherly\", [local])." -eval "systools:make_tar(\"cherly\")." -s erlang halt

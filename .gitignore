@@ -9,3 +9,4 @@ config.status
 c/test_suite
 .deps
 .DS_Store
+VERSION

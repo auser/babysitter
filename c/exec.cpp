@@ -46,10 +46,8 @@
 #include <unistd.h>
 #include <signal.h>
 
-#if defined(__linux)
-  #include <sys/prctl.h>
-  #include <sys/capability.h>
-#endif
+#include <sys/prctl.h>
+#include <sys/capability.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>

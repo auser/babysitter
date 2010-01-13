@@ -5,6 +5,7 @@
 AC_PREREQ([2.64])
 AC_INIT(babysitter, 0.1)
 # AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_CONFIG_SRCDIR([c/babysitter.cpp])
 
 # Checks for programs.
 AC_PROG_CC
@@ -32,11 +33,8 @@ AC_SUBST(ERLBINDIR)
 AC_SUBST(ERLDIR)
 
 ERL_INTERFACE=`ls ${ERLDIR}/lib | grep erl_interface | tail -n 1`
- 
-ERTSBASE="`$ERL -noshell -noinput -eval 'io:format (\"~s\", [[ \"/\" ++ filename:join (lists:reverse ([ \"erts-\" ++ erlang:system_info (version) | tl (lists:reverse (string:tokens (code:lib_dir (), \"/\"))) ])) ]]).' -s erlang halt `"
-AC_SUBST(ERTSBASE)
 
-CPPFLAGS="$CPPFLAGS -I ${ERTSBASE}/include -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -Wall -fPIC -I./"
+CPPFLAGS="$CPPFLAGS -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -Wall -fPIC -I./ -lstdc++"
 
 LIBEI="${ERLDIR}/lib/${ERL_INTERFACE}/lib/libei.a"
 AC_SUBST(LIBEI)
@@ -45,7 +43,7 @@ AC_SUBST(LIBEI)
 AC_ARG_WITH(libelf,
     [ --with-libelf=<path> prefix of the LibElf installation. e.g. /usr/local or /usr],
     [ELF_PREFIX=$with_libelf],
-		[ELF_PREFIX=/usr/local/include])
+		[ELF_PREFIX=/usr/local])
 
 AC_SUBST(ELF_PREFIX)
 ELF_LIBS="-L${ELF_PREFIX}/lib -lelf"

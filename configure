@@ -551,6 +551,7 @@ PACKAGE_STRING='babysitter 0.1'
 PACKAGE_BUGREPORT=''
 PACKAGE_URL=''
 
+ac_unique_file="c/babysitter.cpp"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -596,7 +597,6 @@ ELF_LIBS
 ELF_CFLAGS
 ELF_PREFIX
 LIBEI
-ERTSBASE
 ERLDIR
 ERLBINDIR
 ERLANG_LIB_VER_erl_interface
@@ -2341,6 +2341,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 # AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
+
 # Checks for programs.
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -3828,10 +3829,7 @@ ERLDIR=`awk -F= '/ROOTDIR=/ { print $2; exit; }' $ERL`
 
 ERL_INTERFACE=`ls ${ERLDIR}/lib | grep erl_interface | tail -n 1`
 
-ERTSBASE="`$ERL -noshell -noinput -eval 'io:format (\"~s\", [ \"/\" ++ filename:join (lists:reverse ([ \"erts-\" ++ erlang:system_info (version) | tl (lists:reverse (string:tokens (code:lib_dir (), \"/\"))) ])) ]).' -s erlang halt `"
-
-
-CPPFLAGS="$CPPFLAGS -I ${ERTSBASE}/include -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -Wall -fPIC -I./"
+CPPFLAGS="$CPPFLAGS -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -Wall -fPIC -I./ -lstdc++"
 
 LIBEI="${ERLDIR}/lib/${ERL_INTERFACE}/lib/libei.a"
 
@@ -3842,7 +3840,7 @@ LIBEI="${ERLDIR}/lib/${ERL_INTERFACE}/lib/libei.a"
 if test "${with_libelf+set}" = set; then :
   withval=$with_libelf; ELF_PREFIX=$with_libelf
 else
-  ELF_PREFIX=/usr/local/include
+  ELF_PREFIX=/usr/local
 fi
 
 
