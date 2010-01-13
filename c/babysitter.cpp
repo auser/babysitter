@@ -277,9 +277,9 @@ static void populate_resources() {
       resources[RLIMIT_DATA]    = "RLIMIT_DATA (data segment size)";
       resources[RLIMIT_NOFILE]  = "RLIMIT_NOFILE (number of files)";
       resources[RLIMIT_MEMLOCK] = "RLIMIT_MEMLOCK (locked memory size)";
-#ifndef linux
-      resources[RLIMIT_SBSIZE]  = "RLIMIT_SBSIZE (socket buffer size)";
-#endif
+// #ifndef linux
+//       resources[RLIMIT_SBSIZE]  = "RLIMIT_SBSIZE (socket buffer size)";
+// #endif
       resources[RLIMIT_NPROC]   = "RLIMIT_NPROC (simultaneous processes)";
       resources[RLIMIT_RSS]     = "RLIMIT_RSS (resident set size)";
       resources[RLIMIT_STACK]   = "RLIMIT_STACK (stack size)";
@@ -541,11 +541,8 @@ static rlim_t copy_dependencies(const string & image) throw (runtime_error) {
                   string dstntn = confinement_path + src;
 
                   try {
-#ifdef linux
                         make_path(dirname(strdup(dstntn.c_str())));
-#else
-                        make_path(dirname(dstntn.c_str()));
-#endif
+
                         copy_file(src, dstntn);
                         lmt_fls += 1;
                         fnd = true;
@@ -617,11 +614,7 @@ static void copy_support_paths(const string_set & support_paths) throw (runtime_
             found = src.find(wildcard);
             
             // Make the paths
-#ifdef linux
             string dstntn_pth = confinement_path + dirname(strdup(src.c_str()));
-#else
-            string dstntn_pth = confinement_path + dirname(src.c_str());
-#endif      
 
             if(found != string::npos)
             {
@@ -741,10 +734,6 @@ void install_handlers() {
       signal(SIGPROF, signal_handler);
       signal(SIGUSR1, signal_handler);
       signal(SIGUSR2, signal_handler);
-#ifndef linux
-      signal(SIGTHR, signal_handler);
-      signal(SIGEMT, signal_handler);
-#endif
 }
 
 void copy_required_files(string skel_dir) {
@@ -780,11 +769,8 @@ void copy_required_files(string skel_dir) {
 
 
     /* Copy the executable image into the confinement directory. */
-#ifdef linux
     make_path(dirname(strdup(pth.c_str())));
-#else
-    make_path(dirname(pth.c_str()));
-#endif
+    
     copy_file(fl_pth, pth);
 
     if (chmod(pth.c_str(), 0755)) {
@@ -855,11 +841,8 @@ void load_executable_into_environment() {
 
     string cp = p;
 
-  #ifdef linux
     string pth2 = confinement_path + dirname(strdup(cp.c_str()));
-  #else
-    string pth2 = confinement_path + dirname(cp.c_str());
-  #endif
+    
     make_path(pth2);
     pth2 = confinement_path + p;
     copy_file(cp, pth2);
@@ -883,9 +866,9 @@ int babysit(const char *cmd, char* const* env) {
     lmt_fls = min(static_cast<rlim_t>(3), get_resource_limit(RLIMIT_NOFILE)),
     lmt_fl_sz = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_FSIZE)),
     lmt_mlck = min(static_cast<rlim_t>(0x200000), get_resource_limit(RLIMIT_MEMLOCK)),
-#ifndef linux
-    lmt_ntwrk = min(static_cast<rlim_t>(0x200000), get_resource_limit(RLIMIT_SBSIZE)),
-#endif
+// #ifndef linux
+//     lmt_ntwrk = min(static_cast<rlim_t>(0x200000), get_resource_limit(RLIMIT_SBSIZE)),
+// #endif
     lmt_prcs = min(static_cast<rlim_t>(0), get_resource_limit(RLIMIT_NPROC)),
     lmt_rss = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_RSS)),
     lmt_stck = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_STACK)),
@@ -916,112 +899,6 @@ int babysit(const char *cmd, char* const* env) {
     env_vars[curr_env_vars++] = strdup(env[i]);
   }
   //cout << "Added env " << env_vars[curr_env_vars-1] << endl;
-
-  /* Parse command line. */
-// 
-//   char c;
-//   while (-1 != (c = getopt(argc, argv, "a:b:c:d:D:e:f:i:hm:M:n:p:r:s:St:Tvz:"))) {
-//     switch (c) {
-//       case 'a':
-//         lmt_all = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'b':
-//         skel_dir = string(optarg);
-//         break;
-//       case 'c':
-//         lmt_cr = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'C':
-//         confinement_root = string(optarg);
-//         break;
-//       case 'd':
-//         lmt_dta = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'D':
-//         sprt_pths.insert(string(optarg));
-//         break;
-//       case 'e':
-//         if (curr_env_vars <= max_env_vars)
-//           env_vars[curr_env_vars++] = strdup(optarg);
-//           cout << "Added env " << env_vars[curr_env_vars-1] << endl;
-//         break;
-//       case 'i':
-//         image_path = string(optarg);
-//         break;
-//       case 'f':
-//         lmt_fls = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'm':
-//         lmt_mlck = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'M':
-//         mdmfs = strtoll(optarg, NULL, 0);
-//         break;
-// #ifndef linux
-//       case 'n':
-//         lmt_ntwrk = strtoll(optarg, NULL, 0);
-//         break;
-// #endif
-//       case 'p':
-//         lmt_prcs = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'r':
-//         lmt_rss = strtoll(optarg, NULL, 0);
-//         break;
-//       case 's':
-//         lmt_stck = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'S':
-//         save_isolation_path = true;
-//         break;
-//       case 't':
-//         lmt_tm = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'v':
-//         vrbs = true;
-//         break;
-//       case 'z':
-//         lmt_fl_sz = strtoll(optarg, NULL, 0);
-//         break;
-//       case 'h':
-//       default:
-//         cerr << HELP_MESSAGE;
-//         return 1;
-//       }
-//   }
-// 
-//   if(!confinement_root.empty())
-//     CONFINEMENT_ROOT = confinement_root;
-// 
-//   argc -= optind;
-//   argv += optind;
-// 
-//   if (NULL == argv || NULL == *argv) {
-//     cerr << HELP_MESSAGE;
-//     return 1;
-//   }
-// 
-//   // TODO: Fix this.
-//   if (mdmfs && save_isolation_path) {
-//     cerr << "Unfortunately, the -M and -S options cannot be used together." << endl;
-//     return 1;
-//   }
-// 
-//   vrbs && cerr << "Resource limits:" << endl
-//                << "      RLIMIT_AS           0x" << hex << lmt_all << " bytes" << endl
-//                << "      RLIMIT_CORE         0x" << hex << lmt_cr << " bytes" << endl
-//                << "      RLIMIT_DATA         0x" << hex << lmt_dta << " bytes" << endl
-//                << "      RLIMIT_NOFILE       " << dec << lmt_fls << " files" << endl
-//                << "      RLIMIT_FSIZE        0x" << hex << lmt_fl_sz << " bytes" << endl
-//                << "      RLIMIT_MEMLOCK      0x" << hex << lmt_mlck << " bytes" << endl
-// #ifndef linux
-//                << "      RLIMIT_SBSIZE       0x" << hex << lmt_ntwrk << " bytes" << endl
-// #endif
-//                << "      RLIMIT_NPROC        " << dec << lmt_prcs << " processes" << endl
-//                << "      RLIMIT_RSS          0x" << hex << lmt_rss << " bytes" << endl
-//                << "      RLIMIT_STACK        0x" << hex << lmt_stck << " bytes" << endl
-//                << "      RLIMIT_CPU          " << dec << lmt_tm << " seconds" << endl
-//                ;
 
  /**
   * Start building the isolated environment
@@ -1100,16 +977,9 @@ int babysit(const char *cmd, char* const* env) {
     //set_resource_limit(RLIMIT_NOFILE, lmt_fls);
     set_resource_limit(RLIMIT_FSIZE, lmt_fl_sz);
     set_resource_limit(RLIMIT_MEMLOCK, lmt_mlck);
-#ifndef linux
-    set_resource_limit(RLIMIT_SBSIZE, lmt_ntwrk);
-#endif
-#ifdef linux
-    /* On Linux, setresuid(2) can fail, EAGAIN, because there
-     * weren't enough processes. Kinky! */
+
     set_resource_limit(RLIMIT_NPROC, lmt_prcs + 1);
-#else
-    set_resource_limit(RLIMIT_NPROC, lmt_prcs);
-#endif
+
     set_resource_limit(RLIMIT_RSS, lmt_rss);
     set_resource_limit(RLIMIT_STACK, lmt_stck);
     set_resource_limit(RLIMIT_CPU, lmt_tm);
@@ -1127,9 +997,9 @@ int babysit(const char *cmd, char* const* env) {
     lmt_fls = min(lmt_fls, get_resource_limit(RLIMIT_NOFILE));
     lmt_fl_sz = min(lmt_fl_sz, get_resource_limit(RLIMIT_FSIZE));
     lmt_mlck = min(lmt_mlck, get_resource_limit(RLIMIT_MEMLOCK));
-#ifndef linux
-    lmt_ntwrk = min(lmt_ntwrk, get_resource_limit(RLIMIT_SBSIZE));
-#endif
+// #ifndef linux
+//     lmt_ntwrk = min(lmt_ntwrk, get_resource_limit(RLIMIT_SBSIZE));
+// #endif
     lmt_prcs = min(lmt_prcs, get_resource_limit(RLIMIT_NPROC));
     lmt_rss = min(lmt_rss, get_resource_limit(RLIMIT_RSS));
     lmt_stck = min(lmt_stck, get_resource_limit(RLIMIT_STACK));
@@ -1139,8 +1009,9 @@ int babysit(const char *cmd, char* const* env) {
     /**
      * Execute the sandbox -> fork -> run
      **/
-    const char* argv[] = { getenv("SHELL"), "-c", cmd, (char*)NULL };
+    char* argv[] = {NULL};
     execve(fl_pth.c_str(), argv, env_vars);
+    
     cerr << "Could not execute " << *argv << ": " << strerror(errno) << endl;
     _exit(errno);
   } else {
