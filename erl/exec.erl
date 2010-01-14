@@ -147,7 +147,7 @@ start(Options) when is_list(Options) ->
 %% @end
 %%-------------------------------------------------------------------------
 run(Exe, Options) when is_list(Exe), is_list(Options) ->
-    gen_server:call(?MODULE, {port, {start, {run, Exe, Options}, nolink}}, 30000).
+  gen_server:call(?MODULE, {port, {start, {run, Exe, Options}, nolink}}, 30000).
 
 %%-------------------------------------------------------------------------
 %% @equiv run/2
@@ -158,7 +158,7 @@ run(Exe, Options) when is_list(Exe), is_list(Options) ->
 %% @end
 %%-------------------------------------------------------------------------
 run_link(Exe, Options) when is_list(Exe), is_list(Options) ->
-    gen_server:call(?MODULE, {port, {start, {run, Exe, Options}, link}}).
+  gen_server:call(?MODULE, {port, {start, {run, Exe, Options}, link}}).
 
 %%-------------------------------------------------------------------------
 %% @spec () -> [OsPid::integer()]
@@ -287,7 +287,7 @@ init([Options]) ->
 %%----------------------------------------------------------------------
 handle_call({port, Instruction}, From, #state{last_trans=Last} = State) ->
     try is_port_command(Instruction, State) of
-    {ok, Term, Link} ->
+    {ok, Term, Opts, Link} ->
         Next = next_trans(Last),
         erlang:port_command(State#state.port, term_to_binary({Next, Term})),
         {noreply, State#state{trans = queue:in({Next, From, Link}, State#state.trans)}}
@@ -474,54 +474,48 @@ get_transaction(Q, I, OldQ) ->
     end.
     
 is_port_command({start, {run, _Cmd, Options} = T, Link}, State) ->
-    check_cmd_options(Options, State),
-    {ok, T, Link};
+  check_cmd_options(Options, [], State),
+  {ok, {run, Cmd, Options}, Acc, Link};
 is_port_command({list} = T, _State) -> 
-    {ok, T, undefined};
+  {ok, T, undefined, undefined};
 is_port_command({stop, OsPid}=T, _State) when is_integer(OsPid) -> 
-    {ok, T, undefined};
+  {ok, T, undefined, undefined};
 is_port_command({stop, Pid}, _State) when is_pid(Pid) ->
-    case ets:lookup(exec_mon, Pid) of
+  case ets:lookup(exec_mon, Pid) of
     [{Pid, OsPid}]  -> {ok, {stop, OsPid}, undefined};
     []              -> throw({error, no_process})
-    end;
+  end;
 is_port_command({kill, OsPid, Sig}=T, _State) when is_integer(OsPid),is_integer(Sig) -> 
-    {ok, T, undefined};
+  {ok, T, undefined, undefined};
 is_port_command({kill, Pid, Sig}, _State) when is_pid(Pid),is_integer(Sig) -> 
-    case ets:lookup(exec_mon, Pid) of
+  case ets:lookup(exec_mon, Pid) of
     [{Pid, OsPid}]  -> {ok, {kill, OsPid, Sig}, undefined};
     []              -> throw({error, no_process})
-    end.
+  end.
 
-check_cmd_options([{cd, Dir}|T], State) when is_list(Dir) ->
-    check_cmd_options(T, State);
+check_cmd_options([{cd, Dir}|T], State) when is_list(Dir) -> check_cmd_options(T, State);
 check_cmd_options([{env, Env}|T], State) when is_list(Env) ->
-    case lists:filter(fun(S) -> is_list(S) =:= false end, Env) of
+  case lists:filter(fun(S) -> is_list(S) =:= false end, Env) of
     [] -> check_cmd_options(T, State);
     L  -> throw({error, {invalid_env_value, L}})
-    end;
-check_cmd_options([{kill, Cmd}|T], State) when is_list(Cmd) ->
-    check_cmd_options(T, State);
-check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->
-    check_cmd_options(T, State);
+  end;
+check_cmd_options([{kill, Cmd}|T], State) when is_list(Cmd) -> check_cmd_options(T, State);
+check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 -> check_cmd_options(T, State);
 check_cmd_options([{Std, I}|T], State) when Std=:=stderr, I=/=Std; Std=:=stdout, I=/=Std ->
-    if I=:=null; I=:=stderr; I=:=stdout; is_list(I); 
-       is_tuple(I), size(I)=:=2, element(1,I)=:="append", is_list(element(2,I))
-    ->  check_cmd_options(T, State);
-    true -> 
-        throw({error, ?FMT("Invalid ~w option ~p", [Std, I])})
-    end;
+  if I=:=null; I=:=stderr; I=:=stdout; is_list(I); is_tuple(I), size(I)=:=2, element(1,I)=:="append", is_list(element(2,I)) ->  
+      check_cmd_options(T, State);
+  true -> 
+    throw({error, ?FMT("Invalid ~w option ~p", [Std, I])})
+  end;
 check_cmd_options([{user, U}|T], State) when is_list(U), U =/= "" ->
-    case lists:member(U, State#state.limit_users) of
+  case lists:member(U, State#state.limit_users) of
     true  -> check_cmd_options(T, State);
     false -> throw({error, ?FMT("User ~s is not allowed to run commands!", [U])})
-    end;
-check_cmd_options([Other|_], _State) -> throw({error, {invalid_option, Other}});
-check_cmd_options([], _State)        -> ok.
+  end;
+check_cmd_options([Other|_Rest], State) -> throw({error, {invalid_option, Other}});
+check_cmd_options([], _State)          -> ok.
     
-next_trans(I) when I =< 134217727 ->
-    I+1;
-next_trans(_) ->
-    1.
+next_trans(I) when I =< 134217727 -> I+1;
+next_trans(_) -> 1.
 
 

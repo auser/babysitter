@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/mount.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -34,33 +35,19 @@
 #include <set>
 #include <string>
 #include <stdexcept>
+#include <dirent.h>
 
 using namespace std;
 
-#include "configuration.h"
 #include "help.h"
 #include "privilege.h"
 #include "babysitter.h"
+#include "ei++.h"
 
 typedef set<string> string_set;
 
-
-/* Global variables. */
-string_set sprt_pths;
-static string confinement_path;
-string image_path;
-bool vrbs = false;
-string fl_pth, pth;
-
-static uid_t isolator, invoker;
-// These have to be global so that clean_up can take no arguments (and hence
-// be a suitable atexit handler).
-static bool save_isolation_path = false;
-unsigned int mdmfs = 0;
-
-
 /* Functions. */
-
+static uid_t random_uid() throw (runtime_error);
 /**
  * NOTE: The implementation of this function is amusing.
  *
@@ -73,19 +60,17 @@ unsigned int mdmfs = 0;
  * as a string.
  */
 static const char * const to_string(long long int n, unsigned char base) {
-      static char bfr[32];
+  static char bfr[32];
 
-      const char * frmt = "%lld";
-      if (16 == base) {
-            frmt = "%llx";
-      } else if (8 == base) {
-            frmt = "%llo";
-      }
-
-      snprintf(bfr, sizeof(bfr) / sizeof(bfr[0]), frmt, n);
-      return bfr;
+  const char * frmt = "%lld";
+  if (16 == base) {
+    frmt = "%llx";
+  } else if (8 == base) {
+    frmt = "%llo";
+  }
+  snprintf(bfr, sizeof(bfr) / sizeof(bfr[0]), frmt, n);
+  return bfr;
 }
-
 
 /**
  * @param source The name of the source file.
@@ -93,54 +78,43 @@ static const char * const to_string(long long int n, unsigned char base) {
  *
  * @throws runtime_error If the file could not be copied for any reason.
  */
-static void copy_file(const string & source, const string & destination) throw (runtime_error) {
-      struct stat stt;
-      if (0 == stat(destination.c_str(), &stt)) {
-            return;
-      }
+static void copy_file(const string &source, const string &destination) throw (runtime_error) {
+  struct stat stt;
+  if (0 == stat(destination.c_str(), &stt))
+    return;
 
-      FILE *src = fopen(source.c_str(), "rb");
-      if (NULL == src) {
-             throw runtime_error(string("Could not read ") + source + ": " + strerror(errno));
-      }
+  FILE *src = fopen(source.c_str(), "rb");
+  if (NULL == src)
+    throw runtime_error(string("Could not read ") + source + ": " + strerror(errno));
 
-      FILE *dstntn = fopen(destination.c_str(), "wb");
-      if (NULL == dstntn) {
-            fclose(src);
-            throw runtime_error(string("Could not write ") + destination + ": " + strerror(errno));
-      }
+  FILE *dstntn = fopen(destination.c_str(), "wb");
+  if (NULL == dstntn) {
+    fclose(src);
+    throw runtime_error(string("Could not write ") + destination + ": " + strerror(errno));
+  }
 
-      char bfr [4096];
-      while (true) {
-            size_t r = fread(bfr, 1, sizeof bfr, src);
-            if (0 == r || r != fwrite(bfr, 1, r, dstntn)) {
-                  break;
-            }
-      }
+  char bfr [4096];
+  while (true) {
+    size_t r = fread(bfr, 1, sizeof bfr, src);
+    if (0 == r || r != fwrite(bfr, 1, r, dstntn)) {
+      break;
+    }
+  }
 
-      fclose(src);
-      if (fclose(dstntn)) {
-            throw runtime_error(string("Could not write ") + destination + ": " + strerror(errno));
-      }
+  fclose(src);
+  if (fclose(dstntn)) {
+    throw runtime_error(string("Could not write ") + destination + ": " + strerror(errno));
+  }
 }
 
-
 /**
- * @param path The path to check.
- *
- * @returns true if the path is absolute. Note that our definition of
- * "absolute" includes paths beginning with "./", since they are "absolute"
- * relative to a known path. Paths beginning with "../" are not absolute,
- * nor are paths that do not begin with "/" or "./" such as "ls" or
- * "foo.txt".
- */
+ * Check if it's an absolute path
+ **/
 static bool is_absolute_path(const string & path) throw () {
   return '/' == path[0] || ('.' == path[0] && '/' == path[1]);
 }
 
-
 /**
-
  * @param file The basename of a file to find in one of the directories
  * specified in $PATH. (If $PATH is not available, DEFAULT_PATH is used.)
  *
@@ -148,42 +122,35 @@ static bool is_absolute_path(const string & path) throw () {
  *
  * @throws range_error if file was not found in $PATH/DEFAULT_PATH.
  */
-static string which(const string & file) throw (runtime_error) {
-      assert(geteuid() != 0 && getegid() != 0);
+const string DEFAULT_PATH = "/bin:/usr/bin:/usr/local/bin";
+static string which(const string &file) throw (runtime_error) {
+  if (is_absolute_path(file))
+    return file;
 
-      if (is_absolute_path(file)) {
-            return file;
-      }
+  string pth = DEFAULT_PATH;
+  char *p = getenv("PATH");
+  if (p)
+    pth = p;
 
-      string pth = DEFAULT_PATH;
-      char *p = getenv("PATH");
-      if (p) {
-            pth = p;
-      }
+  string::size_type i = 0;
+  string::size_type f = pth.find(':', i);
+  do {
+    string s = pth.substr(i, f - i) + "/" + file;
+    if (0 == access(s.c_str(), X_OK))
+      return s;
 
-      string::size_type i = 0;
-      string::size_type f = pth.find(':', i);
-      do {
-            string s = pth.substr(i, f - i) + "/" + file;
-            if (0 == access(s.c_str(), X_OK)) {
-                  return s;
-            }
+    i = f + 1;
+    f = pth.find(':', i);
+  } while (string::npos != f);
 
-            i = f + 1;
-            f = pth.find(':', i);
-      } while (string::npos != f);
+  if (! is_absolute_path(file))
+    throw runtime_error("File not found in $PATH");
 
-      if (! is_absolute_path(file)) {
-            throw runtime_error("File not found in $PATH");
-      }
+  if (0 == access(file.c_str(), X_OK))
+    return file;
 
-      if (0 == access(file.c_str(), X_OK)) {
-            return file;
-      }
-
-      throw runtime_error("File not found in $PATH");
+  throw runtime_error("File not found in $PATH");
 }
-
 
 /**
  * @param matchee The string to match against pattern.
@@ -193,23 +160,20 @@ static string which(const string & file) throw (runtime_error) {
  *
  * @return true if matchee matches pattern, false otherwise.
  */
-static bool matches_pattern(const string & matchee, const char * pattern, int flags)
-      throw (logic_error)
+static bool matches_pattern(const string &matchee, const char * pattern, int flags) throw (logic_error)
 {
-      regex_t xprsn;
-      if (regcomp(&xprsn, pattern, flags|REG_EXTENDED|REG_NOSUB)) {
-            throw logic_error("Failed to compile regular expression");
-      }
+  regex_t xprsn;
+  if (regcomp(&xprsn, pattern, flags|REG_EXTENDED|REG_NOSUB))
+    throw logic_error("Failed to compile regular expression");
 
-      if (0 == regexec(&xprsn, matchee.c_str(), 1, NULL, 0)) {
-            regfree(&xprsn);
-            return true;
-      }
+  if (0 == regexec(&xprsn, matchee.c_str(), 1, NULL, 0)) {
+        regfree(&xprsn);
+        return true;
+  }
 
-      regfree(&xprsn);
-      return false;
+  regfree(&xprsn);
+  return false;
 }
-
 
 /**
  * @param path The path to create, with successive calls to mkdir(2).
@@ -217,75 +181,70 @@ static bool matches_pattern(const string & matchee, const char * pattern, int fl
  * @throws runtime_error If any call to mkdir failed.
  */
 static void make_path(const string & path) {
-      struct stat stt;
-      if (0 == stat(path.c_str(), &stt) && S_ISDIR(stt.st_mode)) {
-            return;
-      }
+  struct stat stt;
+  if (0 == stat(path.c_str(), &stt) && S_ISDIR(stt.st_mode))
+    return;
 
-      string::size_type lngth = path.length();
-      for (string::size_type i = 1; i < lngth; ++i) {
-            if (lngth - 1 == i || '/' == path[i]) {
-                  string p = path.substr(0, i + 1);
-                  if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
-                        throw runtime_error("Could not create path (make_path:230) " + p + ": " + strerror(errno));
-                  }
-            }
+  string::size_type lngth = path.length();
+  for (string::size_type i = 1; i < lngth; ++i) {
+    if (lngth - 1 == i || '/' == path[i]) {
+      string p = path.substr(0, i + 1);
+      if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
+            throw runtime_error("Could not create path (make_path:230) " + p + ": " + strerror(errno));
       }
+    }
+  }
 }
-
 
 /**
- * @throws runtime_error If CONFINEMENT_ROOT is not owned by UID and GID
- * 0, if it exists but does not have CONFINEMENT_ROOT_MODE, or if
- * CONFINEMENT_ROOT cannot be created.
- */
-static void create_confinement_root() throw (runtime_error) {
-      struct stat stt;
+ * Create the confinement root
+ **/
+static void create_confinement_root(const string &confinement_root, const mode_t confinement_root_mode) throw (runtime_error) {
+  struct stat stt;
 
-      if (0 == stat(CONFINEMENT_ROOT.c_str(), &stt)) {
-            if (0 != stt.st_uid || 0 != stt.st_gid) {
-                  throw runtime_error(CONFINEMENT_ROOT + " not owned by 0:0. Cannot continue.");
-            }
+  if (0 == stat(confinement_root.c_str(), &stt)) {
+    if (0 != stt.st_uid || 0 != stt.st_gid) {
+      throw runtime_error(confinement_root + " not owned by 0:0. Cannot continue.");
+    }
 
-            if (stt.st_mode != CONFINEMENT_ROOT_MODE) {
-                  throw runtime_error(CONFINEMENT_ROOT + " is mode " + to_string(stt.st_mode, 8)
-                        + "; should be " + to_string(CONFINEMENT_ROOT_MODE, 8));
-            }
-      }
-      else if (ENOENT == errno) {
-            /* Make sure we have the right EGID so that the directory has
-             * the right group ownership. */
-            gid_t egid = getegid();
-            setegid(0);
-
-            if (mkdir(CONFINEMENT_ROOT.c_str(), CONFINEMENT_ROOT_MODE)) {
-                  throw runtime_error("Could not create confinement_root " + CONFINEMENT_ROOT);
-            }
-
-            setegid(egid);
-      }
-      else {
-            throw runtime_error(CONFINEMENT_ROOT + ": " + strerror(errno));
-      }
+    if (stt.st_mode != confinement_root_mode) {
+      throw runtime_error(confinement_root + " is mode " + to_string(stt.st_mode, 8) + 
+        "; should be " + to_string(confinement_root_mode, 8));
+    }
+  } else if (ENOENT == errno) {
+    gid_t egid = getegid();
+    setegid(0);
+    
+    if (mkdir(confinement_root.c_str(), confinement_root_mode)) {
+      throw runtime_error("Could not create confinement_root" + confinement_root + ":" + strerror(errno));
+    }  
+    
+    setegid(egid);
+  }
+  else {
+    throw runtime_error(confinement_root + ": " + strerror(errno));
+  }
 }
 
+/**
+ * Add nice error messaging
+ **/
+static map<int, string> populate_resources() {
+  static map<int, string> resources;
+  resources[RLIMIT_AS]      = "RLIMIT_AS (virtual memory size)";
+  resources[RLIMIT_CORE]    = "RLIMIT_CORE (core file size)";
+  resources[RLIMIT_DATA]    = "RLIMIT_DATA (data segment size)";
+  resources[RLIMIT_NOFILE]  = "RLIMIT_NOFILE (number of files)";
+  resources[RLIMIT_MEMLOCK] = "RLIMIT_MEMLOCK (locked memory size)";
+  resources[RLIMIT_NPROC]   = "RLIMIT_NPROC (simultaneous processes)";
+  resources[RLIMIT_RSS]     = "RLIMIT_RSS (resident set size)";
+  resources[RLIMIT_STACK]   = "RLIMIT_STACK (stack size)";
+  resources[RLIMIT_CPU]     = "RLIMIT_CPU (CPU time)";
+  resources[RLIMIT_FSIZE]   = "RLIMIT_FSIZE (file size)";
 
-static map<int, string> resources;
-static void populate_resources() {
-      resources[RLIMIT_AS]      = "RLIMIT_AS (virtual memory size)";
-      resources[RLIMIT_CORE]    = "RLIMIT_CORE (core file size)";
-      resources[RLIMIT_DATA]    = "RLIMIT_DATA (data segment size)";
-      resources[RLIMIT_NOFILE]  = "RLIMIT_NOFILE (number of files)";
-      resources[RLIMIT_MEMLOCK] = "RLIMIT_MEMLOCK (locked memory size)";
-// #ifndef linux
-//       resources[RLIMIT_SBSIZE]  = "RLIMIT_SBSIZE (socket buffer size)";
-// #endif
-      resources[RLIMIT_NPROC]   = "RLIMIT_NPROC (simultaneous processes)";
-      resources[RLIMIT_RSS]     = "RLIMIT_RSS (resident set size)";
-      resources[RLIMIT_STACK]   = "RLIMIT_STACK (stack size)";
-      resources[RLIMIT_CPU]     = "RLIMIT_CPU (CPU time)";
-      resources[RLIMIT_FSIZE]   = "RLIMIT_FSIZE (file size)";
+  return resources;
 }
+
 
 /**
  * @param resource The resource to set the limit on. (See setrlimit(2).)
@@ -295,77 +254,24 @@ static void populate_resources() {
  * @throws runtime_error If setrlimit fails.
  */
 static void set_resource_limit(const int resource, const rlim_t limit) throw (runtime_error) {
-      assert(geteuid() == invoker && getegid() == invoker);
-
-      struct rlimit rlmt = { limit, limit };
-      if (setrlimit(resource, &rlmt)) {
-            populate_resources();
-            throw runtime_error("Could not set resource " + resources[resource]
-                  + " to " + to_string(limit, 10) + ": " + strerror(errno));
-      }
+  struct rlimit rlmt = { limit, limit };
+  if (setrlimit(resource, &rlmt)) {
+    static map<int, string> resources = populate_resources();
+    throw runtime_error("Could not set resource " + resources[resource] + 
+      " to " + to_string(limit, 10) + ": " + strerror(errno));
+  }
 }
-
 
 /**
  * Confines the process to confinement_path.
  *
  * @throws runtime_error If chroot(2) or chdir(2) fail.
  */
-static void confine() throw (runtime_error) {
-      if (chdir(confinement_path.c_str()) || chroot(confinement_path.c_str()) || chdir("/")) {
-            throw runtime_error("Could not confine to " + confinement_path + ": "
-                  + strerror(errno));
-      }
+static void confine(string confinement_path) throw (runtime_error) {
+  if (chdir(confinement_path.c_str()) || chroot(confinement_path.c_str()) || chdir("/")) {
+    throw runtime_error("Could not confine to " + confinement_path + ": " + strerror(errno));
+  }
 }
-
-
-/**
- * Sends signal 0 to all processes running as isolator. This function
- * returns only if that failed because of ESRCH -- i.e. if no processes were
- * running as isolator.
- *
- * NOTE: This technique appears not to work on Linux -- kill(-1, 0) always
- * returns 0.
- *
- * NOTE: This function is of only limited usefulness, since there is an
- * inherent race condition.  There is no real way to ensure that nobody is
- * running with the same UID, or to lock other UIDs from spawning processes.
- *
- * @throws runtime_error If it was impossible to fork, or if other
- * processes had been running as isolator.
- */
-static void ensure_no_processes() throw (runtime_error) {
-#ifndef linux
-      int sts = 0;
-      errno = 0;
-      pid_t pid = fork();
-
-      if (-1 == pid) {
-            throw runtime_error("Could not fork!");
-      }
-
-      if (0 == pid) {
-            drop_privilege_permanently(isolator);
-
-            if (0 == kill(-1, 0)) {
-                  _exit(1);
-            } else if (ESRCH != errno) {
-                  _exit(errno);
-            }
-
-            _exit(0);
-      }
-      else {
-            (void) wait(&sts);
-      }
-
-      if (0 != WEXITSTATUS(sts)) {
-            throw runtime_error(string("Could not ensure that no processes were running as UID ")
-                  + to_string(isolator, 10));
-      }
-#endif
-}
-
 
 /**
  * @return An unpredictable (uid_t is not large enough for me to say
@@ -373,28 +279,23 @@ static void ensure_no_processes() throw (runtime_error) {
  *
  * @throws runtime_error If a security assertion cannot be met.
  */
+const string DEV_RANDOM = "/dev/urandom";
 static uid_t random_uid() throw (runtime_error) {
-      uid_t u;
-      for (unsigned char i = 0; i < 10; i++) {
-#ifdef linux
-            
-            int rndm = open(DEV_RANDOM.c_str(), O_RDONLY);
-            if (sizeof(u) != read(rndm, reinterpret_cast<char *>(&u), sizeof(u))) {
-                  continue;
-            }
-            close(rndm);
-#else
-            u = arc4random();
-#endif
+  uid_t u;
+  for (unsigned char i = 0; i < 10; i++) {
+    int rndm = open(DEV_RANDOM.c_str(), O_RDONLY);
+    if (sizeof(u) != read(rndm, reinterpret_cast<char *>(&u), sizeof(u))) {
+      continue;
+    }
+    close(rndm);
 
-            if (u > 0xFFFF) {
-              return u;
-            }
-      }
+    if (u > 0xFFFF) {
+      return u;
+    }
+  }
 
-      throw runtime_error("Could not generate a good random UID after 10 attempts. Bummer!");
+  throw runtime_error("Could not generate a good random UID after 10 attempts. Bummer!");
 }
-
 
 /**
  * @param file The file to test.
@@ -403,18 +304,17 @@ static uid_t random_uid() throw (runtime_error) {
  * pointer by two bytes.
  */
 static bool shell_magic(FILE *file) throw () {
-      char bfr[2];
-      if (2 != fread(bfr, sizeof(char), 2, file)) {
-            return false;
-      }
+  char bfr[2];
+  if (2 != fread(bfr, sizeof(char), 2, file)) {
+    return false;
+  }
 
-      if ('#' == bfr[0] && '!' == bfr[1]) {
-            return true;
-      }
+  if ('#' == bfr[0] && '!' == bfr[1]) {
+    return true;
+  }
 
-      return false;
+  return false;
 }
-
 
 /**
  * @param name A string that might be the name of a code library, e.g.
@@ -424,9 +324,8 @@ static bool shell_magic(FILE *file) throw () {
  * library.
  */
 static bool names_library(const string & name) throw() {
-    return matches_pattern(name, "^lib.+\\.so[.0-9]*$", 0);
+ return matches_pattern(name, "^lib.+\\.so[.0-9]*$", 0);
 }
-
 
 /**
  * @param elf A pointer to an Elf object (see elf(3)).
@@ -438,62 +337,57 @@ static bool names_library(const string & name) throw() {
  * @throws runtime_error If the Elf could not be parsed normally.
  */
 static pair<string_set *, string_set *> * dynamic_loads(Elf *elf) throw (runtime_error) {
-      assert(geteuid() != 0 && getegid() != 0);
+  assert(geteuid() != 0 && getegid() != 0);
 
-      GElf_Ehdr ehdr;
-      if (! gelf_getehdr(elf, &ehdr)) {
-            throw runtime_error(string("elf_getehdr failed: ") + elf_errmsg(-1));
+  GElf_Ehdr ehdr;
+  if (! gelf_getehdr(elf, &ehdr)) {
+    throw runtime_error(string("elf_getehdr failed: ") + elf_errmsg(-1));
+  }
+
+  Elf_Scn *scn = elf_nextscn(elf, NULL);
+  GElf_Shdr shdr;
+  string to_find = ".dynstr";
+  while (scn) {
+    if (NULL == gelf_getshdr(scn, &shdr)) {
+      throw runtime_error(string("getshdr() failed: ") + elf_errmsg(-1));
+    }
+    char * nm = elf_strptr(elf, ehdr.e_shstrndx, shdr.sh_name);
+    if (NULL == nm) {
+      throw runtime_error(string("elf_strptr() failed: ") + elf_errmsg(-1));
+    }
+    if (to_find == nm) {
+      break;
+    }
+
+    scn = elf_nextscn(elf, scn);
+  }
+
+  Elf_Data *data = NULL;
+  size_t n = 0;
+  string_set *lbrrs = new string_set(), *pths = new string_set();
+
+  pths->insert("/lib");
+  pths->insert("/usr/lib");
+  pths->insert("/usr/local/lib");
+
+  while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
+    char *bfr = static_cast<char *>(data->d_buf);
+    char *p = bfr + 1;
+    while (p < bfr + data->d_size) {
+      if (names_library(p)) {
+        lbrrs->insert(p);
+      } else if ('/' == *p) {
+        pths->insert(p);
       }
+      
+      size_t lngth = strlen(p) + 1;
+      n += lngth;
+      p += lngth;
+    }
+  }
 
-      Elf_Scn *scn = elf_nextscn(elf, NULL);
-      GElf_Shdr shdr;
-      string to_find = ".dynstr";
-      while (scn) {
-            if (NULL == gelf_getshdr(scn, &shdr)) {
-                  throw runtime_error(string("getshdr() failed: ") + elf_errmsg(-1));
-            }
-
-            char * nm = elf_strptr(elf, ehdr.e_shstrndx, shdr.sh_name);
-            if (NULL == nm) {
-                  throw runtime_error(string("elf_strptr() failed: ") + elf_errmsg(-1));
-            }
-
-            if (to_find == nm) {
-                  break;
-            }
-
-            scn = elf_nextscn(elf, scn);
-      }
-
-      Elf_Data *data = NULL;
-      size_t n = 0;
-      string_set *lbrrs = new string_set(), *pths = new string_set();
-
-      pths->insert("/lib");
-      pths->insert("/usr/lib");
-      pths->insert("/usr/local/lib");
-
-      while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
-            char *bfr = static_cast<char *>(data->d_buf);
-            char *p = bfr + 1;
-            while (p < bfr + data->d_size) {
-                  if (names_library(p)) {
-                        lbrrs->insert(p);
-                  } else if ('/' == *p) {
-                        pths->insert(p);
-                  }
-
-                  size_t lngth = strlen(p) + 1;
-                  n += lngth;
-                  p += lngth;
-            }
-      }
-
-      return new pair<string_set *, string_set *>(lbrrs, pths);
+  return new pair<string_set *, string_set *>(lbrrs, pths);
 }
-
-
-static string_set already_copied;
 
 /**
  * @param image The path to the executable image file.
@@ -505,82 +399,63 @@ static string_set already_copied;
  * @throws runtime_error if the image could not be parsed. Does not throw
  * if a dependency could not be copied.
  */
-static rlim_t copy_dependencies(const string & image) throw (runtime_error) {
-      if (EV_NONE == elf_version(EV_CURRENT)) {
-            throw runtime_error(string("ELF library initialization failed: ") + elf_errmsg(-1));
+string_set already_copied;
+static rlim_t copy_dependencies(const string image, const string confinement_path) throw (runtime_error) {
+  if (EV_NONE == elf_version(EV_CURRENT)) {
+    throw runtime_error(string("ELF library initialization failed: ") + elf_errmsg(-1));
+  }
+
+  int fl = open(image.c_str(), O_RDONLY);
+  if (-1 == fl) {
+    throw runtime_error(string("Could not open ") + image + ": " + strerror(errno));
+  }
+
+  Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
+  if (NULL == elf) {
+    throw runtime_error(string("elf_begin failed: ") + elf_errmsg(-1));
+  }
+
+  if (ELF_K_ELF != elf_kind(elf)) {
+    throw runtime_error(image + " is not an ELF object.");
+  }
+
+  pair<string_set *, string_set *> *r = dynamic_loads(elf);
+  string_set lds = *r->first;
+  rlim_t lmt_fls = 0;
+
+  for (string_set::iterator ld = lds.begin(); ld != lds.end(); ++ld) {
+    string_set pths = *r->second;
+    bool fnd = false;
+
+    for (string_set::iterator pth = pths.begin(); pth != pths.end(); ++pth) {
+      string src = *pth + '/' + *ld;
+      if (already_copied.count(src)) {
+        fnd = true;
+        continue;
       }
+      string dstntn = confinement_path + src;
 
-      int fl = open(image.c_str(), O_RDONLY);
-      if (-1 == fl) {
-            throw runtime_error(string("Could not open ") + image + ": " + strerror(errno));
+      try {
+        make_path(dirname(strdup(dstntn.c_str())));
+
+        copy_file(src, dstntn);
+        lmt_fls += 1;
+        fnd = true;
+        already_copied.insert(src);
+        lmt_fls += copy_dependencies(src, confinement_path);    // FIXME: Grossly inefficient.
+        break;
+      } catch (runtime_error e) { }
+    }
+
+    if (! fnd) {
+      cerr << "Could not find library " << *ld << endl;
       }
+    }
 
-      Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
-      if (NULL == elf) {
-            throw runtime_error(string("elf_begin failed: ") + elf_errmsg(-1));
-      }
-
-      if (ELF_K_ELF != elf_kind(elf)) {
-            throw runtime_error(image + " is not an ELF object.");
-      }
-
-      pair<string_set *, string_set *> *r = dynamic_loads(elf);
-      string_set lds = *r->first;
-      rlim_t lmt_fls = 0;
-
-      for (string_set::iterator ld = lds.begin(); ld != lds.end(); ++ld) {
-            string_set pths = *r->second;
-            bool fnd = false;
-
-            for (string_set::iterator pth = pths.begin(); pth != pths.end(); ++pth) {
-                  string src = *pth + '/' + *ld;
-                  if (already_copied.count(src)) {
-                        fnd = true;
-                        continue;
-                  }
-                  string dstntn = confinement_path + src;
-
-                  try {
-                        make_path(dirname(strdup(dstntn.c_str())));
-
-                        copy_file(src, dstntn);
-                        lmt_fls += 1;
-                        fnd = true;
-                        already_copied.insert(src);
-                        lmt_fls += copy_dependencies(src);    // FIXME: Grossly inefficient.
-                        break;
-                  } catch (runtime_error e) { }
-            }
-
-            if (! fnd) {
-                  cerr << "Could not find library " << *ld << endl;
-            }
-      }
-
-      elf_end(elf);
-      close(fl);
-      return lmt_fls;
+  elf_end(elf);
+  close(fl);
+  return lmt_fls;
 }
-
-
-/**
- * Prints the resource usage of the child process to cerr.
- */
-static void print_rusage() throw () {
-      struct rusage usg;
-      if (getrusage(RUSAGE_CHILDREN, &usg)) {
-            cerr << "Could not get child's resource usage: " << strerror(errno) << endl;
-            return;
-      }
-
-      cerr << "User time: " << usg.ru_utime.tv_sec << "." << setfill('0') << setw(6)
-           << usg.ru_utime.tv_usec << endl
-           << "System time: " << usg.ru_stime.tv_sec << "." << setfill('0') << setw(6)
-           << usg.ru_stime.tv_usec << endl
-           << "Unshared data size: " << usg.ru_idrss << endl
-           << "Unshared stack size: " << usg.ru_isrss << endl;
-}
-
 
 /**
  * @param resource The resource for which to find the limit. See
@@ -589,13 +464,12 @@ static void print_rusage() throw () {
  * @return The current process' maximum limit for the given resource.
  */
 static rlim_t get_resource_limit(int resource) throw () {
-      struct rlimit rlmt;
-      if (getrlimit(resource, &rlmt)) {
-            throw runtime_error(string("getrlimit: ") + strerror(errno));
-      }
-      return rlmt.rlim_max;
+  struct rlimit rlmt;
+  if (getrlimit(resource, &rlmt)) {
+    throw runtime_error(string("getrlimit: ") + strerror(errno));
+  }
+  return rlmt.rlim_max;
 }
-
 
 /**
  * For each support path, recursively copies it into confinement_path by
@@ -605,138 +479,154 @@ static rlim_t get_resource_limit(int resource) throw () {
  *
  * @throws runtime_error if the cp command fails for any reason.
  */
-static void copy_support_paths(const string_set & support_paths) throw (runtime_error) {
-      for (string_set::const_iterator i = support_paths.begin(); i != support_paths.end(); ++i) {
-            string src = *i;
-            string wildcard ("*");
-            size_t found;
-            
-            found = src.find(wildcard);
-            
-            // Make the paths
-            string dstntn_pth = confinement_path + dirname(strdup(src.c_str()));
+static void copy_support_paths(const string_set &support_paths, const string &confinement_path) throw (runtime_error) {
+  for (string_set::const_iterator i = support_paths.begin(); i != support_paths.end(); ++i) {
+    string src = *i;
+    string wildcard ("*");
+    size_t found;
+    string cmnd;
+    
+    found = src.find(wildcard);
+    
+    // Make the paths
+    string dstntn_pth = confinement_path + dirname(strdup(src.c_str()));
 
-            if(found != string::npos)
-            {
-              // We found a wildcard, we'll use a command instead
-              make_path(dstntn_pth.c_str());
-              string cmnd = CP + " -RL" + " " + src + " " + dstntn_pth + "";
-              if (system(cmnd.c_str())) {
-                    throw runtime_error("Could not copy " + src + " into " + confinement_path);
-              }
-            } else {
-              struct stat stt;
-              if (stat(src.c_str(), &stt)) {
-                    throw runtime_error(src + ": " + strerror(errno));
-              }
-
-              make_path(dstntn_pth.c_str());
-
-              // If it's just a file, copy it directly and continue.
-              if (S_ISREG(stt.st_mode)) {
-                    copy_file(src, confinement_path + src);
-                    continue;
-              }
-
-              string cmnd = CP + " -RL" + " \"" + src + "\" \"" + dstntn_pth + "\"";
-              if (system(cmnd.c_str())) {
-                    throw runtime_error("Could not copy " + src + " into " + confinement_path);
-              }
-            }
+    if(found != string::npos)
+    {
+      // We found a wildcard, we'll use a command instead
+      make_path(dstntn_pth.c_str());
+      cmnd = string("cp -RL") + " " + src + " " + dstntn_pth + "";
+      if (system(cmnd.c_str())) {
+        throw runtime_error("Could not copy " + src + " into " + confinement_path);
       }
+    } else {
+      struct stat stt;
+      if (stat(src.c_str(), &stt)) {
+        throw runtime_error(src + ": " + strerror(errno));
+      }
+
+      make_path(dstntn_pth.c_str());
+
+      // If it's just a file, copy it directly and continue.
+      if (S_ISREG(stt.st_mode)) {
+        copy_file(src, confinement_path + src);
+        continue;
+      }
+
+      cmnd = string("cp -RL") + " \"" + src + "\" \"" + dstntn_pth + "\"";
+      if (system(cmnd.c_str())) {
+        throw runtime_error("Could not copy " + src + " into " + confinement_path);
+      }
+    }
+  }
+}
+
+/**
+ * Is this a directory
+ **/
+bool is_directory(char path[]) {
+  if (path[strlen(path)] == '.') {return true;}
+  for (int i = strlen(path) - 1; i >= 0; i--) {
+    if (path[i] == '.') return false;
+    else if (path[i] == '\\' || path[i] == '/') { return true; }
+  }
+  return false; // Should never get here
+}
+/**
+ * Recursively delete
+ **/
+int recursively_delete(string path) {
+  if((path[path.length() - 1]) != '\\') path+= "\\";
+  
+  DIR *pdir = NULL;
+  pdir = opendir(path.c_str());
+  struct dirent *pent = NULL;
+  if(pdir == NULL) {
+    return false;
+  }
+  
+  char file[256];
+  int counter = 1;
+  
+  while ( pent = readdir(pdir) ) {
+    if(counter > 2) {
+      for(int i = 0; i < 256; i++) {
+        strcat(file, path.c_str());
+      }
+      if (pent == NULL) return false;
+      strcat(file, pent->d_name);
+      if (is_directory(file) == true) { recursively_delete(file); } else { remove(file); }
+    } counter ++;
+  }
+  return 0;
 }
 
 /**
  * Performs necessary filesystem clean-up after the isolatee exits.
  */
-static void clean_up() throw () {
-      string pth;
-
-#ifndef linux
-      pth = confinement_path + "/dev";
-      if (system( (UMOUNT + ' ' + pth).c_str() )) {
-            cerr << "WARNING: Could not unmount " << pth << endl;
-      }
-#endif
-      
-      if(!image_path.empty())
-      {
-        cerr << "Current user " << getuid() << ":" << getgid() << " or " << isolator << ":" << isolator << endl;
-        if (system( (UMOUNT + ' ' + confinement_path + "/home").c_str() )) {
-          cerr << "WARNING: Could not unmount " << image_path << endl;
-          cerr << "Current user " << getuid() << ":" << getgid() << endl;
-          sleep(5);
-        }
-      }
-
-      if (save_isolation_path) {
-            string cmnd = CHOWN + " -R " + to_string(getuid(), 10) + ':' + to_string(getgid(), 10)
-                         + ' ' + confinement_path;
-            if (system(cmnd.c_str())) {
-                  cerr << "WARNING: Could not chown " << confinement_path << " to "
-                       << getuid() << ":" << getgid() << endl;
-            } else {
-                  cerr << "Chowned " << confinement_path << " to "
-                       << getuid() << ":" << getgid() << endl;
-            }
-      } else if (mdmfs > 0) {
-            if (system( (UMOUNT + ' ' + confinement_path).c_str() )) {
-                  cerr << "WARNING: Could not unmount " << confinement_path << endl;
-            }
-
-            if (system( (RMDIR + ' ' + confinement_path).c_str() )) {
-                  cerr << "WARNING: Could not delete " << confinement_path << endl;
-            }
-      } else {
-            if (system( (RM + " -rf " + confinement_path).c_str() )) {
-                  cerr << "WARNING: Could not delete " << confinement_path << endl;
-            }
-      }
+static void clean_up() {
+  // Nothing... yet?
 }
 
 void signal_handler(int received) {
-      cerr << "Received signal " << received << endl;
-      ensure_no_processes();
-      clean_up();
-      cerr << endl;
-      cout << endl;
-      _exit(1);
+  cerr << "Received signal " << received << endl;
+  cerr << endl;
+  cout << endl;
+  _exit(1);
 }
-
 
 /**
  * Installs the signal handlers and the atexit handler to clean up the
  * isolation environment when the parent exits.
  */
 void install_handlers() {
-      atexit(clean_up);
+  atexit(clean_up);
 #ifdef linux
-      #define signal bsd_signal
+  #define signal bsd_signal
 #endif
-      signal(SIGHUP, signal_handler);
-      signal(SIGINT, signal_handler);
-      signal(SIGQUIT, signal_handler);
-      signal(SIGILL, signal_handler);
-      signal(SIGTRAP, signal_handler);
-      signal(SIGABRT, signal_handler);
-      signal(SIGFPE, signal_handler);
-      signal(SIGBUS, signal_handler);
-      signal(SIGSEGV, signal_handler);
-      signal(SIGSYS, signal_handler);
-      signal(SIGPIPE, signal_handler);
-      signal(SIGALRM, signal_handler);
-      signal(SIGTERM, signal_handler);
-      signal(SIGTTIN, signal_handler);
-      signal(SIGTTOU, signal_handler);
-      signal(SIGXCPU, signal_handler);
-      signal(SIGXFSZ, signal_handler);
-      signal(SIGVTALRM, signal_handler);
-      signal(SIGPROF, signal_handler);
-      signal(SIGUSR1, signal_handler);
-      signal(SIGUSR2, signal_handler);
+  signal(SIGHUP, signal_handler);
+  signal(SIGINT, signal_handler);
+  signal(SIGQUIT, signal_handler);
+  signal(SIGILL, signal_handler);
+  signal(SIGTRAP, signal_handler);
+  signal(SIGABRT, signal_handler);
+  signal(SIGFPE, signal_handler);
+  signal(SIGBUS, signal_handler);
+  signal(SIGSEGV, signal_handler);
+  signal(SIGSYS, signal_handler);
+  signal(SIGPIPE, signal_handler);
+  signal(SIGALRM, signal_handler);
+  signal(SIGTERM, signal_handler);
+  signal(SIGTTIN, signal_handler);
+  signal(SIGTTOU, signal_handler);
+  signal(SIGXCPU, signal_handler);
+  signal(SIGXFSZ, signal_handler);
+  signal(SIGVTALRM, signal_handler);
+  signal(SIGPROF, signal_handler);
+  signal(SIGUSR1, signal_handler);
+  signal(SIGUSR2, signal_handler);
 }
 
-void copy_required_files(string skel_dir) {
+/**
+ * Write the contents into the file
+ **/
+void write_contents_to_file(string file_content, string to_file) {
+  ofstream file_ptr(to_file.c_str());
+  file_ptr << file_content;
+  file_ptr << flush;
+  file_ptr.close();
+}
+
+const mode_t CONFINEMENT_ROOT_MODE = 040755;
+const string RESOLV_CONF = "/etc/resolv.conf";
+const string TERMCAP = "/usr/share/misc/termcap.db";
+const rlim_t DEFAULT_MEMORY_LIMIT = 0x2000000;
+
+void copy_required_files(uid_t isolator,
+                        string fl_pth,
+                        const string confinement_path, 
+                        const mode_t confinement_root_mode, 
+                        string skel_dir) {
   /** 
    * Copy the necessary files into the confinement directory. 
    * If the user provided a skeleton directory, then we can skip
@@ -744,10 +634,10 @@ void copy_required_files(string skel_dir) {
    * otherwise, track down the support files and build the 
    * confinement_root
    **/
+  string pth = confinement_path + fl_pth;
   if(! skel_dir.empty() )
   {
-    string cmnd = CP + " -RL" + " " + skel_dir + "/* " + confinement_path + "";
-    vrbs && cout << "Using skeleton directory " << skel_dir << " with " << cmnd << endl;
+    string cmnd = string("cp -RL") + " " + skel_dir + "/* " + confinement_path + "";
     if (system(cmnd.c_str())) {
       cerr << "WARNING: Could not build from the skeleton directory" << endl;
     }
@@ -759,49 +649,43 @@ void copy_required_files(string skel_dir) {
     pths.insert("/libexec");
     pths.insert("/etc");
     for (string_set::iterator i = pths.begin(); i != pths.end(); ++i) {
-          string p = confinement_path + *i;
-          if (mkdir(p.c_str(), CONFINEMENT_ROOT_MODE)) {
-              cerr << "Could not build confinement directory: " << strerror(errno) << endl;
-              _exit(1);
-          }
+      pth = confinement_path + *i;
+      if (mkdir(pth.c_str(), confinement_root_mode)) {
+        cerr << "Could not build confinement directory: " << strerror(errno) << endl;
+        _exit(1);
+      }
     }
-    vrbs && cerr << "Built confinement directory " << confinement_path << endl << endl;
-
-
+    
+    string_set sprt_pths;
     /* Copy the executable image into the confinement directory. */
     make_path(dirname(strdup(pth.c_str())));
     
     copy_file(fl_pth, pth);
 
     if (chmod(pth.c_str(), 0755)) {
-          cerr << "Could not make " << pth << " executable: " << strerror(errno) << endl;
-          _exit(1);
+      cerr << "Could not make " << pth << " executable: " << strerror(errno) << endl;
+      _exit(1);
     }
 
     /* Add a copy of the user's /etc/passwd */
-    string etc_pass_file = string(confinement_path + "/etc/passwd");
-    ofstream etc_pass(etc_pass_file.c_str());
-    etc_pass << "me:x:" << isolator << ":" << isolator << ":me:/home:bin/bash" ;
-    etc_pass << flush;
-    etc_pass.close();
+    string contents, fpath;
+    
+    contents = string("me:x:") + to_string(isolator, 10) + ":" + to_string(isolator, 10) + ":me:/mnt:bin/bash";
+    fpath = confinement_path + "/etc/passwd";
+    write_contents_to_file(contents, fpath);
 
     /* Add default /etc/hosts */
-    string hosts_file_path = string(confinement_path + "/etc/hosts");
-    ofstream hosts_file(hosts_file_path.c_str());
-    hosts_file << "127.0.0.1    localhost" ;
-    hosts_file << flush;
-    hosts_file.close();
+    contents = string("127.0.0.1    localhost");
+    fpath = confinement_path + "/etc/hosts";
+    write_contents_to_file(contents, fpath);
 
     /* Copy the support directories into the isolation environment. */
-    copy_support_paths(sprt_pths);
+    copy_support_paths(sprt_pths, confinement_path);
 
-    pth = confinement_path + '/' + LD_ELF_SO_PATH;
-    copy_file(LD_ELF_SO_PATH, pth);
-
-#ifndef linux
-    make_path(confinement_path + dirname(strdup(TERMCAP.c_str())));
-    copy_file(TERMCAP, confinement_path + TERMCAP);
-#endif
+    // Make this dynamic.. please? thanks
+    string ld_elf_so_path = string("/lib/ld-linux.so.2");
+    pth = confinement_path + '/' + ld_elf_so_path.c_str();
+    copy_file(ld_elf_so_path.c_str(), pth);
 
 #ifdef has_glibc 
     copy_file(NSSWITCH_CONF, confinement_path + NSSWITCH_CONF);
@@ -815,12 +699,12 @@ void copy_required_files(string skel_dir) {
   }
 }
 
-void load_executable_into_environment() {
+void load_executable_into_environment(string fl_pth, string confinement_path) {
   /** 
    * Find out if the requested program is a script, and copy in
    * the script stuff. 
    **/
-
+  rlim_t lmt_fls = 0;
   FILE *fl = fopen(fl_pth.c_str(), "rb");
   if (shell_magic(fl)) {
     char pth[PATH_MAX];
@@ -847,18 +731,53 @@ void load_executable_into_environment() {
     pth2 = confinement_path + p;
     copy_file(cp, pth2);
     chmod(pth2.c_str(), 0755);
-
-    //lmt_fls += copy_dependencies(cp) + 5;
+    lmt_fls += copy_dependencies(cp, confinement_path) + 5;
   } else {
-    // Copy the dependencies of the requested program
-    //lmt_fls += copy_dependencies(fl_pth);
+    /* Figure out what the requested program links to, and copy
+     * those things into the chroot environment. */
+    lmt_fls += copy_dependencies(fl_pth, confinement_path);
   }
   fclose(fl);
 }
 
-// int babysit(int argc, char *argv[]) {
-int babysit(const char *cmd, char* const* env) {
-  /* Setup some defaults */
+uid_t build_env(uid_t isolator,
+                const string image_path,
+                const string filesystemtype,
+                const string base_dir) 
+{  
+  const string confinement_path = base_dir + '/' + to_string(isolator, 16);
+  const mode_t confinement_root_mode = 040755;
+  create_confinement_root( confinement_path, confinement_root_mode );
+  if (chown(confinement_path.c_str(), isolator, isolator)) {
+    throw runtime_error("Could not chown confinement_path " + confinement_path + ":" + strerror(errno));
+  }
+  
+  string cmnd;
+  
+  /**
+   * If specified, mount the image file that is given
+   **/
+   if (!image_path.empty())
+   {
+     string at = confinement_path + "/mnt";
+     
+     make_path(at);
+     
+     cmnd = "mount -o ro -o loop " + image_path + " " + at;     
+     if (system(cmnd.c_str()))
+       throw runtime_error("Could not mount "+ image_path);
+   }
+   
+   return isolator;
+}
+
+pid_t babysit(uid_t isolator, 
+            const char* cmd,
+            string confinement_path,
+            char* const* env,
+            ei::StringBuffer<128> err)
+{
+  // Setup defaults
   rlim_t
     lmt_all = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_AS)),
     lmt_cr = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_CORE)),
@@ -866,32 +785,20 @@ int babysit(const char *cmd, char* const* env) {
     lmt_fls = min(static_cast<rlim_t>(3), get_resource_limit(RLIMIT_NOFILE)),
     lmt_fl_sz = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_FSIZE)),
     lmt_mlck = min(static_cast<rlim_t>(0x200000), get_resource_limit(RLIMIT_MEMLOCK)),
-// #ifndef linux
-//     lmt_ntwrk = min(static_cast<rlim_t>(0x200000), get_resource_limit(RLIMIT_SBSIZE)),
-// #endif
     lmt_prcs = min(static_cast<rlim_t>(0), get_resource_limit(RLIMIT_NPROC)),
     lmt_rss = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_RSS)),
     lmt_stck = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_STACK)),
     lmt_tm = min(static_cast<rlim_t>(10), get_resource_limit(RLIMIT_CPU));
-  
-  string confinement_root = DEFAULT_CONFINEMENT_ROOT;
-  
-  // Add ability to change this from env
-  if(!confinement_root.empty())
-    CONFINEMENT_ROOT = confinement_root;
-  
-  string skel_dir; // A skeleton directory to use (save some time building the chroot)
-  
   /** 
    * Build the default environments
    **/
-
+  uid_t invoker = getegid();
   int curr_env_vars;
   /* Set default environment variables */
   /* We need to set this so that the loader can find libs in /usr/local/lib. */
   const char* default_env_vars[] = {
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   "HOME=/home"
+   "HOME=/mnt"
   };
   const int max_env_vars = 1000;
   char *env_vars[max_env_vars];
@@ -900,66 +807,21 @@ int babysit(const char *cmd, char* const* env) {
   curr_env_vars = sizeof(default_env_vars) / sizeof(char *);
 
   for(size_t i = 0; i < sizeof(env) / sizeof(char *); ++i)
-  {
     env_vars[curr_env_vars++] = strdup(env[i]);
-  }
-  //cout << "Added env " << env_vars[curr_env_vars-1] << endl;
+  
+  pid_t pid = fork();
+  if (-1 == pid)
+    throw runtime_error("Could not fork");
+  
+  int sts = 0;
+  if (0 == pid) {
+    drop_privilege_temporarily(isolator);
+    string fl_pth = which(cmd);
+    string pth = confinement_path + fl_pth;
 
- /**
-  * Start building the isolated environment
-  * Start by generating a random, unique identifier for
-  * the user that we are going to run as.
-  **/
-  isolator = random_uid();
-  invoker = getuid(); // Store the user we are running as
-  
-  /**
-   * Create the chroot
-   **/
-  create_confinement_root();
-  
-  confinement_path = CONFINEMENT_ROOT + '/' + to_string(isolator, 16);
-  if (mkdir(confinement_path.c_str(), CONFINEMENT_ROOT_MODE)) {
-    throw runtime_error("Could not create confinement_path" + confinement_path + ":" + strerror(errno));
-  }
+    const mode_t confinement_root_mode = 040755; // Redundant... yes, I know
+    copy_required_files(isolator, fl_pth, confinement_path, confinement_root_mode, string(""));
 
-  string cmnd;
-  
-  if (chown(confinement_path.c_str(), isolator, isolator)) {
-    throw runtime_error("Could not chown confinement_path " + confinement_path + ":" + strerror(errno));
-  }
-  
-  /**
-   * If specified, mount the image file that is given
-   **/
-   if (!image_path.empty())
-   {
-     string at = confinement_path + "/home";
-     
-     make_path(at);
-     cmnd = MOUNT + " -o ro -o loop " + image_path + " " + at;
-     
-     if (system(cmnd.c_str()))
-       throw runtime_error("Could not mount "+ image_path);
-   }
-  
-  /**
-   * Start forking and isolating
-   **/
-   pid_t chld = fork();
-   if (-1 == chld)
-     throw runtime_error("Could not fork");
-   
-   int sts = 0;
-   // If we've made it into the forked process
-   if( 0 == chld )
-   {
-     drop_privilege_temporarily(isolator);
-     fl_pth = which(cmd);
-     pth = confinement_path + fl_pth;
-
-     copy_required_files(skel_dir);
-     
     /** 
      * Work with the executable that the user requested to run
      **/
@@ -967,13 +829,12 @@ int babysit(const char *cmd, char* const* env) {
       cerr << "Could not make " << pth << " executable: " << strerror(errno) << endl;
       _exit(1);
     }
-    
-    load_executable_into_environment();
-  
+
+    load_executable_into_environment(fl_pth, confinement_path);
+
     /* Do the final sandboxing. */
     restore_privilege();
-    ensure_no_processes();
-    confine();
+    confine(confinement_path);
 
     /* Set the resource limits. */
     drop_privilege_temporarily(invoker);
@@ -1003,36 +864,28 @@ int babysit(const char *cmd, char* const* env) {
     lmt_fls = min(lmt_fls, get_resource_limit(RLIMIT_NOFILE));
     lmt_fl_sz = min(lmt_fl_sz, get_resource_limit(RLIMIT_FSIZE));
     lmt_mlck = min(lmt_mlck, get_resource_limit(RLIMIT_MEMLOCK));
-// #ifndef linux
-//     lmt_ntwrk = min(lmt_ntwrk, get_resource_limit(RLIMIT_SBSIZE));
-// #endif
+    // #ifndef linux
+    //     lmt_ntwrk = min(lmt_ntwrk, get_resource_limit(RLIMIT_SBSIZE));
+    // #endif
     lmt_prcs = min(lmt_prcs, get_resource_limit(RLIMIT_NPROC));
     lmt_rss = min(lmt_rss, get_resource_limit(RLIMIT_RSS));
     lmt_stck = min(lmt_stck, get_resource_limit(RLIMIT_STACK));
     lmt_tm = min(lmt_tm, get_resource_limit(RLIMIT_CPU));
 
-
     /**
      * Execute the sandbox -> fork -> run
      **/
     char* argv[] = {NULL};
-    execve(fl_pth.c_str(), argv, env_vars);
-    
-    cerr << "Could not execute " << *argv << ": " << strerror(errno) << endl;
-    _exit(errno);
+    if (execve(fl_pth.c_str(), argv, env_vars)) {
+      err.write("Cannot execute chroot");
+      return EXIT_FAILURE;
+    }
   } else {
     install_handlers();
-
+    
+    cerr << "In parent process... I wonder why..." << endl;
     (void) wait(&sts);
-
-    if (vrbs) {
-          cerr << endl << "Resource usage statistics for \"";
-          // for (int i = 0; i < argc; i++) {
-          //   cerr << argv[i] << (argc - 1 == i ? "" : " ");
-          // }
-          cerr << "\": " << endl;
-          print_rusage();
-    }
   }
-  return WEXITSTATUS(sts);
+  
+  return pid;
 }

@@ -163,18 +163,8 @@ build_isolate_command(Opts) ->
   FilesCount = build_cli_option("-f", files_count, Opts),
   Mount = build_cli_option("-i", image, Opts),
   Env = build_cli_option("-e", env, Opts),
-  
-  lists:flatten(["exec ", 
-    babysitter:isolate_command(), 
-    ConfineDirectory,
-    SkelOrDirs,
-    ProcessCount,
-    FilesCount,
-    Mount,
-    Env,
-    " ",
-    Command
-  ]).
+
+  Command.
 
 % Build the command-line option
 build_cli_option(Switch, Param, Opts) -> 
@@ -191,6 +181,7 @@ build_exec_opts([{env, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{nice, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{stdout, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{stderr, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
+build_exec_opts([{image, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{kill, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{user, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([_Else|Rest], Acc) -> build_exec_opts(Rest, Acc).
