@@ -1,17 +1,14 @@
-int babysit(const char *cmd, char* const* env);
+//-------------------------------------------------------------------------
+// Helpers
+//-------------------------------------------------------------------------
+const std::string HELP_MESSAGE =
+"Usage:\n"
+" babysitter [-hnD] [-a N]\n"
+"Options:\n"
+" -h                Show this message\n"
+" -n                Using marshaling file descriptors 3 and 4 instead of default 0 and 1\n"
+" -D                Turn on debugging\n"
+" -u [username]     Run as this user (if running as root)\n"
+" -a [seconds]      Set the number of seconds to live after receiving a SIGTERM/SIGINT (default 30)\n"
+;
 
-struct BabySitterInfo {
-  std::string    cmd;         // Command to execute
-  rlim_t         r_limits;    // Limits for chroot
-  char *         env_vars;  // Environment variables
-  std::string    image_path;  // Image to mount
-  
-  BabySitterInfo() {}
-  BabySitterInfo(const char* _cmd, rlim_t _limits, char* _env_vars, std::string _image_path) {
-      new (this) BabySitterInfo();
-      cmd       = _cmd;
-      r_limits  = _limits;
-      env_vars  = _env_vars;
-      image_path = _image_path;
-  }
-};

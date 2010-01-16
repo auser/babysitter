@@ -1,891 +1,954 @@
 /**
- * babysitter -- Mount and run a command in a chrooted environment
- * with an image
+ * Babysitter -- Mount and run a command in a chrooted environment with mouted image support
  *
- * Based on the brilliant work of snackypants, aka Chris Palmer <chris@isecpartners.com>.
- */
+ * Based on the brilliant work of snackypants, aka Chris Palmer <chris@isecpartners.com> and Serge Aleynikov
+ * Description:
+ * ============
+ * Erlang port program for spawning and controlling OS tasks. 
+ * It listens for commands sent from Erlang and executes them until 
+ * the pipe connecting it to Erlang VM is closed or the program 
+ * receives SIGINT or SIGTERM. At that point it kills all processes
+ * it forked by issuing SIGTERM followed by SIGKILL in 6 seconds.
+ * 
+ * Marshalling protocol:
+ *     Erlang                                                 C++
+ *     | ---- {TransId::integer(), Instruction::tuple()} ---> |
+ *     | <----------- {TransId::integer(), Reply} ----------- |
+ * 
+ *  Instruction = {run,   Cmd::string(), Options}   |
+ *                {shell, Cmd::string(), Options}   |
+ *                {list}                            | 
+ *                {stop, OsPid::integer()}          |
+ *                {kill, OsPid::integer(), Signal::integer()}
+ *  Options = [Option]
+ *  Option  = {cd, Dir::string()} | {env, [string()]} | {kill, Cmd::string()} |
+ *            {user, User::string()} | {nice, Priority::integer()} |
+ *            {stdout, Device::string()} | {stderr, Device::string()}
+ *  Device  = null | stderr | stdout | File::string() | {append, File::string()}
+ * 
+ *  Reply = ok                      |       // For kill/stop commands
+ *          {ok, OsPid}             |       // For run/shell command
+ *          {ok, [OsPid]}           |       // For list command
+ *          {error, Reason}         | 
+ *          {exit_status, OsPid, Status}    // OsPid terminated with Status
+ * 
+ *  Reason = atom() | string()
+ *  OsPid  = integer()
+ *  Status = integer()
+ * 
+ **/
 
+// Core includes
+#include <stdio.h>
+#include <errno.h>
+#include <signal.h>
+#include <unistd.h>
+#include <string.h>
 
-#include <sys/param.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/time.h>
+// Object includes
+#include <pwd.h>
+#include <map>
+#include <list>
+#include <deque>
+#include <sstream>
+// System includes
+#include <sys/mount.h>
+#include <sys/prctl.h>
+#include <sys/capability.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/mount.h>
+#include <sys/time.h>
+#include <setjmp.h>
+#include <limits.h>
 
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <gelf.h>
-#ifdef linux
-  #include <grp.h>    // For setgroups(2)
-#endif
-#include <libgen.h>
-#include <regex.h>
-#include <signal.h>
-
-#include <cstring>
-#include <cstdlib>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <stdexcept>
-#include <dirent.h>
-
-using namespace std;
-
-#include "help.h"
-#include "privilege.h"
+// Our own includes
+#include "chroot.h"
 #include "babysitter.h"
+#include <ei.h>
 #include "ei++.h"
 
-typedef set<string> string_set;
+using namespace ei;
 
-/* Functions. */
-static uid_t random_uid() throw (runtime_error);
-/**
- * NOTE: The implementation of this function is amusing.
- *
- * @param n The number to convert to a string.
- *
- * @param base The base in which to represent the number. Can be 8, 10, or
- * 16. Any other value is treated as if it were 10.
- *
- * @return A pointer to a static array of characters representing the number
- * as a string.
- */
-static const char * const to_string(long long int n, unsigned char base) {
-  static char bfr[32];
+//-------------------------------------------------------------------------
+// Defines
+//-------------------------------------------------------------------------
 
-  const char * frmt = "%lld";
-  if (16 == base) {
-    frmt = "%llx";
-  } else if (8 == base) {
-    frmt = "%llo";
-  }
-  snprintf(bfr, sizeof(bfr) / sizeof(bfr[0]), frmt, n);
-  return bfr;
-}
+#define BUF_SIZE 2048
 
-/**
- * @param source The name of the source file.
- * @param destination The name of the destination file.
- *
- * @throws runtime_error If the file could not be copied for any reason.
- */
-static void copy_file(const string &source, const string &destination) throw (runtime_error) {
-  struct stat stt;
-  if (0 == stat(destination.c_str(), &stt))
-    return;
+//-------------------------------------------------------------------------
+// Types
+//-------------------------------------------------------------------------
 
-  FILE *src = fopen(source.c_str(), "rb");
-  if (NULL == src)
-    throw runtime_error(string("Could not read ") + source + ": " + strerror(errno));
+class CmdInfo;
 
-  FILE *dstntn = fopen(destination.c_str(), "wb");
-  if (NULL == dstntn) {
-    fclose(src);
-    throw runtime_error(string("Could not write ") + destination + ": " + strerror(errno));
-  }
+typedef unsigned char byte;
+typedef int   exit_status_t;
+typedef pid_t kill_cmd_pid_t;
+typedef std::pair<pid_t, exit_status_t>     PidStatusT;
+typedef std::pair<pid_t, CmdInfo>           PidInfoT;
+typedef std::map <pid_t, CmdInfo>           MapChildrenT;
+typedef std::pair<kill_cmd_pid_t, pid_t>    KillPidStatusT;
+typedef std::map <kill_cmd_pid_t, pid_t>    MapKillPidT;
 
-  char bfr [4096];
-  while (true) {
-    size_t r = fread(bfr, 1, sizeof bfr, src);
-    if (0 == r || r != fwrite(bfr, 1, r, dstntn)) {
-      break;
+class CmdOptions {
+    ei::StringBuffer<256>   m_tmp;       // Temporary storage
+    std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
+    std::string             m_cmd;       // The command to execute
+    std::string             m_cd;        // The directory to execute the command (generated, if not given)
+    std::string             m_stdout;    // The stdout to use for the execution of the command
+    std::string             m_stderr;    // The stderr to use for the execution of the command
+    std::string             m_kill_cmd;  // A special command to kill the process (if needed)
+    std::string             m_image;     // The path to the image file to mount
+    std::list<std::string>  m_env;       // A list of environment variables to use when starting
+    long                    m_nice;      // The "niceness" level
+    size_t                  m_size;      // The heap/stack size
+    int                     m_user;      // run as user (generated if not given)
+    const char**            m_cenv;      // The string list of environment variables
+
+public:
+
+    CmdOptions() : m_tmp(0, 256), m_image(NULL), m_nice(INT_MAX), m_size(0), m_user(INT_MAX), m_cenv(NULL) {}
+    ~CmdOptions() { delete [] m_cenv; m_cenv = NULL; }
+
+    const char*  strerror() const { return m_err.str().c_str(); }
+    const char*  cmd()      const { return m_cmd.c_str(); }
+    const char*  cd()       const { return m_cd.c_str(); }
+    const char*  image()    const { return m_image.c_str(); }
+    char* const* env()      const { return (char* const*)m_cenv; }
+    const char*  kill_cmd() const { return m_kill_cmd.c_str(); }
+    int          user()     const { return m_user; }
+    int          nice()     const { return m_nice; }
+    
+    int ei_decode(ei::Serializer& ei);
+};
+
+/// Contains run-time info of a child OS process.
+/// When a user provides a custom command to kill a process this 
+/// structure will contain its run-time information.
+struct CmdInfo {
+    std::string     cmd;            // Executed command
+    std::string     mount_point;    // Mount-point related to this process
+    pid_t           cmd_pid;        // Pid of the custom kill command
+    std::string     kill_cmd;       // Kill command to use (if provided - otherwise use SIGTERM)
+    kill_cmd_pid_t  kill_cmd_pid;   // Pid of the command that <pid> is supposed to kill
+    ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
+    bool            sigterm;        // <true> if sigterm was issued.
+    bool            sigkill;        // <true> if sigkill was issued.
+
+    CmdInfo() : cmd_pid(-1), kill_cmd_pid(-1), sigterm(false), sigkill(false) {}
+    CmdInfo(const CmdInfo& ci) {
+        new (this) CmdInfo(ci.cmd.c_str(), ci.kill_cmd.c_str(), ci.cmd_pid);
     }
-  }
+    CmdInfo(const char* _cmd, const char* _kill_cmd, pid_t _cmd_pid) {
+        new (this) CmdInfo();
+        cmd      = _cmd;
+        cmd_pid  = _cmd_pid;
+        kill_cmd = _kill_cmd;
+    }
+    CmdInfo(const char* _cmd, const char* _mount_point, const char* _kill_cmd, pid_t _cmd_pid) {
+        new (this) CmdInfo();
+        mount_point = _mount_point;
+        cmd         = _cmd;
+        cmd_pid     = _cmd_pid;
+        kill_cmd    = _kill_cmd;
+    }
+};
 
-  fclose(src);
-  if (fclose(dstntn)) {
-    throw runtime_error(string("Could not write ") + destination + ": " + strerror(errno));
-  }
-}
+
+//-------------------------------------------------------------------------
+// Global variables
+//-------------------------------------------------------------------------
+
+ei::Serializer eis(/* packet header size */ 2);
+
+sigjmp_buf  jbuf;
+int alarm_max_time     = 12;
+static bool debug      = false;
+static bool oktojump   = false;
+static bool signaled   = false;     // indicates that SIGCHLD was signaled
+static int  terminated = 0;         // indicates that we got a SIGINT / SIGTERM event
+static bool superuser  = false;
+static bool pipe_valid = true;
+
+MapChildrenT children;              // Map containing all managed processes started by this port program.
+MapKillPidT  transient_pids;        // Map of pids of custom kill commands.
+
+#define SIGCHLD_MAX_SIZE 4096
+std::deque< PidStatusT > exited_children;  // deque of processed SIGCHLD events
+
+//-------------------------------------------------------------------------
+// Local Functions
+//-------------------------------------------------------------------------
+
+int   send_ok(int transId, pid_t pid = -1);
+int   send_pid_status_term(const PidStatusT& stat);
+int   send_error_str(int transId, bool asAtom, const char* fmt, ...);
+int   send_pid_list(int transId, const MapChildrenT& children);
+
+pid_t start_child(const CmdOptions& op);
+int   kill_child(pid_t pid, int sig, int transId, bool notify=true);
+int   check_children(int& isTerminated, bool notify = true);
+void  stop_child(pid_t pid, int transId, const TimeVal& now);
+int   stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify = true);
 
 /**
- * Check if it's an absolute path
+ * We received a signal for the child pid process
+ * Wait for the pid to exit if it hasn't only if the and it's an interrupt process
+ * make sure the process get the pid and signal to it
  **/
-static bool is_absolute_path(const string & path) throw () {
-  return '/' == path[0] || ('.' == path[0] && '/' == path[1]);
-}
-
-/**
- * @param file The basename of a file to find in one of the directories
- * specified in $PATH. (If $PATH is not available, DEFAULT_PATH is used.)
- *
- * @return A new string giving the full path in which file was found.
- *
- * @throws range_error if file was not found in $PATH/DEFAULT_PATH.
- */
-const string DEFAULT_PATH = "/bin:/usr/bin:/usr/local/bin";
-static string which(const string &file) throw (runtime_error) {
-  if (is_absolute_path(file))
-    return file;
-
-  string pth = DEFAULT_PATH;
-  char *p = getenv("PATH");
-  if (p)
-    pth = p;
-
-  string::size_type i = 0;
-  string::size_type f = pth.find(':', i);
-  do {
-    string s = pth.substr(i, f - i) + "/" + file;
-    if (0 == access(s.c_str(), X_OK))
-      return s;
-
-    i = f + 1;
-    f = pth.find(':', i);
-  } while (string::npos != f);
-
-  if (! is_absolute_path(file))
-    throw runtime_error("File not found in $PATH");
-
-  if (0 == access(file.c_str(), X_OK))
-    return file;
-
-  throw runtime_error("File not found in $PATH");
-}
-
-/**
- * @param matchee The string to match against pattern.
- * @param pattern The pattern to test.
- * @param flags The regular expression compilation flags (see regex(3)).
- * (REG_EXTENDED|REG_NOSUB is applied implicitly.)
- *
- * @return true if matchee matches pattern, false otherwise.
- */
-static bool matches_pattern(const string &matchee, const char * pattern, int flags) throw (logic_error)
+int process_child_signal(pid_t pid)
 {
-  regex_t xprsn;
-  if (regcomp(&xprsn, pattern, flags|REG_EXTENDED|REG_NOSUB))
-    throw logic_error("Failed to compile regular expression");
-
-  if (0 == regexec(&xprsn, matchee.c_str(), 1, NULL, 0)) {
-        regfree(&xprsn);
-        return true;
-  }
-
-  regfree(&xprsn);
-  return false;
-}
-
-/**
- * @param path The path to create, with successive calls to mkdir(2).
- *
- * @throws runtime_error If any call to mkdir failed.
- */
-static void make_path(const string & path) {
-  struct stat stt;
-  if (0 == stat(path.c_str(), &stt) && S_ISDIR(stt.st_mode))
-    return;
-
-  string::size_type lngth = path.length();
-  for (string::size_type i = 1; i < lngth; ++i) {
-    if (lngth - 1 == i || '/' == path[i]) {
-      string p = path.substr(0, i + 1);
-      if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
-            throw runtime_error("Could not create path (make_path:230) " + p + ": " + strerror(errno));
-      }
-    }
-  }
-}
-
-/**
- * Create the confinement root
- **/
-static void create_confinement_root(const string &confinement_root, const mode_t confinement_root_mode) throw (runtime_error) {
-  struct stat stt;
-
-  if (0 == stat(confinement_root.c_str(), &stt)) {
-    if (0 != stt.st_uid || 0 != stt.st_gid) {
-      throw runtime_error(confinement_root + " not owned by 0:0. Cannot continue.");
-    }
-
-    if (stt.st_mode != confinement_root_mode) {
-      throw runtime_error(confinement_root + " is mode " + to_string(stt.st_mode, 8) + 
-        "; should be " + to_string(confinement_root_mode, 8));
-    }
-  } else if (ENOENT == errno) {
-    gid_t egid = getegid();
-    setegid(0);
+  // If we have less exited_children then allowed
+  if (exited_children.size() < exited_children.max_size()) {
+    int status;
+    pid_t ret;
     
-    if (mkdir(confinement_root.c_str(), confinement_root_mode)) {
-      throw runtime_error("Could not create confinement_root" + confinement_root + ":" + strerror(errno));
-    }  
+    while ((ret = waitpid(pid, &status, WNOHANG)) < 0 && errno == EINTR);
     
-    setegid(egid);
+    // Check for the return on the child process
+    if (ret < 0 && errno == ECHILD) {
+      int status = ECHILD;
+      if (kill(pid, 0) == 0) // process likely forked and is alive
+        status = 0;
+      if (status != 0)
+        exited_children.push_back(std::make_pair(pid <= 0 ? ret : pid, status));
+    } else if (pid <= 0)
+      exited_children.push_back(std::make_pair(ret, status));
+    else if (ret == pid)
+      exited_children.push_back(std::make_pair(pid, status));
+    else
+      return -1;
+    return 1;
+  } else {
+    // else - defer calling waitpid() for later
+    signaled = true;
+    return 0;
   }
-  else {
-    throw runtime_error(confinement_root + ": " + strerror(errno));
-  }
-}
+}   
 
-/**
- * Add nice error messaging
- **/
-static map<int, string> populate_resources() {
-  static map<int, string> resources;
-  resources[RLIMIT_AS]      = "RLIMIT_AS (virtual memory size)";
-  resources[RLIMIT_CORE]    = "RLIMIT_CORE (core file size)";
-  resources[RLIMIT_DATA]    = "RLIMIT_DATA (data segment size)";
-  resources[RLIMIT_NOFILE]  = "RLIMIT_NOFILE (number of files)";
-  resources[RLIMIT_MEMLOCK] = "RLIMIT_MEMLOCK (locked memory size)";
-  resources[RLIMIT_NPROC]   = "RLIMIT_NPROC (simultaneous processes)";
-  resources[RLIMIT_RSS]     = "RLIMIT_RSS (resident set size)";
-  resources[RLIMIT_STACK]   = "RLIMIT_STACK (stack size)";
-  resources[RLIMIT_CPU]     = "RLIMIT_CPU (CPU time)";
-  resources[RLIMIT_FSIZE]   = "RLIMIT_FSIZE (file size)";
-
-  return resources;
-}
-
-
-/**
- * @param resource The resource to set the limit on. (See setrlimit(2).)
- *
- * @param limit The value -- hard and soft -- of the limit.
- *
- * @throws runtime_error If setrlimit fails.
- */
-static void set_resource_limit(const int resource, const rlim_t limit) throw (runtime_error) {
-  struct rlimit rlmt = { limit, limit };
-  if (setrlimit(resource, &rlmt)) {
-    static map<int, string> resources = populate_resources();
-    throw runtime_error("Could not set resource " + resources[resource] + 
-      " to " + to_string(limit, 10) + ": " + strerror(errno));
-  }
-}
-
-/**
- * Confines the process to confinement_path.
- *
- * @throws runtime_error If chroot(2) or chdir(2) fail.
- */
-static void confine(string confinement_path) throw (runtime_error) {
-  if (chdir(confinement_path.c_str()) || chroot(confinement_path.c_str()) || chdir("/")) {
-    throw runtime_error("Could not confine to " + confinement_path + ": " + strerror(errno));
-  }
-}
-
-/**
- * @return An unpredictable (uid_t is not large enough for me to say
- * "secure") UID.
- *
- * @throws runtime_error If a security assertion cannot be met.
- */
-const string DEV_RANDOM = "/dev/urandom";
-static uid_t random_uid() throw (runtime_error) {
-  uid_t u;
-  for (unsigned char i = 0; i < 10; i++) {
-    int rndm = open(DEV_RANDOM.c_str(), O_RDONLY);
-    if (sizeof(u) != read(rndm, reinterpret_cast<char *>(&u), sizeof(u))) {
-      continue;
-    }
-    close(rndm);
-
-    if (u > 0xFFFF) {
-      return u;
-    }
-  }
-
-  throw runtime_error("Could not generate a good random UID after 10 attempts. Bummer!");
-}
-
-/**
- * @param file The file to test.
- *
- * @return True if the file's first two bytes are "#!". Advances the file
- * pointer by two bytes.
- */
-static bool shell_magic(FILE *file) throw () {
-  char bfr[2];
-  if (2 != fread(bfr, sizeof(char), 2, file)) {
-    return false;
-  }
-
-  if ('#' == bfr[0] && '!' == bfr[1]) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * @param name A string that might be the name of a code library, e.g.
- * libc.so.7.
- *
- * @return Whether or not the string is plausibly the name of a code
- * library.
- */
-static bool names_library(const string & name) throw() {
- return matches_pattern(name, "^lib.+\\.so[.0-9]*$", 0);
-}
-
-/**
- * @param elf A pointer to an Elf object (see elf(3)).
- *
- * @return A pair of vectors of strings. The first member is a vector of
- * libraries (e.g. "libc.so.7"), and the second is a vector of search paths
- * (e.g. "/usr/local/gadget/lib").
- *
- * @throws runtime_error If the Elf could not be parsed normally.
- */
-static pair<string_set *, string_set *> * dynamic_loads(Elf *elf) throw (runtime_error) {
-  assert(geteuid() != 0 && getegid() != 0);
-
-  GElf_Ehdr ehdr;
-  if (! gelf_getehdr(elf, &ehdr)) {
-    throw runtime_error(string("elf_getehdr failed: ") + elf_errmsg(-1));
-  }
-
-  Elf_Scn *scn = elf_nextscn(elf, NULL);
-  GElf_Shdr shdr;
-  string to_find = ".dynstr";
-  while (scn) {
-    if (NULL == gelf_getshdr(scn, &shdr)) {
-      throw runtime_error(string("getshdr() failed: ") + elf_errmsg(-1));
-    }
-    char * nm = elf_strptr(elf, ehdr.e_shstrndx, shdr.sh_name);
-    if (NULL == nm) {
-      throw runtime_error(string("elf_strptr() failed: ") + elf_errmsg(-1));
-    }
-    if (to_find == nm) {
-      break;
-    }
-
-    scn = elf_nextscn(elf, scn);
-  }
-
-  Elf_Data *data = NULL;
-  size_t n = 0;
-  string_set *lbrrs = new string_set(), *pths = new string_set();
-
-  pths->insert("/lib");
-  pths->insert("/usr/lib");
-  pths->insert("/usr/local/lib");
-
-  while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
-    char *bfr = static_cast<char *>(data->d_buf);
-    char *p = bfr + 1;
-    while (p < bfr + data->d_size) {
-      if (names_library(p)) {
-        lbrrs->insert(p);
-      } else if ('/' == *p) {
-        pths->insert(p);
-      }
-      
-      size_t lngth = strlen(p) + 1;
-      n += lngth;
-      p += lngth;
-    }
-  }
-
-  return new pair<string_set *, string_set *>(lbrrs, pths);
-}
-
-/**
- * @param image The path to the executable image file.
- *
- * @return The number of dependencies copied into confinement_path.  XXX:
- * This allows a malicious isolatee to increase the number of files it can
- * open. However, I think it is all under the control of the loader?
- *
- * @throws runtime_error if the image could not be parsed. Does not throw
- * if a dependency could not be copied.
- */
-string_set already_copied;
-static rlim_t copy_dependencies(const string image, const string confinement_path) throw (runtime_error) {
-  if (EV_NONE == elf_version(EV_CURRENT)) {
-    throw runtime_error(string("ELF library initialization failed: ") + elf_errmsg(-1));
-  }
-
-  int fl = open(image.c_str(), O_RDONLY);
-  if (-1 == fl) {
-    throw runtime_error(string("Could not open ") + image + ": " + strerror(errno));
-  }
-
-  Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
-  if (NULL == elf) {
-    throw runtime_error(string("elf_begin failed: ") + elf_errmsg(-1));
-  }
-
-  if (ELF_K_ELF != elf_kind(elf)) {
-    throw runtime_error(image + " is not an ELF object.");
-  }
-
-  pair<string_set *, string_set *> *r = dynamic_loads(elf);
-  string_set lds = *r->first;
-  rlim_t lmt_fls = 0;
-
-  for (string_set::iterator ld = lds.begin(); ld != lds.end(); ++ld) {
-    string_set pths = *r->second;
-    bool fnd = false;
-
-    for (string_set::iterator pth = pths.begin(); pth != pths.end(); ++pth) {
-      string src = *pth + '/' + *ld;
-      if (already_copied.count(src)) {
-        fnd = true;
-        continue;
-      }
-      string dstntn = confinement_path + src;
-
-      try {
-        make_path(dirname(strdup(dstntn.c_str())));
-
-        copy_file(src, dstntn);
-        lmt_fls += 1;
-        fnd = true;
-        already_copied.insert(src);
-        lmt_fls += copy_dependencies(src, confinement_path);    // FIXME: Grossly inefficient.
-        break;
-      } catch (runtime_error e) { }
-    }
-
-    if (! fnd) {
-      cerr << "Could not find library " << *ld << endl;
-      }
-    }
-
-  elf_end(elf);
-  close(fl);
-  return lmt_fls;
-}
-
-/**
- * @param resource The resource for which to find the limit. See
- * getrlimit(2).
- *
- * @return The current process' maximum limit for the given resource.
- */
-static rlim_t get_resource_limit(int resource) throw () {
-  struct rlimit rlmt;
-  if (getrlimit(resource, &rlmt)) {
-    throw runtime_error(string("getrlimit: ") + strerror(errno));
-  }
-  return rlmt.rlim_max;
-}
-
-/**
- * For each support path, recursively copies it into confinement_path by
- * calling cp(1) through system(3).
- *
- * @param support_paths The paths to the support directories.
- *
- * @throws runtime_error if the cp command fails for any reason.
- */
-static void copy_support_paths(const string_set &support_paths, const string &confinement_path) throw (runtime_error) {
-  for (string_set::const_iterator i = support_paths.begin(); i != support_paths.end(); ++i) {
-    string src = *i;
-    string wildcard ("*");
-    size_t found;
-    string cmnd;
-    
-    found = src.find(wildcard);
-    
-    // Make the paths
-    string dstntn_pth = confinement_path + dirname(strdup(src.c_str()));
-
-    if(found != string::npos)
-    {
-      // We found a wildcard, we'll use a command instead
-      make_path(dstntn_pth.c_str());
-      cmnd = string("cp -RL") + " " + src + " " + dstntn_pth + "";
-      if (system(cmnd.c_str())) {
-        throw runtime_error("Could not copy " + src + " into " + confinement_path);
-      }
-    } else {
-      struct stat stt;
-      if (stat(src.c_str(), &stt)) {
-        throw runtime_error(src + ": " + strerror(errno));
-      }
-
-      make_path(dstntn_pth.c_str());
-
-      // If it's just a file, copy it directly and continue.
-      if (S_ISREG(stt.st_mode)) {
-        copy_file(src, confinement_path + src);
-        continue;
-      }
-
-      cmnd = string("cp -RL") + " \"" + src + "\" \"" + dstntn_pth + "\"";
-      if (system(cmnd.c_str())) {
-        throw runtime_error("Could not copy " + src + " into " + confinement_path);
-      }
-    }
-  }
-}
-
-/**
- * Is this a directory
- **/
-bool is_directory(char path[]) {
-  if (path[strlen(path)] == '.') {return true;}
-  for (int i = strlen(path) - 1; i >= 0; i--) {
-    if (path[i] == '.') return false;
-    else if (path[i] == '\\' || path[i] == '/') { return true; }
-  }
-  return false; // Should never get here
-}
-/**
- * Recursively delete
- **/
-int recursively_delete(string path) {
-  if((path[path.length() - 1]) != '\\') path+= "\\";
-  
-  DIR *pdir = NULL;
-  pdir = opendir(path.c_str());
-  struct dirent *pent = NULL;
-  if(pdir == NULL) {
-    return false;
-  }
-  
-  char file[256];
-  int counter = 1;
-  
-  while ( pent = readdir(pdir) ) {
-    if(counter > 2) {
-      for(int i = 0; i < 256; i++) {
-        strcat(file, path.c_str());
-      }
-      if (pent == NULL) return false;
-      strcat(file, pent->d_name);
-      if (is_directory(file) == true) { recursively_delete(file); } else { remove(file); }
-    } counter ++;
-  }
-  return 0;
-}
-
-/**
- * Performs necessary filesystem clean-up after the isolatee exits.
- */
-static void clean_up() {
-  // Nothing... yet?
-}
-
-void signal_handler(int received) {
-  cerr << "Received signal " << received << endl;
-  cerr << endl;
-  cout << endl;
-  _exit(1);
-}
-
-/**
- * Installs the signal handlers and the atexit handler to clean up the
- * isolation environment when the parent exits.
- */
-void install_handlers() {
-  atexit(clean_up);
-#ifdef linux
-  #define signal bsd_signal
-#endif
-  signal(SIGHUP, signal_handler);
-  signal(SIGINT, signal_handler);
-  signal(SIGQUIT, signal_handler);
-  signal(SIGILL, signal_handler);
-  signal(SIGTRAP, signal_handler);
-  signal(SIGABRT, signal_handler);
-  signal(SIGFPE, signal_handler);
-  signal(SIGBUS, signal_handler);
-  signal(SIGSEGV, signal_handler);
-  signal(SIGSYS, signal_handler);
-  signal(SIGPIPE, signal_handler);
-  signal(SIGALRM, signal_handler);
-  signal(SIGTERM, signal_handler);
-  signal(SIGTTIN, signal_handler);
-  signal(SIGTTOU, signal_handler);
-  signal(SIGXCPU, signal_handler);
-  signal(SIGXFSZ, signal_handler);
-  signal(SIGVTALRM, signal_handler);
-  signal(SIGPROF, signal_handler);
-  signal(SIGUSR1, signal_handler);
-  signal(SIGUSR2, signal_handler);
-}
-
-/**
- * Write the contents into the file
- **/
-void write_contents_to_file(string file_content, string to_file) {
-  ofstream file_ptr(to_file.c_str());
-  file_ptr << file_content;
-  file_ptr << flush;
-  file_ptr.close();
-}
-
-const mode_t CONFINEMENT_ROOT_MODE = 040755;
-const string RESOLV_CONF = "/etc/resolv.conf";
-const string TERMCAP = "/usr/share/misc/termcap.db";
-const rlim_t DEFAULT_MEMORY_LIMIT = 0x2000000;
-
-void copy_required_files(uid_t isolator,
-                        string fl_pth,
-                        const string confinement_path, 
-                        const mode_t confinement_root_mode, 
-                        string skel_dir) {
-  /** 
-   * Copy the necessary files into the confinement directory. 
-   * If the user provided a skeleton directory, then we can skip
-   * all of the smart lookups and just use that directory
-   * otherwise, track down the support files and build the 
-   * confinement_root
-   **/
-  string pth = confinement_path + fl_pth;
-  if(! skel_dir.empty() )
+// int send_error_str(int transId, bool asAtom, const char* fmt, ...)
+void dmesg(const char *fmt, ...) {
+  if(debug)
   {
-    string cmnd = string("cp -RL") + " " + skel_dir + "/* " + confinement_path + "";
-    if (system(cmnd.c_str())) {
-      cerr << "WARNING: Could not build from the skeleton directory" << endl;
-    }
-  } else {
-    string_set pths;
-    pths.insert("/tmp");
-    pths.insert("/bin");
-    pths.insert("/lib");
-    pths.insert("/libexec");
-    pths.insert("/etc");
-    for (string_set::iterator i = pths.begin(); i != pths.end(); ++i) {
-      pth = confinement_path + *i;
-      if (mkdir(pth.c_str(), confinement_root_mode)) {
-        cerr << "Could not build confinement directory: " << strerror(errno) << endl;
-        _exit(1);
-      }
-    }
-    
-    string_set sprt_pths;
-    /* Copy the executable image into the confinement directory. */
-    make_path(dirname(strdup(pth.c_str())));
-    
-    copy_file(fl_pth, pth);
+    char str[BUF_SIZE];
+    va_list vargs;
+    va_start (vargs, fmt);
+    vsnprintf(str, sizeof(str), fmt, vargs);
+    va_end   (vargs);
 
-    if (chmod(pth.c_str(), 0755)) {
-      cerr << "Could not make " << pth << " executable: " << strerror(errno) << endl;
-      _exit(1);
-    }
-
-    /* Add a copy of the user's /etc/passwd */
-    string contents, fpath;
-    
-    contents = string("me:x:") + to_string(isolator, 10) + ":" + to_string(isolator, 10) + ":me:/mnt:bin/bash";
-    fpath = confinement_path + "/etc/passwd";
-    write_contents_to_file(contents, fpath);
-
-    /* Add default /etc/hosts */
-    contents = string("127.0.0.1    localhost");
-    fpath = confinement_path + "/etc/hosts";
-    write_contents_to_file(contents, fpath);
-
-    /* Copy the support directories into the isolation environment. */
-    copy_support_paths(sprt_pths, confinement_path);
-
-    // Make this dynamic.. please? thanks
-    string ld_elf_so_path = string("/lib/ld-linux.so.2");
-    pth = confinement_path + '/' + ld_elf_so_path.c_str();
-    copy_file(ld_elf_so_path.c_str(), pth);
-
-#ifdef has_glibc 
-    copy_file(NSSWITCH_CONF, confinement_path + NSSWITCH_CONF);
-    copy_file(NSS_COMPAT, confinement_path + NSS_COMPAT);
-    copy_file(NSS_DNS, confinement_path + NSS_DNS);
-    copy_file(NSS_FILES, confinement_path + NSS_FILES);
-    copy_file(LIBRESOLV, confinement_path + LIBRESOLV);
-#endif
- 
-    copy_file(RESOLV_CONF, confinement_path + RESOLV_CONF);
+    fprintf(stderr, fmt, str);
   }
 }
 
-void load_executable_into_environment(string fl_pth, string confinement_path) {
-  /** 
-   * Find out if the requested program is a script, and copy in
-   * the script stuff. 
-   **/
-  rlim_t lmt_fls = 0;
-  FILE *fl = fopen(fl_pth.c_str(), "rb");
-  if (shell_magic(fl)) {
-    char pth[PATH_MAX];
-    size_t r = fread(pth, sizeof(char), PATH_MAX, fl);
-    pth[r] = '\0';
-
-    // Trim whitespace at the beginning and end of the
-    // interpreter path.
-    char *p = pth;
-    while (' ' == *p) {
-          p++;
-    }
-    char *q = strchr(p, '\n');
-    if (NULL == q) {
-          q = strchr(p, ' ');
-    }
-    *q = '\0';
-
-    string cp = p;
-
-    string pth2 = confinement_path + dirname(strdup(cp.c_str()));
-    
-    make_path(pth2);
-    pth2 = confinement_path + p;
-    copy_file(cp, pth2);
-    chmod(pth2.c_str(), 0755);
-    lmt_fls += copy_dependencies(cp, confinement_path) + 5;
-  } else {
-    /* Figure out what the requested program links to, and copy
-     * those things into the chroot environment. */
-    lmt_fls += copy_dependencies(fl_pth, confinement_path);
+// We've received a signal to process
+void gotsignal(int sig) {
+  if (debug) dmesg("Got signal: %d\n", sig);
+  if (oktojump) siglongjmp(jbuf, 1);
+  switch (sig) {
+    case SIGTERM:
+    case SIGINT:
+      terminated = 1;
+      break;
+    case SIGPIPE:
+      terminated = 1;
+      pipe_valid = false;
+      break;
   }
-  fclose(fl);
 }
 
-uid_t build_env(uid_t isolator,
-                const string image_path,
-                const string filesystemtype,
-                const string base_dir) 
-{  
-  const string confinement_path = base_dir + '/' + to_string(isolator, 16);
-  const mode_t confinement_root_mode = 040755;
-  create_confinement_root( confinement_path, confinement_root_mode );
-  if (chown(confinement_path.c_str(), isolator, isolator)) {
-    throw runtime_error("Could not chown confinement_path " + confinement_path + ":" + strerror(errno));
-  }
+/**
+ * Got a signal from a child
+ **/
+void gotsigchild(int signal, siginfo_t* si, void* context) {
+  // If someone used kill() to send SIGCHLD ignore the event
+  if (si->si_code == SI_USER || signal != SIGCHLD) return;
   
-  string cmnd;
-  
-  /**
-   * If specified, mount the image file that is given
-   **/
-   if (!image_path.empty())
-   {
-     string at = confinement_path + "/mnt";
-     
-     make_path(at);
-     
-     cmnd = "mount -o ro -o loop " + image_path + " " + at;     
-     if (system(cmnd.c_str()))
-       throw runtime_error("Could not mount "+ image_path);
-   }
-   
-   return isolator;
+  dmesg("Process %d exited (sig=%d)\r\n", si->si_pid, signal);
+  process_child_signal(si->si_pid);
+  if (oktojump) siglongjmp(jbuf, 1);
 }
 
-pid_t babysit(uid_t isolator, 
-            const char* cmd,
-            string confinement_path,
-            char* const* env,
-            ei::StringBuffer<128> err)
+/**
+ * Check for the pending messages, so we don't miss any
+ * child signal messages
+ **/
+void check_pending() {
+  static const struct timespec timeout = {0, 0};
+
+  sigset_t  set;
+  siginfo_t info;
+  int sig;
+  sigemptyset(&set);
+  if (sigpending(&set) == 0) {
+    while ((sig = sigtimedwait(&set, &info, &timeout)) > 0 || errno == EINTR)
+    switch (sig) {
+      case SIGCHLD:   gotsigchild(sig, &info, NULL); break;
+      case SIGPIPE:   pipe_valid = false; /* intentionally follow through */
+      case SIGTERM:
+      case SIGINT:
+      case SIGHUP:    gotsignal(sig); break;
+      default:        break;
+    }
+  }
+}
+
+void usage() {
+  std::cerr << HELP_MESSAGE;
+  exit(1);
+}
+
+//-------------------------------------------------------------------------
+// MAIN
+//-------------------------------------------------------------------------
+
+int main(int argc, char* argv[])
 {
-  // Setup defaults
-  rlim_t
-    lmt_all = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_AS)),
-    lmt_cr = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_CORE)),
-    lmt_dta = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_DATA)),
-    lmt_fls = min(static_cast<rlim_t>(3), get_resource_limit(RLIMIT_NOFILE)),
-    lmt_fl_sz = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_FSIZE)),
-    lmt_mlck = min(static_cast<rlim_t>(0x200000), get_resource_limit(RLIMIT_MEMLOCK)),
-    lmt_prcs = min(static_cast<rlim_t>(0), get_resource_limit(RLIMIT_NPROC)),
-    lmt_rss = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_RSS)),
-    lmt_stck = min(DEFAULT_MEMORY_LIMIT, get_resource_limit(RLIMIT_STACK)),
-    lmt_tm = min(static_cast<rlim_t>(10), get_resource_limit(RLIMIT_CPU));
-  /** 
-   * Build the default environments
-   **/
-  uid_t invoker = getegid();
-  int curr_env_vars;
-  /* Set default environment variables */
-  /* We need to set this so that the loader can find libs in /usr/local/lib. */
-  const char* default_env_vars[] = {
-   "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   "HOME=/mnt"
-  };
-  const int max_env_vars = 1000;
-  char *env_vars[max_env_vars];
-
-  memcpy(env_vars, default_env_vars, (min((int)max_env_vars, (int)sizeof(default_env_vars)) * sizeof(char *)));
-  curr_env_vars = sizeof(default_env_vars) / sizeof(char *);
-
-  for(size_t i = 0; i < sizeof(env) / sizeof(char *); ++i)
-    env_vars[curr_env_vars++] = strdup(env[i]);
-  
-  pid_t pid = fork();
-  if (-1 == pid)
-    throw runtime_error("Could not fork");
-  
-  int sts = 0;
-  if (0 == pid) {
-    drop_privilege_temporarily(isolator);
-    string fl_pth = which(cmd);
-    string pth = confinement_path + fl_pth;
-
-    const mode_t confinement_root_mode = 040755; // Redundant... yes, I know
-    copy_required_files(isolator, fl_pth, confinement_path, confinement_root_mode, string(""));
+    fd_set readfds;
+    struct sigaction sact, sterm;
+    int userid = 0;
+    
+    // Deque of all pids that exited and have their exit status available.
+    exited_children.resize(SIGCHLD_MAX_SIZE);
+    
+    /**
+     * Setup the signal handlers for *this* process
+     **/
+    sterm.sa_handler = gotsignal;
+    sigemptyset(&sterm.sa_mask);
+    sigaddset(&sterm.sa_mask, SIGCHLD);
+    sterm.sa_flags = 0;
+    sigaction(SIGINT,  &sterm, NULL);
+    sigaction(SIGTERM, &sterm, NULL);
+    sigaction(SIGHUP,  &sterm, NULL);
+    sigaction(SIGPIPE, &sterm, NULL);
+    
+    sact.sa_handler = NULL;
+    sact.sa_sigaction = gotsigchild;
+    sigemptyset(&sact.sa_mask);
+    sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
+    sigaction(SIGCHLD, &sact, NULL);
+    
+    /**
+     * Command line processing
+     **/
+    char c;
+    while (-1 != (c = getopt(argc, argv, "a:Dhn"))) {
+      switch (c) {
+        case 'h':
+        case 'H':
+         usage();
+         return 1;
+        case 'D':
+          debug = true;
+          eis.debug(true);
+          break;
+        case 'a':
+          alarm_max_time = atoi(optarg);
+          break;
+        case 'n':
+          eis.set_handles(3,4);
+          break;
+        case 'u':
+          char* run_as_user = optarg;
+          struct passwd *pw = NULL;
+          if ((pw = getpwnam(run_as_user)) == NULL) {
+            fprintf(stderr, "User %s not found!\n", run_as_user);
+            exit(3);
+          }
+          userid = pw->pw_uid;
+          break;
+      }
+    } 
 
     /** 
-     * Work with the executable that the user requested to run
+     * If we are root, switch to non-root user and set capabilities
+     * to be able to adjust niceness and run commands as other users.
+     * Currently, you MUST be root to run babysitter because root
+     * is the only user that has access to mounting loop-back devices
      **/
-    if (chmod(pth.c_str(), 0755)) {
-      cerr << "Could not make " << pth << " executable: " << strerror(errno) << endl;
-      _exit(1);
-    }
-
-    load_executable_into_environment(fl_pth, confinement_path);
-
-    /* Do the final sandboxing. */
-    restore_privilege();
-    confine(confinement_path);
-
-    /* Set the resource limits. */
-    drop_privilege_temporarily(invoker);
-    set_resource_limit(RLIMIT_AS, lmt_all);
-    set_resource_limit(RLIMIT_CORE, lmt_cr);
-    set_resource_limit(RLIMIT_DATA, lmt_dta);
-    //set_resource_limit(RLIMIT_NOFILE, lmt_fls);
-    set_resource_limit(RLIMIT_FSIZE, lmt_fl_sz);
-    set_resource_limit(RLIMIT_MEMLOCK, lmt_mlck);
-
-    set_resource_limit(RLIMIT_NPROC, lmt_prcs + 1);
-
-    set_resource_limit(RLIMIT_RSS, lmt_rss);
-    set_resource_limit(RLIMIT_STACK, lmt_stck);
-    set_resource_limit(RLIMIT_CPU, lmt_tm);
-    restore_privilege();
-
-    /* Become the isolator, irrevocably. */
-    drop_privilege_permanently(isolator);
-
-    /* Set the resource limits to their new minima. Previously,
-     * they were set to root's minima (at the top of main), but we
-     * do this again here with the new, low-privilege values. */
-    lmt_all = min(lmt_all, get_resource_limit(RLIMIT_AS));
-    lmt_cr = min(lmt_cr, get_resource_limit(RLIMIT_CORE));
-    lmt_dta = min(lmt_dta, get_resource_limit(RLIMIT_DATA));
-    lmt_fls = min(lmt_fls, get_resource_limit(RLIMIT_NOFILE));
-    lmt_fl_sz = min(lmt_fl_sz, get_resource_limit(RLIMIT_FSIZE));
-    lmt_mlck = min(lmt_mlck, get_resource_limit(RLIMIT_MEMLOCK));
-    // #ifndef linux
-    //     lmt_ntwrk = min(lmt_ntwrk, get_resource_limit(RLIMIT_SBSIZE));
-    // #endif
-    lmt_prcs = min(lmt_prcs, get_resource_limit(RLIMIT_NPROC));
-    lmt_rss = min(lmt_rss, get_resource_limit(RLIMIT_RSS));
-    lmt_stck = min(lmt_stck, get_resource_limit(RLIMIT_STACK));
-    lmt_tm = min(lmt_tm, get_resource_limit(RLIMIT_CPU));
+    change_user_to_non_root_user();
+    const int maxfd = eis.read_handle()+1;
 
     /**
-     * Execute the sandbox -> fork -> run
+     * Program loop. 
+     * Daemonizing loop. This waits for signals
+     * from the erlang process
      **/
-    char* argv[] = {NULL};
-    if (execve(fl_pth.c_str(), argv, env_vars)) {
-      err.write("Cannot execute chroot");
-      return EXIT_FAILURE;
+    while (!terminated) {
+      /* Detect "open" for serial pty slave */
+      FD_ZERO (&readfds);
+      FD_SET (eis.read_handle(), &readfds);
+
+      sigsetjmp(jbuf, 1); oktojump = 0;
+        
+      // If there are children that are exiting, we can't do anything until they have exited
+      while (!terminated && (exited_children.size() > 0 || signaled)) check_children(terminated);
+      // Check for pending signals arrived while we were in the signal handler
+      check_pending();
+      
+      // If we are going to die, die
+      if (terminated) break;
+
+      oktojump = 1;
+      ei::TimeVal timeout(5, 0);
+      int cnt = select (maxfd, &readfds, (fd_set *)0, (fd_set *) 0, &timeout.timeval());
+      int interrupted = (cnt < 0 && errno == EINTR);
+      oktojump = 0;
+        
+      if (interrupted || cnt == 0) {
+        if (check_children(terminated) < 0) break;
+      } else if (cnt < 0) {
+        perror("select"); 
+        exit(9);
+      } else if (FD_ISSET (eis.read_handle(), &readfds) ) {
+        // Read from fin a command sent by Erlang
+        int  err, arity;
+        long transId;
+        std::string command;
+
+        // Note that if we were using non-blocking reads, we'd also need to check for errno EWOULDBLOCK.
+        if ((err = eis.read()) < 0) {
+          terminated = 90-err;
+          break;
+        } 
+                
+        /* Our marshalling spec is that we are expecting a tuple {TransId, {Cmd::atom(), Arg1, Arg2, ...}} */
+        if (eis.decodeTupleSize() != 2 || 
+          (eis.decodeInt(transId)) < 0 || 
+          (arity = eis.decodeTupleSize()) < 1)
+        {
+          terminated = 10; break;
+        }
+        
+        // Available commands from erlang    
+        enum CmdTypeT { 
+          EXECUTE,
+          SHELL,
+          STOP,
+          KILL,
+          LIST
+        } cmd;
+        const char* cmds[] = {
+          "run",
+          "shell",
+          "stop",
+          "kill",
+          "list"
+        };
+
+        // Determine which of the commands was called
+        if ((int)(cmd = (CmdTypeT) eis.decodeAtomIndex(cmds, command)) < 0) {
+          if (send_error_str(transId, false, "Unknown command: %s", command.c_str()) < 0) {
+            terminated = 11; 
+            break;
+          } else continue;
+        }
+
+        switch (cmd) {
+          case EXECUTE:
+          case SHELL: {
+            // {shell, Cmd::string(), Options::list()}
+            CmdOptions po;
+            if (arity != 3 || po.ei_decode(eis) < 0) {
+              send_error_str(transId, false, po.strerror());
+              continue;
+            }
+
+            pid_t pid;
+            if ((pid = start_child(po)) < 0)
+              send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
+            else {
+              CmdInfo ci(po.cmd(), po.kill_cmd(), pid);
+              children[pid] = ci;
+              send_ok(transId, pid);
+            }
+            break;
+          }
+          case STOP: {
+            // {stop, OsPid::integer()}
+            long pid;
+            if (arity != 2 || (eis.decodeInt(pid)) < 0) {
+              send_error_str(transId, true, "badarg");
+              continue;
+            }
+              stop_child(pid, transId, TimeVal(TimeVal::NOW));
+              break;
+            }
+          case KILL: {
+            // {kill, OsPid::integer(), Signal::integer()}
+            long pid, sig;
+            if (arity != 3 || (eis.decodeInt(pid)) < 0 || (eis.decodeInt(sig)) < 0) {
+              send_error_str(transId, true, "badarg");
+              continue;
+            } 
+            if (superuser && children.find(pid) == children.end()) {
+              send_error_str(transId, false, "Cannot kill a pid not managed by this application");
+              continue;
+            }
+            kill_child(pid, sig, transId);
+            break;
+          }
+          case LIST:
+            // {list}
+            if (arity != 1) {
+            send_error_str(transId, true, "badarg");
+            continue;
+          }
+          send_pid_list(transId, children);
+          break;
+        }
+      }
     }
-  } else {
-    install_handlers();
+
+    sigsetjmp(jbuf, 1); 
+    oktojump = 0;
+    alarm(alarm_max_time);  // Die in <alarm_max_time> seconds if not done
+
+    int old_terminated = terminated;
+    terminated = 0;
     
-    cerr << "In parent process... I wonder why..." << endl;
-    (void) wait(&sts);
-  }
-  
-  return pid;
+    kill(0, SIGTERM); // Kill all children in our process group
+
+    TimeVal now(TimeVal::NOW);
+    TimeVal deadline(now, 6, 0);
+
+    while (children.size() > 0) {
+      sigsetjmp(jbuf, 1);
+        
+      while (exited_children.size() > 0 || signaled) {
+        int term = 0;
+        check_children(term, pipe_valid);
+      }
+
+      for(MapChildrenT::iterator it=children.begin(), end=children.end(); it != end; ++it)
+        stop_child(it->first, 0, now);
+    
+      for(MapKillPidT::iterator it=transient_pids.begin(), end=transient_pids.end(); it != end; ++it) {
+        kill(it->first, SIGKILL);
+        transient_pids.erase(it);
+      }
+        
+      if (children.size() == 0)
+        break;
+    
+      TimeVal timeout(TimeVal::NOW);
+      if (timeout < deadline) {
+        timeout = deadline - timeout;
+        
+        oktojump = 1;
+        select (0, (fd_set *)0, (fd_set *)0, (fd_set *) 0, &timeout);
+        oktojump = 0;
+      }
+    }
+    
+    dmesg("Exiting (%d)\n", old_terminated);
+    return old_terminated;
 }
+
+pid_t start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
+{
+    pid_t pid = fork();
+    ei::StringBuffer<128> err;
+
+    switch (pid) {
+        case -1: 
+            return -1;
+        case 0: {
+            // I am the child
+            if (user != INT_MAX && setresuid(user, user, user) < 0) {
+                err.write("Cannot set effective user to %d", user);
+                perror(err.c_str());
+                return EXIT_FAILURE;
+            }
+            const char* const argv[] = { getenv("SHELL"), "-c", cmd, (char*)NULL };
+            if (cd != NULL && cd[0] != '\0' && chdir(cd) < 0) {
+                err.write("Cannot chdir to '%s'", cd);
+                perror(err.c_str());
+                return EXIT_FAILURE;
+            }
+            if (execve((const char*)argv[0], (char* const*)argv, env) < 0) {
+                err.write("Cannot execute '%s'", cd);
+                perror(err.c_str());
+                return EXIT_FAILURE;
+            }
+        }
+        default:
+            // I am the parent
+            if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
+                err.write("Cannot set priority of pid %d to %d", pid, nice);
+                perror(err.c_str());
+            }
+            return pid;
+    }
+}
+
+pid_t start_child(const CmdOptions& op) 
+{
+    return start_child(op.cmd(), op.cd(), op.env(), op.user(), op.nice());
+}
+
+int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify) 
+{
+    bool use_kill = false;
+    
+    if (ci.kill_cmd_pid > 0 || ci.sigterm) {
+        double diff = ci.deadline.diff(now);
+        if (debug)
+            fprintf(stderr, "Deadline: %.3f\r\n", diff);
+        // There was already an attempt to kill it.
+        if (ci.sigterm && ci.deadline.diff(now) < 0) {
+            // More than 5 secs elapsed since the last kill attempt
+            kill(ci.cmd_pid, SIGKILL);
+            kill(ci.kill_cmd_pid, SIGKILL);
+            ci.sigkill = true;
+        }
+        if (notify) send_ok(transId);
+        return 0;
+    } else if (!ci.kill_cmd.empty()) {
+        // This is the first attempt to kill this pid and kill command is provided.
+        ci.kill_cmd_pid = start_child(ci.kill_cmd.c_str(), NULL, NULL, INT_MAX, INT_MAX);
+        if (ci.kill_cmd_pid > 0) {
+            transient_pids[ci.kill_cmd_pid] = ci.cmd_pid;
+            ci.deadline.set(now, 5);
+            if (notify) send_ok(transId);
+            return 0;
+        } else {
+            if (notify) send_error_str(transId, false, "bad kill command - using SIGTERM");
+            use_kill = true;
+            notify = false;
+        }
+    } else {
+        // This is the first attempt to kill this pid and no kill command is provided.
+        use_kill = true;
+    }
+    
+    if (use_kill) {
+        // Use SIGTERM / SIGKILL to nuke the pid
+        int n;
+        if (!ci.sigterm && (n = kill_child(ci.cmd_pid, SIGTERM, transId, notify)) == 0) {
+            ci.deadline.set(now, 5);
+        } else if (!ci.sigkill && (n = kill_child(ci.cmd_pid, SIGKILL, 0, false)) == 0) {
+            ci.deadline = now;
+            ci.sigkill  = true;
+        } else {
+            n = 0; // FIXME
+            // Failed to send SIGTERM & SIGKILL to the process - give up
+            ci.sigkill = true;
+            MapChildrenT::iterator it = children.find(ci.cmd_pid);
+            if (it != children.end()) 
+                children.erase(it);
+        }
+        ci.sigterm = true;
+        return n;
+    }
+    return 0;
+}
+
+void stop_child(pid_t pid, int transId, const TimeVal& now)
+{
+    int n = 0;
+
+    MapChildrenT::iterator it = children.find(pid);
+    if (it == children.end()) {
+        send_error_str(transId, false, "pid not alive");
+        return;
+    } else if ((n = kill(pid, 0)) < 0) {
+        send_error_str(transId, false, "pid not alive (err: %d)", n);
+        return;
+    }
+    stop_child(it->second, transId, now);
+}
+
+int kill_child(pid_t pid, int signal, int transId, bool notify)
+{
+    // We can't use -pid here to kill the whole process group, because our process is
+    // the group leader.
+    int err = kill(pid, signal);
+    switch (err) {
+        case 0:
+            if (notify) send_ok(transId);
+            break;
+        case EINVAL:
+            if (notify) send_error_str(transId, false, "Invalid signal: %d", signal);
+            break;
+        case ESRCH:
+            if (notify) send_error_str(transId, true, "esrch");
+            break;
+        case EPERM:
+            if (notify) send_error_str(transId, true, "eperm");
+            break;
+        default:
+            if (notify) send_error_str(transId, true, strerror(err));
+            break;
+    }
+    return err;
+}
+
+int check_children(int& isTerminated, bool notify)
+{
+    do {
+        // For each process info in the <exited_children> queue deliver it to the Erlang VM
+        // and removed it from the managed <children> map.
+        std::deque< PidStatusT >::iterator it;
+        while (!isTerminated && (it = exited_children.begin()) != exited_children.end()) {
+            MapChildrenT::iterator i = children.find(it->first);
+            MapKillPidT::iterator j;
+            if (i != children.end()) {
+                if (notify && send_pid_status_term(*it) < 0) {
+                    isTerminated = 1;
+                    return -1;
+                }
+                children.erase(i);
+            } else if ((j = transient_pids.find(it->first)) != transient_pids.end()) {
+                // the pid is one of the custom 'kill' commands started by us.
+                transient_pids.erase(j);
+            }
+            
+            exited_children.erase(it);
+        }
+        // Signaled flag indicates that there are more processes signaled SIGCHLD then
+        // could be stored in the <exited_children> deque.
+        if (signaled) {
+            signaled = false;
+            process_child_signal(-1);
+        }
+    } while (signaled && !isTerminated);
+    
+    TimeVal now(TimeVal::NOW);
+    
+    for (MapChildrenT::iterator it=children.begin(), end=children.end(); it != end; ++it) {
+        int   status = ECHILD;
+        pid_t pid = it->first;
+        int n = kill(pid, 0);
+        if (n == 0) { // process is alive
+            if (it->second.kill_cmd_pid > 0 && now.diff(it->second.deadline) > 0) {
+                kill(pid, SIGTERM);
+                if ((n = kill(it->second.kill_cmd_pid, 0)) == 0)
+                    kill(it->second.kill_cmd_pid, SIGKILL);
+                it->second.deadline.set(now, 5, 0);
+            }
+            
+            while ((n = waitpid(pid, &status, WNOHANG)) < 0 && errno == EINTR);
+            if (n > 0)
+                exited_children.push_back(std::make_pair(pid <= 0 ? n : pid, status));
+            continue;
+        } else if (n < 0 && errno == ESRCH) {
+            if (notify) 
+                send_pid_status_term(std::make_pair(it->first, status));
+            children.erase(it);
+        }
+    }
+
+    return 0;
+}
+
+int send_pid_list(int transId, const MapChildrenT& children)
+{
+    // Reply: {TransId, [OsPid::integer()]}
+    eis.reset();
+    eis.encodeTupleSize(2);
+    eis.encode(transId);
+    eis.encodeListSize(children.size());
+    for(MapChildrenT::const_iterator it=children.begin(), end=children.end(); it != end; ++it)
+        eis.encode(it->first);
+    eis.encodeListEnd();
+    return eis.write();
+}
+
+int send_error_str(int transId, bool asAtom, const char* fmt, ...)
+{
+    char str[MAXATOMLEN];
+    va_list vargs;
+    va_start (vargs, fmt);
+    vsnprintf(str, sizeof(str), fmt, vargs);
+    va_end   (vargs);
+    
+    eis.reset();
+    eis.encodeTupleSize(2);
+    eis.encode(transId);
+    eis.encodeTupleSize(2);
+    eis.encode(atom_t("error"));
+    (asAtom) ? eis.encode(atom_t(str)) : eis.encode(str);
+    return eis.write();
+}
+
+int send_ok(int transId, pid_t pid)
+{
+    eis.reset();
+    eis.encodeTupleSize(2);
+    eis.encode(transId);
+    if (pid < 0)
+        eis.encode(atom_t("ok"));
+    else {
+        eis.encodeTupleSize(2);
+        eis.encode(atom_t("ok"));
+        eis.encode(pid);
+    }
+    return eis.write();
+}
+
+int send_pid_status_term(const PidStatusT& stat)
+{
+    eis.reset();
+    eis.encodeTupleSize(2);
+    eis.encode(0);
+    eis.encodeTupleSize(3);
+    eis.encode(atom_t("exit_status"));
+    eis.encode(stat.first);
+    eis.encode(stat.second);
+    return eis.write();
+}
+
+int CmdOptions::ei_decode(ei::Serializer& ei)
+{
+    // {Cmd::string(), [Option]}
+    //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
+    int sz;
+    std::string op, val;
+    
+    m_err.str("");
+    delete [] m_cenv;
+    m_cenv = NULL;
+    m_env.clear();
+    m_nice = INT_MAX;
+    
+    if (eis.decodeString(m_cmd) < 0) {
+        m_err << "badarg: cmd string expected or string size too large";
+        return -1;
+    } else if ((sz = eis.decodeListSize()) < 0) {
+        m_err << "option list expected";
+        return -1;
+    } else if (sz == 0) {
+        m_cd  = "";
+        m_kill_cmd = "";
+        return 0;
+    }
+
+    for(int i=0; i < sz; i++) {
+        enum OptionT            { CD,   ENV,   KILL,   NICE,   USER,   STDOUT,   STDERR } opt;
+        const char* options[] = {"cd", "env", "kill", "nice", "user", "stdout", "stderr"};
+        
+        if (eis.decodeTupleSize() != 2 || (int)(opt = (OptionT)eis.decodeAtomIndex(options, op)) < 0) {
+            m_err << "badarg: cmd option must be an atom"; return -1;
+        }
+        
+        switch (opt) {
+            case CD:
+            case KILL:
+            case USER:
+                // {cd, Dir::string()} | {kill, Cmd::string()}
+                if (eis.decodeString(val) < 0) {
+                    m_err << op << " bad option value"; return -1;
+                }
+                if      (opt == CD)     m_cd        = val;
+                else if (opt == KILL)   m_kill_cmd  = val;
+                else if (opt == USER) {
+                    struct passwd *pw = getpwnam(val.c_str());
+                    if (pw == NULL) {
+                        m_err << "Invalid user " << val << ": " << ::strerror(errno);
+                        return -1;
+                    }
+                    m_user = pw->pw_uid;
+                }
+                break;
+
+            case NICE:
+                if (eis.decodeInt(m_nice) < 0 || m_nice < -20 || m_nice > 20) {
+                    m_err << "nice option must be an integer between -20 and 20"; 
+                    return -1;
+                }
+                break;
+
+            case ENV: {
+                // {env, [NameEqualsValue::string()]}
+                int env_sz = eis.decodeListSize();
+                if (env_sz < 0) {
+                    m_err << "env list expected"; return -1;
+                } else if ((m_cenv = (const char**) new char* [env_sz+1]) == NULL) {
+                    m_err << "out of memory"; return -1;
+                }
+
+                for (int i=0; i < env_sz; i++) {
+                    std::string s;
+                    if (eis.decodeString(s) < 0) {
+                        m_err << "invalid env argument #" << i; return -1;
+                    }
+                    m_env.push_back(s);
+                    m_cenv[i] = m_env.back().c_str();
+                }
+                m_cenv[env_sz] = NULL;
+                break;
+            }
+
+            case STDOUT:
+            case STDERR: {
+                int type = 0, sz;
+                std::string s, fop;
+                type = eis.decodeType(sz);
+                    
+                if (type == ERL_ATOM_EXT)
+                    eis.decodeAtom(s);
+                else if (type == ERL_STRING_EXT)
+                    eis.decodeString(s);
+                else if (type == ERL_SMALL_TUPLE_EXT && sz == 2 && 
+                         eis.decodeAtom(fop) == 0 && eis.decodeString(s) == 0 && fop == "append") {
+                    ;
+                } else {
+                    m_err << "Atom, string or {'append', Name} tuple required for option " << op;
+                    return -1;
+                }
+
+                std::string& rs = (opt == STDOUT) ? m_stdout : m_stderr;
+                std::stringstream ss;
+                int fd = (opt == STDOUT) ? 1 : 2;
+                
+                if (s == "null") {
+                    ss << fd << ">/dev/null";
+                    rs = ss.str();
+                } else if (s == "stderr" && opt == STDOUT)
+                    rs = "1>&2";
+                else if (s == "stdout" && opt == STDERR)
+                    rs = "2>&1";
+                else if (s != "") {
+                    ss << fd << (fop == "append" ? ">" : "") << ">\"" << s << "\"";
+                    rs = ss.str();
+                }
+                break;
+            }
+            default:
+                m_err << "bad option: " << op; return -1;
+        }
+    }
+
+    if (m_stdout == "1>&2" && m_stderr != "2>&1") {
+        m_err << "cirtular reference of stdout and stderr";
+        return -1;
+    } else if (!m_stdout.empty() || !m_stderr.empty()) {
+        std::stringstream ss;
+        ss << m_cmd;
+        if (!m_stdout.empty()) ss << " " << m_stdout;
+        if (!m_stderr.empty()) ss << " " << m_stderr;
+        m_cmd = ss.str();
+    }
+    return 0;
+}
+
+/*
+int CmdOptions::init(const std::list<std::string>& list) 
+{
+    int i, size=0;
+    for(std::list<std::string>::iterator it=list.begin(), end=list.end(); it != end; ++it)
+        size += it->size() + 1;
+    if (m_env.resize(m_size) == NULL)
+        return -1;
+    m_count = list.size() + 1;
+    char *p = m_env.c_str();
+    for(std::list<std::string>::iterator it=list.begin(), end=list.end(); it != end; ++it) {
+        strcpy(p, it->c_str());
+        m_cenv[i++] = p;
+        p += it->size() + 1;
+    }
+    m_cenv[i] = NULL;
+    return 0;
+}
+*/

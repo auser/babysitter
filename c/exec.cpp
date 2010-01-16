@@ -45,11 +45,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <signal.h>
-#include <string.h>
-
 #include <sys/prctl.h>
 #include <sys/capability.h>
-
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/time.h>
@@ -60,11 +57,9 @@
 #include <list>
 #include <deque>
 #include <sstream>
-#include <sys/mount.h>
 
 #include <ei.h>
 #include "ei++.h"
-#include "babysitter.h"
 
 using namespace ei;
 
@@ -97,12 +92,11 @@ class CmdOptions {
     std::string             m_stdout;
     std::string             m_stderr;
     std::string             m_kill_cmd;
-    std::string             m_image;
     std::list<std::string>  m_env;
     long                    m_nice;     // niceness level
     size_t                  m_size;
     size_t                  m_count;
-    uid_t                   m_user;     // run as
+    int                     m_user;     // run as
     const char**            m_cenv;
 
 public:
@@ -112,11 +106,10 @@ public:
 
     const char*  strerror() const { return m_err.str().c_str(); }
     const char*  cmd()      const { return m_cmd.c_str(); }
-    const char*  image()    const { return m_image.c_str(); }
     const char*  cd()       const { return m_cd.c_str(); }
     char* const* env()      const { return (char* const*)m_cenv; }
     const char*  kill_cmd() const { return m_kill_cmd.c_str(); }
-    uid_t        user()     const { return m_user; }
+    int          user()     const { return m_user; }
     int          nice()     const { return m_nice; }
     
     int ei_decode(ei::Serializer& ei);
@@ -129,7 +122,6 @@ struct CmdInfo {
     std::string     cmd;            // Executed command
     pid_t           cmd_pid;        // Pid of the custom kill command
     std::string     kill_cmd;       // Kill command to use (if provided - otherwise use SIGTERM)
-    std::string     confine_path;   // Path of the confinement root
     kill_cmd_pid_t  kill_cmd_pid;   // Pid of the command that <pid> is supposed to kill
     ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
     bool            sigterm;        // <true> if sigterm was issued.
@@ -137,11 +129,10 @@ struct CmdInfo {
 
     CmdInfo() : cmd_pid(-1), kill_cmd_pid(-1), sigterm(false), sigkill(false) {}
     CmdInfo(const CmdInfo& ci) {
-        new (this) CmdInfo(ci.cmd.c_str(), ci.kill_cmd.c_str(), ci.cd().c_str(), ci.cmd_pid);
+        new (this) CmdInfo(ci.cmd.c_str(), ci.kill_cmd.c_str(), ci.cmd_pid);
     }
-    CmdInfo(const char* _cmd, const char* _kill_cmd, string _cp, pid_t _cmd_pid) {
+    CmdInfo(const char* _cmd, const char* _kill_cmd, pid_t _cmd_pid) {
         new (this) CmdInfo();
-        confine_path = _cp;
         cmd      = _cmd;
         cmd_pid  = _cmd_pid;
         kill_cmd = _kill_cmd;
@@ -439,17 +430,10 @@ int main(int argc, char* argv[])
                     }
 
                     pid_t pid;
-                    uid_t isolator - random_uid();
-                    uid_t invoker = getuid();
-                    
-                    string confinement_path = build_env(isolator, string(image), string("loop"), string("/var/isolate"));
-                    po->cd = confinement_path;
-                    
                     if ((pid = start_child(po)) < 0)
                         send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
                     else {
-                        CmdInfo ci(po.cmd(), po.kill_cmd(), confinement_path.c_str(), pid);
-                        ci.m_user = isolator;
+                        CmdInfo ci(po.cmd(), po.kill_cmd(), pid);
                         children[pid] = ci;
                         send_ok(transId, pid);
                     }
@@ -499,7 +483,7 @@ int main(int argc, char* argv[])
     kill(0, SIGTERM); // Kill all children in our process group
 
     TimeVal now(TimeVal::NOW);
-    TimeVal deadline(now, 20, 0);
+    TimeVal deadline(now, 6, 0);
 
     while (children.size() > 0) {
         sigsetjmp(jbuf, 1);
@@ -535,29 +519,46 @@ int main(int argc, char* argv[])
     return old_terminated;
 }
 
-pid_t start_child(uid_t isolator, const char* cmd, string confinement_path, char* const* env, const char* image, int user, int nice)
+pid_t start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
 {
-  ei::StringBuffer<128> err;
+    pid_t pid = fork();
+    ei::StringBuffer<128> err;
 
-  switch (pid) {
-      case -1: 
-        return -1;
-      case 0: {      
-        babysit(isolator, cmd, confinement_path, env, err);
-      }
-      default:
-          // I am the parent
-          if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
-              err.write("Cannot set priority of pid %d to %d", pid, nice);
-              perror(err.c_str());
-          }
-          return pid;
-  }
+    switch (pid) {
+        case -1: 
+            return -1;
+        case 0: {
+            // I am the child
+            if (user != INT_MAX && setresuid(user, user, user) < 0) {
+                err.write("Cannot set effective user to %d", user);
+                perror(err.c_str());
+                return EXIT_FAILURE;
+            }
+            const char* const argv[] = { getenv("SHELL"), "-c", cmd, (char*)NULL };
+            if (cd != NULL && cd[0] != '\0' && chdir(cd) < 0) {
+                err.write("Cannot chdir to '%s'", cd);
+                perror(err.c_str());
+                return EXIT_FAILURE;
+            }
+            if (execve((const char*)argv[0], (char* const*)argv, env) < 0) {
+                err.write("Cannot execute '%s'", cd);
+                perror(err.c_str());
+                return EXIT_FAILURE;
+            }
+        }
+        default:
+            // I am the parent
+            if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
+                err.write("Cannot set priority of pid %d to %d", pid, nice);
+                perror(err.c_str());
+            }
+            return pid;
+    }
 }
 
 pid_t start_child(const CmdOptions& op) 
 {
-    return start_child(op.cmd(), op.cd(), op.env(), op.image(), op.user(), op.nice());
+    return start_child(op.cmd(), op.cd(), op.env(), op.user(), op.nice());
 }
 
 int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify) 
@@ -567,7 +568,7 @@ int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify)
     if (ci.kill_cmd_pid > 0 || ci.sigterm) {
         double diff = ci.deadline.diff(now);
         if (debug)
-            fprintf(stderr, "Deadline: %.3f %i\r\n", diff, ci.cmd_pid);
+            fprintf(stderr, "Deadline: %.3f\r\n", diff);
         // There was already an attempt to kill it.
         if (ci.sigterm && ci.deadline.diff(now) < 0) {
             // More than 5 secs elapsed since the last kill attempt
@@ -576,16 +577,14 @@ int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify)
             ci.sigkill = true;
         }
         if (notify) send_ok(transId);
-        cleanup_child(ci);
         return 0;
     } else if (!ci.kill_cmd.empty()) {
         // This is the first attempt to kill this pid and kill command is provided.
-        ci.kill_cmd_pid = start_child(ci.kill_cmd.c_str(), NULL, NULL, NULL, INT_MAX, INT_MAX);
+        ci.kill_cmd_pid = start_child(ci.kill_cmd.c_str(), NULL, NULL, INT_MAX, INT_MAX);
         if (ci.kill_cmd_pid > 0) {
             transient_pids[ci.kill_cmd_pid] = ci.cmd_pid;
             ci.deadline.set(now, 5);
             if (notify) send_ok(transId);
-            cleanup_child(ci);
             return 0;
         } else {
             if (notify) send_error_str(transId, false, "bad kill command - using SIGTERM");
@@ -614,25 +613,9 @@ int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify)
                 children.erase(it);
         }
         ci.sigterm = true;
-        cleanup_child(ci));
         return n;
     }
-    cleanup_child(ci);
     return 0;
-}
-
-void cleanup_child(CmdInfo& ci) {
-  if(is_directory(string mount_path = string(ci.cd()) + "/mnt")) {
-    cerr << "Current user " << getuid() << ":" << getgid() << " or " << ci.user() << ":" << ci.user() << endl;
-    // int umount(const char *target);
-    if (umount(mount_path)) {
-      cerr << "WARNING: Could not unmount " << ci.image() << endl;
-    }
-  }
-  
-  if (recursively_delete(ci.cd())) {
-    cerr << "WARNING: Could not delete " << ci.cd() << endl;
-  }
 }
 
 void stop_child(pid_t pid, int transId, const TimeVal& now)
@@ -793,11 +776,10 @@ int send_pid_status_term(const PidStatusT& stat)
 int CmdOptions::ei_decode(ei::Serializer& ei)
 {
     // {Cmd::string(), [Option]}
-    //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd} | {image, Image}
+    //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
     int sz;
     std::string op, val;
     
-    m_image.str("");
     m_err.str("");
     delete [] m_cenv;
     m_cenv = NULL;
@@ -817,8 +799,8 @@ int CmdOptions::ei_decode(ei::Serializer& ei)
     }
 
     for(int i=0; i < sz; i++) {
-        enum OptionT            { CD,   ENV,   KILL,   NICE,   USER,   STDOUT,   STDERR,  IMAGE } opt;
-        const char* options[] = {"cd", "env", "kill", "nice", "user", "stdout", "stderr", "image"};
+        enum OptionT            { CD,   ENV,   KILL,   NICE,   USER,   STDOUT,   STDERR } opt;
+        const char* options[] = {"cd", "env", "kill", "nice", "user", "stdout", "stderr"};
         
         if (eis.decodeTupleSize() != 2 || (int)(opt = (OptionT)eis.decodeAtomIndex(options, op)) < 0) {
             m_err << "badarg: cmd option must be an atom"; return -1;
@@ -828,14 +810,12 @@ int CmdOptions::ei_decode(ei::Serializer& ei)
             case CD:
             case KILL:
             case USER:
-            case IMAGE:
                 // {cd, Dir::string()} | {kill, Cmd::string()}
                 if (eis.decodeString(val) < 0) {
                     m_err << op << " bad option value"; return -1;
                 }
                 if      (opt == CD)     m_cd        = val;
                 else if (opt == KILL)   m_kill_cmd  = val;
-                else if (opt == IMAGE)  m_image     = val;
                 else if (opt == USER) {
                     struct passwd *pw = getpwnam(val.c_str());
                     if (pw == NULL) {
@@ -946,4 +926,3 @@ int CmdOptions::init(const std::list<std::string>& list)
     return 0;
 }
 */
-

@@ -9,8 +9,9 @@ bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
-CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include/include
+CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include
 INC_LIBS = -lerl_interface -lei -lelf -lcap
+EXECUTABLE = ../priv/bin/babysitter
 
 ifeq ($(shell uname),Linux)
 	ARCH = linux
@@ -22,15 +23,16 @@ endif
 
 # Defines
 CC = gcc
-CPPFLAGS =  -I /opt/erlang/lib/erlang/erts-5.7.4/include -I /opt/erlang/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./
+CPPFLAGS =  -I /opt/erlang/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./ -lstdc++
 LIBS = 
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
 UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
 PACKAGE_NAME = babysitter
 PACKAGE_VERSION = 0.1
- 
-OUTPUTFILES := $(patsubst %.cpp, %.o, $(wildcard *.cpp)) babysitter
+
+INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
+OUTPUTFILES := $(INTERMEDIATES) babysitter
  
 DEFS = -DHAVE_CONFIG_H
  
@@ -60,8 +62,12 @@ test_%.o: test_%.c %.o
 .cpp.o:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) $(INC_LIBS) -c $<
 
-babysitter:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) babysitter $(wildcard *.o)
+babysitter: configuration.h
+	mkdir -p `dirname $(EXECUTABLE)`
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(INC_LIBS)
+
+configuration.h:
+	sh configuration.sh > configuration.h
 
 clean:
 	rm -rf *.o *.a $(OUTPUTFILES)
