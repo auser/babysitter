@@ -10,7 +10,7 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) @CFLAGS@ @ELF_CFLAGS@
-INC_LIBS = -lerl_interface -lei -lelf -lcap
+INC_LIBS = -lerl_interface -lei -lelf -lcap -lstdc++
 EXECUTABLE = ../priv/bin/babysitter
 
 ifeq ($(shell uname),Linux)
@@ -22,7 +22,7 @@ else
 endif
 
 # Defines
-CC = @CC@
+CC = g++
 CPPFLAGS = @CPPFLAGS@
 LIBS = @LIBS@
 TEST_SOURCES := $(wildcard check_*.cpp)
@@ -38,7 +38,7 @@ DEFS = -DHAVE_CONFIG_H
  
 ERLDIR = @ERLDIR@
  
-all: $(OUTPUTFILES)
+all: chroot $(OUTPUTFILES)
  
 debug:
 	$(MAKE) DEBUG=-DDEBUG
@@ -58,11 +58,15 @@ test-dbg: test_suite
  
 test_%.o: test_%.c %.o
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
- 
-.cpp.o:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) $(INC_LIBS) -c $<
 
-babysitter: configuration.h
+chroot:
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c chroot.cpp chroot.h
+	
+.cpp.o: chroot
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
+		
+babysitter: chroot configuration.h
+	echo "chroot!"
 	mkdir -p `dirname $(EXECUTABLE)`
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(INC_LIBS)
 

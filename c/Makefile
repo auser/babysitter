@@ -10,7 +10,7 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include
-INC_LIBS = -lerl_interface -lei -lelf -lcap
+INC_LIBS = -lerl_interface -lei -lelf -lcap -lstdc++
 EXECUTABLE = ../priv/bin/babysitter
 
 ifeq ($(shell uname),Linux)
@@ -22,8 +22,8 @@ else
 endif
 
 # Defines
-CC = gcc
-CPPFLAGS =  -I /opt/erlang/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./ -lstdc++
+CC = g++
+CPPFLAGS =  -I /opt/erlang/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./
 LIBS = 
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
@@ -38,7 +38,7 @@ DEFS = -DHAVE_CONFIG_H
  
 ERLDIR = /opt/erlang/lib/erlang
  
-all: $(OUTPUTFILES)
+all: chroot $(OUTPUTFILES)
  
 debug:
 	$(MAKE) DEBUG=-DDEBUG
@@ -58,11 +58,15 @@ test-dbg: test_suite
  
 test_%.o: test_%.c %.o
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
- 
-.cpp.o:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) $(INC_LIBS) -c $<
 
-babysitter: configuration.h
+chroot:
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c chroot.cpp chroot.h
+	
+.cpp.o: chroot
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
+		
+babysitter: chroot configuration.h
+	echo "chroot!"
 	mkdir -p `dirname $(EXECUTABLE)`
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(INC_LIBS)
 

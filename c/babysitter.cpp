@@ -43,7 +43,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
-#include <string.h>
+#include <signal.h>
 
 // Object includes
 #include <pwd.h>
@@ -51,10 +51,12 @@
 #include <list>
 #include <deque>
 #include <sstream>
+#include <setjmp.h>
+#include <limits.h>
+#include <pwd.h>
+
 // System includes
 #include <sys/mount.h>
-#include <sys/prctl.h>
-#include <sys/capability.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/time.h>
@@ -273,14 +275,17 @@ void gotsigchild(int signal, siginfo_t* si, void* context) {
  * child signal messages
  **/
 void check_pending() {
-  static const struct timespec timeout = {0, 0};
-
+  int sig;
   sigset_t  set;
   siginfo_t info;
-  int sig;
   sigemptyset(&set);
   if (sigpending(&set) == 0) {
+#ifdef HAVE_SIGTIMEDWAIT
+    static const struct timespec timeout = {0, 0};
     while ((sig = sigtimedwait(&set, &info, &timeout)) > 0 || errno == EINTR)
+#else
+    while ((sig = sigwait(&set, NULL)) > 0 || errno == EINTR)
+#endif
     switch (sig) {
       case SIGCHLD:   gotsigchild(sig, &info, NULL); break;
       case SIGPIPE:   pipe_valid = false; /* intentionally follow through */
@@ -366,7 +371,6 @@ int main(int argc, char* argv[])
      * Currently, you MUST be root to run babysitter because root
      * is the only user that has access to mounting loop-back devices
      **/
-    change_user_to_non_root_user();
     const int maxfd = eis.read_handle()+1;
 
     /**
@@ -545,46 +549,81 @@ int main(int argc, char* argv[])
     return old_terminated;
 }
 
-pid_t start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
-{
-    pid_t pid = fork();
-    ei::StringBuffer<128> err;
+pid_t attempt_to_kill_child(const char* cmd, int user, int nice) {
+  pid_t pid = fork();
+  ei::StringBuffer<128> err;
 
-    switch (pid) {
-        case -1: 
-            return -1;
-        case 0: {
-            // I am the child
-            if (user != INT_MAX && setresuid(user, user, user) < 0) {
-                err.write("Cannot set effective user to %d", user);
-                perror(err.c_str());
-                return EXIT_FAILURE;
-            }
-            const char* const argv[] = { getenv("SHELL"), "-c", cmd, (char*)NULL };
-            if (cd != NULL && cd[0] != '\0' && chdir(cd) < 0) {
-                err.write("Cannot chdir to '%s'", cd);
-                perror(err.c_str());
-                return EXIT_FAILURE;
-            }
-            if (execve((const char*)argv[0], (char* const*)argv, env) < 0) {
-                err.write("Cannot execute '%s'", cd);
-                perror(err.c_str());
-                return EXIT_FAILURE;
-            }
+  switch (pid) {
+      case -1: 
+        return -1;
+      case 0: {
+        // I am the child
+        if ((user != INT_MAX && setegid(user) && setuid(user)) < 0) {
+          err.write("Cannot set effective user to %d", user);
+          perror(err.c_str());
+          return EXIT_FAILURE;
         }
-        default:
-            // I am the parent
-            if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
-                err.write("Cannot set priority of pid %d to %d", pid, nice);
-                perror(err.c_str());
-            }
-            return pid;
+        const char* const argv[] = { getenv("SHELL"), "-c", cmd, (char*)NULL };
+        if (execve((const char*)argv[0], (char* const*)argv, NULL) < 0) {
+          perror(err.c_str());
+          return EXIT_FAILURE;
+        }
+      }
+      default:
+        // I am the parent
+        if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
+          err.write("Cannot set priority of pid %d to %d", pid, nice);
+          perror(err.c_str());
+        }
+        return pid;
     }
+}
+
+int build_and_execute_chroot(const CmdOptions& op, ei::StringBuffer<128> err) {
+  
+  if (!(op.user())) {
+    err.write("Cannot set effective user to %d", op.user());
+    perror(err.c_str());
+    return EXIT_FAILURE;
+  }
+  const char* const argv[] = { getenv("SHELL"), "-c", op.cmd(), (char*)NULL };
+  if (op.cd() != NULL && op.cd()[0] != '\0' && chdir(op.cd()) < 0) {
+    err.write("Cannot chdir to '%s'", op.cd());
+    perror(err.c_str());
+    return EXIT_FAILURE;
+  }
+  if (execve((const char*)argv[0], (char* const*)argv, op.env()) < 0) {
+    err.write("Cannot execute '%s'", op.cd());
+    perror(err.c_str());
+    return EXIT_FAILURE;
+  }
+  return 0;
 }
 
 pid_t start_child(const CmdOptions& op) 
 {
-    return start_child(op.cmd(), op.cd(), op.env(), op.user(), op.nice());
+  pid_t pid = fork();
+  ei::StringBuffer<128> err;
+
+  switch (pid) {
+    case -1: 
+      return -1;
+    case 0: {
+      // I am the child
+      // This will exit on failture
+      if (int ret = build_and_execute_chroot(op, err)) {
+        perror("build_and_execute_chroot failed");
+        exit(ret);
+      }
+    }
+    default:
+      // I am the parent
+      if (op.nice() != INT_MAX && setpriority(PRIO_PROCESS, pid, op.nice()) < 0) {
+        err.write("Cannot set priority of pid %d to %d", pid, op.nice());
+        perror(err.c_str());
+      }
+      return pid;
+  }
 }
 
 int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify) 
@@ -606,7 +645,7 @@ int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify)
         return 0;
     } else if (!ci.kill_cmd.empty()) {
         // This is the first attempt to kill this pid and kill command is provided.
-        ci.kill_cmd_pid = start_child(ci.kill_cmd.c_str(), NULL, NULL, INT_MAX, INT_MAX);
+        ci.kill_cmd_pid = attempt_to_kill_child(ci.kill_cmd.c_str(), INT_MAX, INT_MAX);
         if (ci.kill_cmd_pid > 0) {
             transient_pids[ci.kill_cmd_pid] = ci.cmd_pid;
             ci.deadline.set(now, 5);
