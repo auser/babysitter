@@ -609,10 +609,35 @@ pid_t start_child(const CmdOptions& op)
 {
   ei::StringBuffer<128> err;
     
-  printf("Building chroot path!\n\n");
+  dmesg("Building the chroot environment\n");
   /**
    * Create the chroot, thank you
    **/  
+
+   /**
+    * Build up the environment variables
+    **/
+  int curr_env_vars;
+  /* Set default environment variables */
+  /* We need to set this so that the loader can find libs in /usr/local/lib. */
+  const char* default_env_vars[] = {
+   "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
+   "HOME=/mnt"
+  };
+  const int max_env_vars = 1000;
+  char *env_vars[max_env_vars];
+  
+  dmesg("Memcopy the default environment variables");
+  memcpy(env_vars, default_env_vars, (min((int)max_env_vars, (int)sizeof(default_env_vars)) * sizeof(char *)));
+  curr_env_vars = sizeof(default_env_vars) / sizeof(char *);
+  
+  dmesg("Adding user environment vars\n");
+  char* const* env = op.env();
+  if(env)
+    for(size_t i = 0; i < sizeof(env) / sizeof(char *); ++i)
+      env_vars[curr_env_vars++] = strdup(env[i]);
+  
+  dmesg("Done with the environment");
   
   pid_t pid = fork();
   
@@ -641,14 +666,28 @@ pid_t start_child(const CmdOptions& op)
         fprintf(stderr,"\nSetting Group ID %u\n",real_user);
         perror("setresgid");
         exit(-1);
-      }
+      }     
 
-      const char* const argv[] = { getenv("SHELL"), "-c", op.cmd(), (char*)NULL };
-      if (op.cd() != NULL && op.cd()[0] != '\0' && chdir(op.cd()) < 0) {
-        err.write("Cannot chdir to '%s'", op.cd());
-        perror(err.c_str());
-        return EXIT_FAILURE;
-      }
+     const char* const argv[] = { getenv("SHELL"), "-c", op.cmd(), (char*)NULL };
+     if (op.cd() != NULL && op.cd()[0] != '\0' && chdir(op.cd()) < 0) {
+       err.write("Cannot chdir to '%s'", op.cd());
+       perror(err.c_str());
+       return EXIT_FAILURE;
+     }
+      /**
+       * Drop down and execute
+       **/
+     uid_t ruid, euid, suid;
+     gid_t rgid, egid, sgid;
+
+     if (setresgid(real_user, real_user, real_user) || setresuid(real_user, real_user, real_user) || getresgid(&rgid, &egid, &sgid)
+         || getresuid(&ruid, &euid, &suid) || rgid != real_user || egid != real_user || sgid != real_user
+         || ruid != real_user || euid != real_user || suid != real_user || getegid() != real_user || geteuid() != real_user ) {
+       fprintf(stderr,"\nError setting user to %u\n",real_user);
+       err.write("Could not drop down");
+       exit(-1);
+     }
+     
       if (execve((const char*)argv[0], (char* const*)argv, op.env()) < 0) {
         err.write("Cannot execute '%s'", op.cd());
         perror(err.c_str());

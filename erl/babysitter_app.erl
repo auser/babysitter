@@ -14,7 +14,7 @@
 start(_Type, _Args) -> 
   lists:map(fun(A) ->
     io:format("Starting ~p...", [A]),
-    A:start([])
+    A:start([{args, "-D"}])
   end, [exec]),
   babysitter_sup:start_link().
 
