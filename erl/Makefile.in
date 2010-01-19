@@ -41,8 +41,7 @@ boot:
 	mv babysitter-@PACKAGE_VERSION@.script ../ebin
 
 clean:
-	-rm -rf $(EBIN_FILES)
-	@(rm erl_crash.dump)
+	@(rm -rf $(EBIN_FILES) ebin/*.beam erl_crash.dump)
  
 install:
 	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)

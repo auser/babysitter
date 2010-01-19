@@ -10,5 +10,6 @@ const std::string HELP_MESSAGE =
 " -D                Turn on debugging\n"
 " -u [username]     Run as this user (if running as root)\n"
 " -a [seconds]      Set the number of seconds to live after receiving a SIGTERM/SIGINT (default 30)\n"
+" -b [path]         Path to base all the chroot environments on (not yet functional)\n"
 ;
 

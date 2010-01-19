@@ -44,10 +44,20 @@
 #include <signal.h>
 #include <unistd.h>
 #include <signal.h>
+#include <fcntl.h>
 
 // Object includes
-#include <pwd.h>
+#include <cstring>
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <stdexcept>
+#include <dirent.h>
 #include <list>
 #include <deque>
 #include <sstream>
@@ -60,26 +70,26 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/time.h>
-#include <setjmp.h>
-#include <limits.h>
 
 // Our own includes
-#include "chroot.h"
 #include "babysitter.h"
 #include <ei.h>
 #include "ei++.h"
 
 using namespace ei;
+using namespace std;
 
 //-------------------------------------------------------------------------
 // Defines
 //-------------------------------------------------------------------------
 
 #define BUF_SIZE 2048
+#define EXIT_FAILURE 1
 
 //-------------------------------------------------------------------------
 // Types
 //-------------------------------------------------------------------------
+typedef set<string> string_set;
 
 class CmdInfo;
 
@@ -109,7 +119,7 @@ class CmdOptions {
 
 public:
 
-    CmdOptions() : m_tmp(0, 256), m_image(NULL), m_nice(INT_MAX), m_size(0), m_user(INT_MAX), m_cenv(NULL) {}
+    CmdOptions() : m_tmp(0, 256), m_image(""), m_nice(INT_MAX), m_size(0), m_user(INT_MAX), m_cenv(NULL) {}
     ~CmdOptions() { delete [] m_cenv; m_cenv = NULL; }
 
     const char*  strerror() const { return m_err.str().c_str(); }
@@ -242,6 +252,26 @@ void dmesg(const char *fmt, ...) {
   }
 }
 
+const char *DEV_RANDOM = "/dev/urandom";
+static uid_t random_uid() {
+  uid_t u;
+  for (unsigned char i = 0; i < 10; i++) {
+    int rndm = open(DEV_RANDOM, O_RDONLY);
+    if (sizeof(u) != read(rndm, reinterpret_cast<char *>(&u), sizeof(u))) {
+      continue;
+    }
+    close(rndm);
+
+    if (u > 0xFFFF) {
+      return u;
+    }
+  }
+
+  printf("Could not generate a good random UID after 10 attempts. Bummer!");
+  exit(-1);
+}
+
+
 // We've received a signal to process
 void gotsignal(int sig) {
   if (debug) dmesg("Got signal: %d\n", sig);
@@ -275,17 +305,13 @@ void gotsigchild(int signal, siginfo_t* si, void* context) {
  * child signal messages
  **/
 void check_pending() {
+  static const struct timespec timeout = {0, 0};
   int sig;
   sigset_t  set;
   siginfo_t info;
   sigemptyset(&set);
   if (sigpending(&set) == 0) {
-#ifdef HAVE_SIGTIMEDWAIT
-    static const struct timespec timeout = {0, 0};
     while ((sig = sigtimedwait(&set, &info, &timeout)) > 0 || errno == EINTR)
-#else
-    while ((sig = sigwait(&set, NULL)) > 0 || errno == EINTR)
-#endif
     switch (sig) {
       case SIGCHLD:   gotsigchild(sig, &info, NULL); break;
       case SIGPIPE:   pipe_valid = false; /* intentionally follow through */
@@ -579,42 +605,56 @@ pid_t attempt_to_kill_child(const char* cmd, int user, int nice) {
     }
 }
 
-int build_and_execute_chroot(const CmdOptions& op, ei::StringBuffer<128> err) {
-  
-  if (!(op.user())) {
-    err.write("Cannot set effective user to %d", op.user());
-    perror(err.c_str());
-    return EXIT_FAILURE;
-  }
-  const char* const argv[] = { getenv("SHELL"), "-c", op.cmd(), (char*)NULL };
-  if (op.cd() != NULL && op.cd()[0] != '\0' && chdir(op.cd()) < 0) {
-    err.write("Cannot chdir to '%s'", op.cd());
-    perror(err.c_str());
-    return EXIT_FAILURE;
-  }
-  if (execve((const char*)argv[0], (char* const*)argv, op.env()) < 0) {
-    err.write("Cannot execute '%s'", op.cd());
-    perror(err.c_str());
-    return EXIT_FAILURE;
-  }
-  return 0;
-}
-
 pid_t start_child(const CmdOptions& op) 
 {
-  pid_t pid = fork();
   ei::StringBuffer<128> err;
-
+    
+  printf("Building chroot path!\n\n");
+  /**
+   * Create the chroot, thank you
+   **/  
+  
+  pid_t pid = fork();
+  
   switch (pid) {
     case -1: 
+      err.write("Forking fail\n");
       return -1;
     case 0: {
       // I am the child
       // This will exit on failture
-      if (int ret = build_and_execute_chroot(op, err)) {
-        perror("build_and_execute_chroot failed");
-        exit(ret);
+      printf("\n------->>>> in build_and_execute_chroot <<<<-----------\n\n");
+
+      /**
+       * Setup the user and drop into effective user first
+       **/
+      uid_t real_user; // Save these users
+      if (op.user()) 
+        real_user = op.user();
+      else 
+        real_user = random_uid();
+
+      printf("--> The real user: %d\n", real_user);
+
+      // Set the process group IDS first
+      if (setresgid(-1, real_user, getegid()) || setresuid(-1, real_user, geteuid()) || getegid() != real_user || geteuid() != real_user ) {   
+        fprintf(stderr,"\nSetting Group ID %u\n",real_user);
+        perror("setresgid");
+        exit(-1);
       }
+
+      const char* const argv[] = { getenv("SHELL"), "-c", op.cmd(), (char*)NULL };
+      if (op.cd() != NULL && op.cd()[0] != '\0' && chdir(op.cd()) < 0) {
+        err.write("Cannot chdir to '%s'", op.cd());
+        perror(err.c_str());
+        return EXIT_FAILURE;
+      }
+      if (execve((const char*)argv[0], (char* const*)argv, op.env()) < 0) {
+        err.write("Cannot execute '%s'", op.cd());
+        perror(err.c_str());
+        return EXIT_FAILURE;
+      }
+      return 0;
     }
     default:
       // I am the parent

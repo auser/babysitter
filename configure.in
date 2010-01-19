@@ -40,16 +40,16 @@ LIBEI="${ERLDIR}/lib/${ERL_INTERFACE}/lib/libei.a"
 AC_SUBST(LIBEI)
 
 # Custom proggies
-AC_ARG_WITH(libelf,
-    [ --with-libelf=<path> prefix of the LibElf installation. e.g. /usr/local or /usr],
-    [ELF_PREFIX=$with_libelf],
-		[ELF_PREFIX=/usr/local])
-
-AC_SUBST(ELF_PREFIX)
-ELF_LIBS="-L${ELF_PREFIX}/lib -lelf"
-ELF_CFLAGS="-I${ELF_PREFIX}/include"
-AC_SUBST(ELF_CFLAGS)
-AC_SUBST(ELF_LIBS)
+# AC_ARG_WITH(libelf,
+#     [ --with-libelf=<path> prefix of the LibElf installation. e.g. /usr/local or /usr],
+#     [ELF_PREFIX=$with_libelf],
+# 		[ELF_PREFIX=/usr/local])
+# 
+# AC_SUBST(ELF_PREFIX)
+# ELF_LIBS="-L${ELF_PREFIX}/lib -lelf"
+# ELF_CFLAGS="-I${ELF_PREFIX}/include"
+# AC_SUBST(ELF_CFLAGS)
+# AC_SUBST(ELF_LIBS)
 
 # Checks for libraries.
 AC_HEADER_STDC

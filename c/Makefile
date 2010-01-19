@@ -10,7 +10,7 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include
-INC_LIBS = -lerl_interface -lei -lelf -lcap -lstdc++
+INC_LIBS = -lerl_interface -lei -lcap -lstdc++
 EXECUTABLE = ../priv/bin/babysitter
 
 ifeq ($(shell uname),Linux)
@@ -38,7 +38,7 @@ DEFS = -DHAVE_CONFIG_H
  
 ERLDIR = /opt/erlang/lib/erlang
  
-all: chroot $(OUTPUTFILES)
+all: $(OUTPUTFILES)
  
 debug:
 	$(MAKE) DEBUG=-DDEBUG
@@ -59,14 +59,10 @@ test-dbg: test_suite
 test_%.o: test_%.c %.o
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
 
-chroot:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c chroot.cpp chroot.h
-	
-.cpp.o: chroot
+.cpp.o:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
 		
-babysitter: chroot configuration.h
-	echo "chroot!"
+babysitter: configuration.h
 	mkdir -p `dirname $(EXECUTABLE)`
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(INC_LIBS)
 

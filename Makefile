@@ -28,3 +28,6 @@ install: all
 debug:
 	(cd c;$(MAKE) debug)
 	(cd erl;$(MAKE) debug)
+	
+test_deploy: clean
+	@(rsync -va --exclude=.git --exclude=*.o . vm:~/bs)
