@@ -72,6 +72,7 @@
 #include <sys/time.h>
 
 // Our own includes
+#include "honeycomb.h"
 #include "babysitter.h"
 #include <ei.h>
 #include "ei++.h"
@@ -85,87 +86,6 @@ using namespace std;
 
 #define BUF_SIZE 2048
 #define EXIT_FAILURE 1
-
-//-------------------------------------------------------------------------
-// Types
-//-------------------------------------------------------------------------
-typedef set<string> string_set;
-
-class CmdInfo;
-
-typedef unsigned char byte;
-typedef int   exit_status_t;
-typedef pid_t kill_cmd_pid_t;
-typedef std::pair<pid_t, exit_status_t>     PidStatusT;
-typedef std::pair<pid_t, CmdInfo>           PidInfoT;
-typedef std::map <pid_t, CmdInfo>           MapChildrenT;
-typedef std::pair<kill_cmd_pid_t, pid_t>    KillPidStatusT;
-typedef std::map <kill_cmd_pid_t, pid_t>    MapKillPidT;
-
-class CmdOptions {
-    ei::StringBuffer<256>   m_tmp;       // Temporary storage
-    std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
-    std::string             m_cmd;       // The command to execute
-    std::string             m_cd;        // The directory to execute the command (generated, if not given)
-    std::string             m_stdout;    // The stdout to use for the execution of the command
-    std::string             m_stderr;    // The stderr to use for the execution of the command
-    std::string             m_kill_cmd;  // A special command to kill the process (if needed)
-    std::string             m_image;     // The path to the image file to mount
-    std::list<std::string>  m_env;       // A list of environment variables to use when starting
-    long                    m_nice;      // The "niceness" level
-    size_t                  m_size;      // The heap/stack size
-    int                     m_user;      // run as user (generated if not given)
-    const char**            m_cenv;      // The string list of environment variables
-
-public:
-
-    CmdOptions() : m_tmp(0, 256), m_image(""), m_nice(INT_MAX), m_size(0), m_user(INT_MAX), m_cenv(NULL) {}
-    ~CmdOptions() { delete [] m_cenv; m_cenv = NULL; }
-
-    const char*  strerror() const { return m_err.str().c_str(); }
-    const char*  cmd()      const { return m_cmd.c_str(); }
-    const char*  cd()       const { return m_cd.c_str(); }
-    const char*  image()    const { return m_image.c_str(); }
-    char* const* env()      const { return (char* const*)m_cenv; }
-    const char*  kill_cmd() const { return m_kill_cmd.c_str(); }
-    int          user()     const { return m_user; }
-    int          nice()     const { return m_nice; }
-    
-    int ei_decode(ei::Serializer& ei);
-};
-
-/// Contains run-time info of a child OS process.
-/// When a user provides a custom command to kill a process this 
-/// structure will contain its run-time information.
-struct CmdInfo {
-    std::string     cmd;            // Executed command
-    std::string     mount_point;    // Mount-point related to this process
-    pid_t           cmd_pid;        // Pid of the custom kill command
-    std::string     kill_cmd;       // Kill command to use (if provided - otherwise use SIGTERM)
-    kill_cmd_pid_t  kill_cmd_pid;   // Pid of the command that <pid> is supposed to kill
-    ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
-    bool            sigterm;        // <true> if sigterm was issued.
-    bool            sigkill;        // <true> if sigkill was issued.
-
-    CmdInfo() : cmd_pid(-1), kill_cmd_pid(-1), sigterm(false), sigkill(false) {}
-    CmdInfo(const CmdInfo& ci) {
-        new (this) CmdInfo(ci.cmd.c_str(), ci.kill_cmd.c_str(), ci.cmd_pid);
-    }
-    CmdInfo(const char* _cmd, const char* _kill_cmd, pid_t _cmd_pid) {
-        new (this) CmdInfo();
-        cmd      = _cmd;
-        cmd_pid  = _cmd_pid;
-        kill_cmd = _kill_cmd;
-    }
-    CmdInfo(const char* _cmd, const char* _mount_point, const char* _kill_cmd, pid_t _cmd_pid) {
-        new (this) CmdInfo();
-        mount_point = _mount_point;
-        cmd         = _cmd;
-        cmd_pid     = _cmd_pid;
-        kill_cmd    = _kill_cmd;
-    }
-};
-
 
 //-------------------------------------------------------------------------
 // Global variables
@@ -197,11 +117,11 @@ int   send_pid_status_term(const PidStatusT& stat);
 int   send_error_str(int transId, bool asAtom, const char* fmt, ...);
 int   send_pid_list(int transId, const MapChildrenT& children);
 
-pid_t start_child(const CmdOptions& op);
+pid_t start_child(const Honeycomb& op);
 int   kill_child(pid_t pid, int sig, int transId, bool notify=true);
 int   check_children(int& isTerminated, bool notify = true);
 void  stop_child(pid_t pid, int transId, const TimeVal& now);
-int   stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify = true);
+int   stop_child(Bee& ci, int transId, const TimeVal& now, bool notify = true);
 
 /**
  * We received a signal for the child pid process
@@ -466,7 +386,7 @@ int main(int argc, char* argv[])
           case EXECUTE:
           case SHELL: {
             // {shell, Cmd::string(), Options::list()}
-            CmdOptions po;
+            Honeycomb po;
             if (arity != 3 || po.ei_decode(eis) < 0) {
               send_error_str(transId, false, po.strerror());
               continue;
@@ -476,7 +396,7 @@ int main(int argc, char* argv[])
             if ((pid = start_child(po)) < 0)
               send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
             else {
-              CmdInfo ci(po.cmd(), po.kill_cmd(), pid);
+              Bee ci(po, pid);
               children[pid] = ci;
               send_ok(transId, pid);
             }
@@ -598,7 +518,7 @@ pid_t attempt_to_kill_child(const char* cmd, int user, int nice) {
  * into real responsible methods...
  * Implemented now to get it going mainly
  **/
-pid_t start_child(const CmdOptions& op) 
+pid_t start_child(const Honeycomb& op) 
 {
   ei::StringBuffer<128> err;
     
@@ -698,16 +618,16 @@ pid_t start_child(const CmdOptions& op)
   }
 }
 
-int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify) 
+int stop_child(Bee& ci, int transId, const TimeVal& now, bool notify) 
 {
     bool use_kill = false;
     
-    if (ci.kill_cmd_pid > 0 || ci.sigterm) {
+    if (ci.kill_cmd_pid() > 0 || ci.sigterm()) {
         double diff = ci.deadline.diff(now);
         if (debug)
             fprintf(stderr, "Deadline: %.3f\r\n", diff);
         // There was already an attempt to kill it.
-        if (ci.sigterm && ci.deadline.diff(now) < 0) {
+        if (ci.sigterm() && ci.deadline.diff(now) < 0) {
             // More than 5 secs elapsed since the last kill attempt
             kill(ci.cmd_pid, SIGKILL);
             kill(ci.kill_cmd_pid, SIGKILL);
@@ -736,7 +656,7 @@ int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify)
     if (use_kill) {
         // Use SIGTERM / SIGKILL to nuke the pid
         int n;
-        if (!ci.sigterm && (n = kill_child(ci.cmd_pid, SIGTERM, transId, notify)) == 0) {
+        if (!ci.sigterm() && (n = kill_child(ci.cmd_pid(), SIGTERM, transId, notify)) == 0) {
             ci.deadline.set(now, 5);
         } else if (!ci.sigkill && (n = kill_child(ci.cmd_pid, SIGKILL, 0, false)) == 0) {
             ci.deadline = now;
@@ -749,7 +669,7 @@ int stop_child(CmdInfo& ci, int transId, const TimeVal& now, bool notify)
             if (it != children.end()) 
                 children.erase(it);
         }
-        ci.sigterm = true;
+        ci.sigterm() = true;
         return n;
     }
     return 0;
@@ -909,157 +829,3 @@ int send_pid_status_term(const PidStatusT& stat)
     eis.encode(stat.second);
     return eis.write();
 }
-
-// int CmdOptions::ei_decode(ei::Serializer& ei)
-// {
-//     // {Cmd::string(), [Option]}
-//     //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
-//     int sz;
-//     std::string op, val;
-//     
-//     m_err.str("");
-//     delete [] m_cenv;
-//     m_cenv = NULL;
-//     m_env.clear();
-//     m_nice = INT_MAX;
-//     
-//     if (eis.decodeString(m_cmd) < 0) {
-//         m_err << "badarg: cmd string expected or string size too large";
-//         return -1;
-//     } else if ((sz = eis.decodeListSize()) < 0) {
-//         m_err << "option list expected";
-//         return -1;
-//     } else if (sz == 0) {
-//         m_cd  = "";
-//         m_kill_cmd = "";
-//         return 0;
-//     }
-// 
-//     for(int i=0; i < sz; i++) {
-//         enum OptionT            { CD,   ENV,   KILL,   NICE,   USER,   STDOUT,   STDERR } opt;
-//         const char* options[] = {"cd", "env", "kill", "nice", "user", "stdout", "stderr"};
-//         
-//         if (eis.decodeTupleSize() != 2 || (int)(opt = (OptionT)eis.decodeAtomIndex(options, op)) < 0) {
-//             m_err << "badarg: cmd option must be an atom"; return -1;
-//         }
-//         
-//         switch (opt) {
-//             case CD:
-//             case KILL:
-//             case USER:
-//                 // {cd, Dir::string()} | {kill, Cmd::string()}
-//                 if (eis.decodeString(val) < 0) {
-//                     m_err << op << " bad option value"; return -1;
-//                 }
-//                 if      (opt == CD)     m_cd        = val;
-//                 else if (opt == KILL)   m_kill_cmd  = val;
-//                 else if (opt == USER) {
-//                     struct passwd *pw = getpwnam(val.c_str());
-//                     if (pw == NULL) {
-//                         m_err << "Invalid user " << val << ": " << ::strerror(errno);
-//                         return -1;
-//                     }
-//                     m_user = pw->pw_uid;
-//                 }
-//                 break;
-// 
-//             case NICE:
-//                 if (eis.decodeInt(m_nice) < 0 || m_nice < -20 || m_nice > 20) {
-//                     m_err << "nice option must be an integer between -20 and 20"; 
-//                     return -1;
-//                 }
-//                 break;
-// 
-//             case ENV: {
-//                 // {env, [NameEqualsValue::string()]}
-//                 int env_sz = eis.decodeListSize();
-//                 if (env_sz < 0) {
-//                     m_err << "env list expected"; return -1;
-//                 } else if ((m_cenv = (const char**) new char* [env_sz+1]) == NULL) {
-//                     m_err << "out of memory"; return -1;
-//                 }
-// 
-//                 for (int i=0; i < env_sz; i++) {
-//                     std::string s;
-//                     if (eis.decodeString(s) < 0) {
-//                         m_err << "invalid env argument #" << i; return -1;
-//                     }
-//                     m_env.push_back(s);
-//                     m_cenv[i] = m_env.back().c_str();
-//                 }
-//                 m_cenv[env_sz] = NULL;
-//                 break;
-//             }
-// 
-//             case STDOUT:
-//             case STDERR: {
-//                 int type = 0, sz;
-//                 std::string s, fop;
-//                 type = eis.decodeType(sz);
-//                     
-//                 if (type == ERL_ATOM_EXT)
-//                     eis.decodeAtom(s);
-//                 else if (type == ERL_STRING_EXT)
-//                     eis.decodeString(s);
-//                 else if (type == ERL_SMALL_TUPLE_EXT && sz == 2 && 
-//                          eis.decodeAtom(fop) == 0 && eis.decodeString(s) == 0 && fop == "append") {
-//                     ;
-//                 } else {
-//                     m_err << "Atom, string or {'append', Name} tuple required for option " << op;
-//                     return -1;
-//                 }
-// 
-//                 std::string& rs = (opt == STDOUT) ? m_stdout : m_stderr;
-//                 std::stringstream ss;
-//                 int fd = (opt == STDOUT) ? 1 : 2;
-//                 
-//                 if (s == "null") {
-//                     ss << fd << ">/dev/null";
-//                     rs = ss.str();
-//                 } else if (s == "stderr" && opt == STDOUT)
-//                     rs = "1>&2";
-//                 else if (s == "stdout" && opt == STDERR)
-//                     rs = "2>&1";
-//                 else if (s != "") {
-//                     ss << fd << (fop == "append" ? ">" : "") << ">\"" << s << "\"";
-//                     rs = ss.str();
-//                 }
-//                 break;
-//             }
-//             default:
-//                 m_err << "bad option: " << op; return -1;
-//         }
-//     }
-// 
-//     if (m_stdout == "1>&2" && m_stderr != "2>&1") {
-//         m_err << "cirtular reference of stdout and stderr";
-//         return -1;
-//     } else if (!m_stdout.empty() || !m_stderr.empty()) {
-//         std::stringstream ss;
-//         ss << m_cmd;
-//         if (!m_stdout.empty()) ss << " " << m_stdout;
-//         if (!m_stderr.empty()) ss << " " << m_stderr;
-//         m_cmd = ss.str();
-//     }
-//     return 0;
-// }
-
-/*
-int CmdOptions::init(const std::list<std::string>& list) 
-{
-    int i, size=0;
-    for(std::list<std::string>::iterator it=list.begin(), end=list.end(); it != end; ++it)
-        size += it->size() + 1;
-    if (m_env.resize(m_size) == NULL)
-        return -1;
-    m_count = list.size() + 1;
-    char *p = m_env.c_str();
-    for(std::list<std::string>::iterator it=list.begin(), end=list.end(); it != end; ++it) {
-        strcpy(p, it->c_str());
-        m_cenv[i++] = p;
-        p += it->size() + 1;
-    }
-    m_cenv[i] = NULL;
-    return 0;
-}
-*/

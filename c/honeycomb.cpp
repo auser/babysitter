@@ -4,6 +4,9 @@
 #include <fcntl.h>
 #include <sstream>
 #include <iomanip>
+// System
+#include <sys/types.h>
+#include <pwd.h>
 // Erlang interface
 #include "ei++.h"
 
@@ -22,7 +25,7 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   // {Cmd::string(), [Option]}
   //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
   int sz;
-  std::string op, val;
+  std::string op_str, val;
     
   m_err.str("");
   delete [] m_cenv;
@@ -51,39 +54,44 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
       m_err << "badarg: cmd option must be an atom"; 
       return -1;
     }
-    printf("Found option: %d\n", op_str);
+    printf("Found option: %s\n", op_str.c_str());
     switch(opt) {
       case CD:
       case KILL:
-      case USER:
+      case USER: {
         // {cd, Dir::string()} | {kill, Cmd::string()} | {user, Cmd::string()} | etc.
         if (m_eis.decodeString(val) < 0) {m_err << opt << " bad option"; return -1;}
-        if (opt == CD) {m_cd = val}
+        if (opt == CD) {m_cd = val;}
         else if (opt == KILL) {m_kill_cmd = val;}
         else if (opt == USER) {
           struct passwd *pw = getpwnam(val.c_str());
-          if (pw == NULL) {m_err << "Invalid user: " << val " : " << strerror(errno); return -1}
+          if (pw == NULL) {m_err << "Invalid user: " << val << " : " << std::strerror(errno); return -1;}
           m_user = pw->pw_uid;
         }
         break;
-      case NICE:
+      }
+      case NICE: {
         if (m_eis.decodeInt(m_nice) < 0 || m_nice < -20 || m_nice > 20) {m_err << "Nice must be between -20 and 20"; return -1;}
         break;
-      case ENV:
-        int env_sz = eis.decodeListSize();
+      }
+      case ENV: {
+        int env_sz = m_eis.decodeListSize();
         if (env_sz < 0) {m_err << "Must pass a list for env option"; return -1;}
-        elseif ((m_cenv = (const char*) new char* [env_sz+1]) == NULL) {m_err << "Could not allocate enough memory to create list"; return -1;}
+        else if ((m_cenv = (const char**) new char* [env_sz+1]) == NULL) {
+          m_err << "Could not allocate enough memory to create list"; return -1;
+        }
         for(int i=0; i < env_sz; i++) {
-          std:string str;
-          if (eis.decodeString(str) >= 0) {
+          std::string str;
+          if (m_eis.decodeString(str) >= 0) {
             m_env.push_back(str);
             m_cenv[i] = m_env.back().c_str();
           } else {m_err << "Invalid env argument at " << i; return -1;}
         }
         m_cenv[env_sz] = NULL; // Make sure we have a NULL terminated list
         break;
+      }
       case STDOUT:
-      case STDERR:
+      case STDERR: {
         int t = 0;
         int sz = 0;
         std::string str, fop;
@@ -103,6 +111,7 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
         else if (str == "stdout" && opt == STDERR) {rs = "2>&1";}
         else if (str != "") {stream << fd << ">\"" << str << "\"";rs = stream.str();}
         break;
+      }
       default:
         m_err << "bad options: " << op_str; return -1;
     }

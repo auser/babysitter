@@ -15,6 +15,7 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <set>
 #include <utility>
 
 // Erlang interface
@@ -25,6 +26,8 @@
 #define BUF_SIZE 2048
 
 /*---------------------------- TYPES ---------------------------------------*/
+typedef std::set<std::string> string_set;
+
 typedef enum {UNKNOWN, FAILURE} failure_type_t;
 
 class Honeycomb;
@@ -112,11 +115,11 @@ public:
   Bee() : m_cmd_pid(-1), m_kill_cmd_pid(-1), m_sigterm(false), m_sigkill(false) {}
   ~Bee() {}
   
-  Bee(const Honeycomb& ci, const char* _kill_cmd, pid_t _cmd_pid) {
+  Bee(const Honeycomb& ci, pid_t _cmd_pid) {
     m_cmd = ci.cmd();
     m_mount_point = ci.mount();
     m_cmd_pid = _cmd_pid;
-    m_kill_cmd = _kill_cmd;
+    m_kill_cmd = ci.kill_cmd();
   }
   
 };
