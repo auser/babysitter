@@ -101,6 +101,7 @@ public:
   int build_environment();
   
 private:
+  uid_t random_uid();
   int setup_defaults();
 };
 

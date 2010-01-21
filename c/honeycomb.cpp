@@ -106,6 +106,7 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
           } else {m_err << "Invalid env argument at " << i; return -1;}
         }
         m_cenv[m_cenv_c+1] = NULL; // Make sure we have a NULL terminated list
+        m_cenv_c = env_sz+m_cenv_c; // save the new value... we don't really need to do this, though
         break;
       }
       case STDOUT:
@@ -148,12 +149,37 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   return 0;
 }
 
-int build_environment() {
+int Honeycomb::build_environment() {
   
   /* Prepare as of the environment from the child process */
   
   pid_t pid = fork();
+  if (pid < 0) {
+    m_err << "Could not launch new pid to start a new environment";
+    return -1;
+  } else {
+    // We are in the child pid
+  }
   
   // Success!
   return 0;
+}
+
+const char *DEV_RANDOM = "/dev/urandom";
+uid_t Honeycomb::random_uid() {
+  uid_t u;
+  for (unsigned char i = 0; i < 10; i++) {
+    int rndm = open(DEV_RANDOM, O_RDONLY);
+    if (sizeof(u) != read(rndm, reinterpret_cast<char *>(&u), sizeof(u))) {
+      continue;
+    }
+    close(rndm);
+
+    if (u > 0xFFFF) {
+      return u;
+    }
+  }
+
+  printf("Could not generate a good random UID after 10 attempts. Bummer!");
+  exit(-1);
 }
