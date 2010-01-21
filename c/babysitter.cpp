@@ -87,9 +87,7 @@ using namespace std;
 #define BUF_SIZE 2048
 #define EXIT_FAILURE 1
 
-//-------------------------------------------------------------------------
-// Global variables
-//-------------------------------------------------------------------------
+/*---------------------------- Variables ------------------------------------*/
 
 ei::Serializer eis(/* packet header size */ 2);
 
@@ -108,9 +106,7 @@ MapKillPidT  transient_pids;        // Map of pids of custom kill commands.
 #define SIGCHLD_MAX_SIZE 4096
 std::deque< PidStatusT > exited_children;  // deque of processed SIGCHLD events
 
-//-------------------------------------------------------------------------
-// Local Functions
-//-------------------------------------------------------------------------
+/*---------------------------- Functions ------------------------------------*/
 
 int   send_ok(int transId, pid_t pid = -1);
 int   send_pid_status_term(const PidStatusT& stat);
@@ -121,7 +117,7 @@ pid_t start_child(const Honeycomb& op);
 int   kill_child(pid_t pid, int sig, int transId, bool notify=true);
 int   check_children(int& isTerminated, bool notify = true);
 void  stop_child(pid_t pid, int transId, const TimeVal& now);
-int   stop_child(Bee& ci, int transId, const TimeVal& now, bool notify = true);
+int   stop_child(Bee& bee, int transId, const TimeVal& now, bool notify = true);
 
 /**
  * We received a signal for the child pid process
@@ -280,7 +276,7 @@ int main(int argc, char* argv[])
     sigaction(SIGCHLD, &sact, NULL);
     
     /**
-     * Command line processing
+     * Command line processing (TODO: Move this into a function)
      **/
     char c;
     while (-1 != (c = getopt(argc, argv, "a:Dhn"))) {
@@ -396,8 +392,8 @@ int main(int argc, char* argv[])
             if ((pid = start_child(po)) < 0)
               send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
             else {
-              Bee ci(po, pid);
-              children[pid] = ci;
+              Bee bee(po, pid);
+              children[pid] = bee;
               send_ok(transId, pid);
             }
             break;
@@ -618,29 +614,29 @@ pid_t start_child(const Honeycomb& op)
   }
 }
 
-int stop_child(Bee& ci, int transId, const TimeVal& now, bool notify) 
+int stop_child(Bee& bee, int transId, const TimeVal& now, bool notify) 
 {
     bool use_kill = false;
     
-    if (ci.kill_cmd_pid() > 0 || ci.sigterm()) {
-        double diff = ci.deadline.diff(now);
+    if (bee.kill_cmd_pid > 0 || bee.sigterm) {
+        double diff = bee.deadline.diff(now);
         if (debug)
             fprintf(stderr, "Deadline: %.3f\r\n", diff);
         // There was already an attempt to kill it.
-        if (ci.sigterm() && ci.deadline.diff(now) < 0) {
+        if (bee.sigterm && bee.deadline.diff(now) < 0) {
             // More than 5 secs elapsed since the last kill attempt
-            kill(ci.cmd_pid, SIGKILL);
-            kill(ci.kill_cmd_pid, SIGKILL);
-            ci.sigkill = true;
+            kill(bee.cmd_pid, SIGKILL);
+            kill(bee.kill_cmd_pid, SIGKILL);
+            bee.sigkill = true;
         }
         if (notify) send_ok(transId);
         return 0;
-    } else if (!ci.kill_cmd.empty()) {
+    } else if (!bee.kill_cmd.empty()) {
         // This is the first attempt to kill this pid and kill command is provided.
-        ci.kill_cmd_pid = attempt_to_kill_child(ci.kill_cmd.c_str(), INT_MAX, INT_MAX);
-        if (ci.kill_cmd_pid > 0) {
-            transient_pids[ci.kill_cmd_pid] = ci.cmd_pid;
-            ci.deadline.set(now, 5);
+        bee.kill_cmd_pid = attempt_to_kill_child(bee.kill_cmd.c_str(), INT_MAX, INT_MAX);
+        if (bee.kill_cmd_pid > 0) {
+            transient_pids[bee.kill_cmd_pid] = bee.cmd_pid;
+            bee.deadline.set(now, 5);
             if (notify) send_ok(transId);
             return 0;
         } else {
@@ -656,20 +652,20 @@ int stop_child(Bee& ci, int transId, const TimeVal& now, bool notify)
     if (use_kill) {
         // Use SIGTERM / SIGKILL to nuke the pid
         int n;
-        if (!ci.sigterm() && (n = kill_child(ci.cmd_pid(), SIGTERM, transId, notify)) == 0) {
-            ci.deadline.set(now, 5);
-        } else if (!ci.sigkill && (n = kill_child(ci.cmd_pid, SIGKILL, 0, false)) == 0) {
-            ci.deadline = now;
-            ci.sigkill  = true;
+        if (!bee.sigterm && (n = kill_child(bee.cmd_pid, SIGTERM, transId, notify)) == 0) {
+            bee.deadline.set(now, 5);
+        } else if (!bee.sigkill && (n = kill_child(bee.cmd_pid, SIGKILL, 0, false)) == 0) {
+            bee.deadline = now;
+            bee.sigkill  = true;
         } else {
             n = 0; // FIXME
             // Failed to send SIGTERM & SIGKILL to the process - give up
-            ci.sigkill = true;
-            MapChildrenT::iterator it = children.find(ci.cmd_pid);
+            bee.sigkill = true;
+            MapChildrenT::iterator it = children.find(bee.cmd_pid);
             if (it != children.end()) 
                 children.erase(it);
         }
-        ci.sigterm() = true;
+        bee.sigterm = true;
         return n;
     }
     return 0;
@@ -677,47 +673,47 @@ int stop_child(Bee& ci, int transId, const TimeVal& now, bool notify)
 
 void stop_child(pid_t pid, int transId, const TimeVal& now)
 {
-    int n = 0;
+  int n = 0;
 
-    MapChildrenT::iterator it = children.find(pid);
-    if (it == children.end()) {
-        send_error_str(transId, false, "pid not alive");
-        return;
-    } else if ((n = kill(pid, 0)) < 0) {
-        send_error_str(transId, false, "pid not alive (err: %d)", n);
-        return;
-    }
-    stop_child(it->second, transId, now);
+  MapChildrenT::iterator it = children.find(pid);
+  if (it == children.end()) {
+    send_error_str(transId, false, "pid not alive");
+    return;
+  } else if ((n = kill(pid, 0)) < 0) {
+    send_error_str(transId, false, "pid not alive (err: %d)", n);
+    return;
+  }
+  stop_child(it->second, transId, now);
 }
 
 int kill_child(pid_t pid, int signal, int transId, bool notify)
 {
-    // We can't use -pid here to kill the whole process group, because our process is
-    // the group leader.
-    int err = kill(pid, signal);
-    switch (err) {
-        case 0:
-            if (notify) send_ok(transId);
-            break;
-        case EINVAL:
-            if (notify) send_error_str(transId, false, "Invalid signal: %d", signal);
-            break;
-        case ESRCH:
-            if (notify) send_error_str(transId, true, "esrch");
-            break;
-        case EPERM:
-            if (notify) send_error_str(transId, true, "eperm");
-            break;
-        default:
-            if (notify) send_error_str(transId, true, strerror(err));
-            break;
-    }
-    return err;
+  // We can't use -pid here to kill the whole process group, because our process is
+  // the group leader.
+  int err = kill(pid, signal);
+  switch (err) {
+    case 0:
+      if (notify) send_ok(transId);
+      break;
+    case EINVAL:
+      if (notify) send_error_str(transId, false, "Invalid signal: %d", signal);
+      break;
+    case ESRCH:
+      if (notify) send_error_str(transId, true, "esrch");
+      break;
+    case EPERM:
+      if (notify) send_error_str(transId, true, "eperm");
+      break;
+    default:
+      if (notify) send_error_str(transId, true, strerror(err));
+      break;
+  }
+  return err;
 }
 
 int check_children(int& isTerminated, bool notify)
 {
-    do {
+  do {
         // For each process info in the <exited_children> queue deliver it to the Erlang VM
         // and removed it from the managed <children> map.
         std::deque< PidStatusT >::iterator it;
@@ -775,57 +771,57 @@ int check_children(int& isTerminated, bool notify)
 
 int send_pid_list(int transId, const MapChildrenT& children)
 {
-    // Reply: {TransId, [OsPid::integer()]}
-    eis.reset();
-    eis.encodeTupleSize(2);
-    eis.encode(transId);
-    eis.encodeListSize(children.size());
-    for(MapChildrenT::const_iterator it=children.begin(), end=children.end(); it != end; ++it)
-        eis.encode(it->first);
-    eis.encodeListEnd();
-    return eis.write();
+  // Reply: {TransId, [OsPid::integer()]}
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(transId);
+  eis.encodeListSize(children.size());
+  for(MapChildrenT::const_iterator it=children.begin(), end=children.end(); it != end; ++it)
+      eis.encode(it->first);
+  eis.encodeListEnd();
+  return eis.write();
 }
 
 int send_error_str(int transId, bool asAtom, const char* fmt, ...)
 {
-    char str[MAXATOMLEN];
-    va_list vargs;
-    va_start (vargs, fmt);
-    vsnprintf(str, sizeof(str), fmt, vargs);
-    va_end   (vargs);
-    
-    eis.reset();
-    eis.encodeTupleSize(2);
-    eis.encode(transId);
-    eis.encodeTupleSize(2);
-    eis.encode(atom_t("error"));
-    (asAtom) ? eis.encode(atom_t(str)) : eis.encode(str);
-    return eis.write();
+  char str[MAXATOMLEN];
+  va_list vargs;
+  va_start (vargs, fmt);
+  vsnprintf(str, sizeof(str), fmt, vargs);
+  va_end   (vargs);
+  
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(transId);
+  eis.encodeTupleSize(2);
+  eis.encode(atom_t("error"));
+  (asAtom) ? eis.encode(atom_t(str)) : eis.encode(str);
+  return eis.write();
 }
 
 int send_ok(int transId, pid_t pid)
 {
-    eis.reset();
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(transId);
+  if (pid < 0)
+    eis.encode(atom_t("ok"));
+  else {
     eis.encodeTupleSize(2);
-    eis.encode(transId);
-    if (pid < 0)
-        eis.encode(atom_t("ok"));
-    else {
-        eis.encodeTupleSize(2);
-        eis.encode(atom_t("ok"));
-        eis.encode(pid);
-    }
-    return eis.write();
+    eis.encode(atom_t("ok"));
+    eis.encode(pid);
+  }
+  return eis.write();
 }
 
 int send_pid_status_term(const PidStatusT& stat)
 {
-    eis.reset();
-    eis.encodeTupleSize(2);
-    eis.encode(0);
-    eis.encodeTupleSize(3);
-    eis.encode(atom_t("exit_status"));
-    eis.encode(stat.first);
-    eis.encode(stat.second);
-    return eis.write();
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(0);
+  eis.encodeTupleSize(3);
+  eis.encode(atom_t("exit_status"));
+  eis.encode(stat.first);
+  eis.encode(stat.second);
+  return eis.write();
 }

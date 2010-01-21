@@ -101,25 +101,24 @@ public:
  * Bee
  **/
 class Bee {
-private:
-  std::string     m_cmd;            // Executed command
-  mount_type*     m_mount_point;    // Mount-point related to this process
-  pid_t           m_cmd_pid;        // Pid of the custom kill command
-  std::string     m_kill_cmd;       // Kill command to use (if provided - otherwise use SIGTERM)
-  kill_cmd_pid_t  m_kill_cmd_pid;   // Pid of the command that <pid> is supposed to kill
-  ei::TimeVal     m_deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
-  bool            m_sigterm;        // <true> if sigterm was issued.
-  bool            m_sigkill;        // <true> if sigkill was issued.
-
 public:
-  Bee() : m_cmd_pid(-1), m_kill_cmd_pid(-1), m_sigterm(false), m_sigkill(false) {}
+  std::string     cmd;            // Executed command
+  mount_type*     mount_point;    // Mount-point related to this process
+  pid_t           cmd_pid;        // Pid of the custom kill command
+  std::string     kill_cmd;       // Kill command to use (if provided - otherwise use SIGTERM)
+  kill_cmd_pid_t  kill_cmd_pid;   // Pid of the command that <pid> is supposed to kill
+  ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
+  bool            sigterm;        // <true> if sigterm was issued.
+  bool            sigkill;        // <true> if sigkill was issued.
+
+  Bee() : cmd_pid(-1), kill_cmd_pid(-1), sigterm(false), sigkill(false) {}
   ~Bee() {}
   
-  Bee(const Honeycomb& ci, pid_t _cmd_pid) {
-    m_cmd = ci.cmd();
-    m_mount_point = ci.mount();
-    m_cmd_pid = _cmd_pid;
-    m_kill_cmd = ci.kill_cmd();
+  Bee(const Honeycomb& hc, pid_t _cmd_pid) {
+    cmd = hc.cmd();
+    mount_point = hc.mount();
+    cmd_pid = _cmd_pid;
+    kill_cmd = hc.kill_cmd();
   }
   
 };
