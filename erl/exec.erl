@@ -500,6 +500,8 @@ check_cmd_options([{env, Env}|T], State) when is_list(Env) ->
     [] -> check_cmd_options(T, State);
     L  -> throw({error, {invalid_env_value, L}})
     end;
+check_cmd_options([{image, Image}|T], State) when is_list(Image) ->
+    check_cmd_options(T, State);
 check_cmd_options([{kill, Cmd}|T], State) when is_list(Cmd) ->
     check_cmd_options(T, State);
 check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->
@@ -525,3 +527,4 @@ next_trans(_) ->
     1.
 
 
+v

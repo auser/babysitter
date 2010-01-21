@@ -10,6 +10,7 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) @CFLAGS@ @ELF_CFLAGS@
+ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 INC_LIBS = -lerl_interface -lei -lcap -lstdc++
 EXECUTABLE = ../priv/bin/babysitter
 
@@ -38,7 +39,7 @@ DEFS = -DHAVE_CONFIG_H
  
 ERLDIR = @ERLDIR@
  
-all: $(OUTPUTFILES)
+all: honeycomb $(OUTPUTFILES)
  
 debug:
 	$(MAKE) DEBUG=-DDEBUG
@@ -61,7 +62,10 @@ test_%.o: test_%.c %.o
 
 .cpp.o:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
-		
+
+honeycomb: honeycomb.cpp honeycomb.h
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
+
 babysitter: configuration.h
 	mkdir -p `dirname $(EXECUTABLE)`
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(INC_LIBS)

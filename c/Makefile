@@ -38,7 +38,7 @@ DEFS = -DHAVE_CONFIG_H
  
 ERLDIR = /opt/erlang/lib/erlang
  
-all: $(OUTPUTFILES)
+all: honeycomb $(OUTPUTFILES)
  
 debug:
 	$(MAKE) DEBUG=-DDEBUG
@@ -61,7 +61,10 @@ test_%.o: test_%.c %.o
 
 .cpp.o:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
-		
+
+honeycomb: honeycomb.cpp honeycomb.h
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
+
 babysitter: configuration.h
 	mkdir -p `dirname $(EXECUTABLE)`
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(INC_LIBS)
@@ -70,7 +73,7 @@ configuration.h:
 	sh configuration.sh > configuration.h
 
 clean:
-	rm -rf *.o *.a $(OUTPUTFILES)
+	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE)
  
 install:
 	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv
