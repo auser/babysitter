@@ -16,6 +16,26 @@
 
 using namespace ei;
 
+int Honeycomb::setup_defaults() {
+  /* Setup environment defaults */
+  const char* default_env_vars[] = {
+   "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
+   "HOME=/mnt"
+  };
+  
+  int m_cenv_c = 0;
+  const int max_env_vars = 1000;
+  
+  if ((m_cenv = (const char**) new char* [max_env_vars]) == NULL) {
+    m_err << "Could not allocate enough memory to create list"; return -1;
+  }
+  
+  memcpy(m_cenv, default_env_vars, (std::min((int)max_env_vars, (int)sizeof(default_env_vars)) * sizeof(char *)));
+  m_cenv_c = sizeof(default_env_vars) / sizeof(char *);
+  
+  return 0;
+}
+
 /**
  * Decode the erlang tuple
  * The erlang tuple decoding happens for all the tuples that get sent over the wire
@@ -77,17 +97,15 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
       case ENV: {
         int env_sz = m_eis.decodeListSize();
         if (env_sz < 0) {m_err << "Must pass a list for env option"; return -1;}
-        else if ((m_cenv = (const char**) new char* [env_sz+1]) == NULL) {
-          m_err << "Could not allocate enough memory to create list"; return -1;
-        }
+        
         for(int i=0; i < env_sz; i++) {
           std::string str;
           if (m_eis.decodeString(str) >= 0) {
             m_env.push_back(str);
-            m_cenv[i] = m_env.back().c_str();
+            m_cenv[m_cenv_c+i] = m_env.back().c_str();
           } else {m_err << "Invalid env argument at " << i; return -1;}
         }
-        m_cenv[env_sz] = NULL; // Make sure we have a NULL terminated list
+        m_cenv[m_cenv_c+1] = NULL; // Make sure we have a NULL terminated list
         break;
       }
       case STDOUT:
@@ -127,5 +145,15 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
     m_cmd = stream.str();
   }
   
+  return 0;
+}
+
+int build_environment() {
+  
+  /* Prepare as of the environment from the child process */
+  
+  pid_t pid = fork();
+  
+  // Success!
   return 0;
 }

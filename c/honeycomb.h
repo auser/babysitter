@@ -78,6 +78,7 @@ private:
   size_t                  m_size;      // The heap/stack size
   int                     m_user;      // run as user (generated if not given)
   const char**            m_cenv;      // The string list of environment variables
+  int                     m_cenv_c;    // The current count of the environment variables (for internal use)
 
 public:
   Honeycomb() : m_tmp(0,256),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_cenv(NULL) {
@@ -95,6 +96,12 @@ public:
   mount_type*  mount()    const { return m_mount; }
   
   int ei_decode(ei::Serializer& ei);
+  
+  /* Preparations for building the environment */
+  int build_environment();
+  
+private:
+  int setup_defaults();
 };
 
 /**
