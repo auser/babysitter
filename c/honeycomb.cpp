@@ -157,6 +157,7 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
 
 int Honeycomb::build_environment(std::string confinement_root, mode_t confinement_mode = 040755) {
   /* Prepare as of the environment from the child process */
+  setup_defaults();
   // First, get a random_uid to run as
   m_user = random_uid();
   gid_t egid = getegid();
