@@ -5,6 +5,9 @@
 #include <sstream>
 #include <iomanip>
 #include <assert.h>
+#include <fcntl.h>
+#include <gelf.h>
+#include <regex.h>
 // System
 #include <sys/types.h>
 #include <pwd.h>
@@ -188,28 +191,20 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
   
   // Next, create the chroot, if necessary which sets up a chroot
   // environment in the confinement_root path
-  if (do_chroot) {
-    temp_drop(); // drop into new user
-    string_set pths;
-    pths.insert("/tmp");
-    pths.insert("/bin");
-    pths.insert("/lib");
-    pths.insert("/libexec");
-    pths.insert("/etc");
-    // Make these directories please
-    for (string_set::iterator i = pths.begin(); i != pths.end(); ++i) {
-      if (mkdir(m_cd.c_str(), confinement_mode)) {
-        m_err << "Could not build confinement directory: " << std::strerror(errno);
-        exit(1);
-      }
+  if (!dont_chroot) {
+    pid_t child = fork();
+    
+    if(0 == child) {
+      temp_drop(); // drop into new user
+
+      // Find the binary command
+      std::string binary_path = find_binary(m_cmd);
+      std::string pth = m_cd + binary_path;
+      
+      // Currently, we only support running binaries, not shell scripts
+      copy_deps(binary_path);
+      
     }
-    
-    // Find the binary command
-    std::string binary_path = find_binary(m_cmd);
-    std::string pth = m_cd + binary_path;
-    
-    cp(binary_path, pth);
-    
   }
   
   // Success!
@@ -232,7 +227,8 @@ pid_t Honeycomb::run() {
 std::string Honeycomb::find_binary(const std::string& file) {
   assert(geteuid() != 0 && getegid() != 0); // We can't be root to run this.
   
-  if ('/' == file[0] || ('.' == file[0] && '/' == file[1])) return file;
+  if (abs_path(file)) return file;
+  
   std::string pth = DEFAULT_PATH;
   char *p2 = getenv("PATH");
   if (p2) {pth = p2;}
@@ -243,13 +239,19 @@ std::string Honeycomb::find_binary(const std::string& file) {
     std::string s = pth.substr(i, f - i) + "/" + file;
     if (0 == access(s.c_str(), X_OK)) {return s;}
   } while(std::string::npos != f);
-  if (!('/' == file[0] && ('.' == file[0] && '/' == file[1]))) {
+  
+  if (!abs_path(file)) {
     fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
     return NULL;
   }
   if (0 == access(file.c_str(), X_OK)) return file;
+  
   fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
   return NULL;
+}
+
+bool Honeycomb::abs_path(const std::string & path) {
+  return '/' == path[0] || ('.' == path[0] && '/' == path[1]);
 }
 
 void Honeycomb::make_path(const std::string & path) {
@@ -266,6 +268,120 @@ void Honeycomb::make_path(const std::string & path) {
       }
     }
   }
+}
+
+void Honeycomb::copy_deps(const std::string & image) {
+  if (EV_NONE == elf_version(EV_CURRENT)) {
+    fprintf(stderr, "ELF libs failed to initialize\n");
+    exit(-1);
+  }
+  int fl = open(image.c_str(), O_RDONLY);
+  if (-1 == fl) {
+    fprintf(stderr, "Could not open %s - %s\n", image.c_str(), std::strerror(errno));
+    exit(-1);
+  }
+  Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
+  if (NULL == elf) {
+    fprintf(stderr, "elf_begin failed because %s\n", elf_errmsg(-1));
+    exit(-1);
+  }
+  if (ELF_K_ELF != elf_kind(elf)) {
+    fprintf(stderr, "%s is not an ELF object\n", (&image)->c_str());
+    exit(-1);
+  }
+  
+  std::pair<string_set *, string_set *> *r = dynamic_loads(elf);
+  string_set libs = *r->first;
+  
+  // Go through the libs
+  for (string_set::iterator ld = libs.begin(); ld != libs.end(); ++ld) {
+    string_set pths = *r->second;
+    bool found = false;
+    
+    for (string_set::iterator pth = pths.begin(); pth != pths.end(); ++pth) {
+      std::string src = *pth + '/' + *ld;
+      if (m_already_copied.count(src)) {
+        found = true;
+        continue;
+      }
+      std::string dest = m_cd + src;
+      
+      found = true;
+      m_already_copied.insert(src);
+      copy_deps(src);
+      break;
+      
+      if (!found) {fprintf(stderr, "Could not find the library %s\n", ld->c_str());}
+    }
+  }
+  
+  elf_end(elf);
+  close(fl);
+}
+
+/**
+ * dynamic_loads (from line 443 of isolate.cpp)
+ **/
+std::pair<string_set *, string_set *> * Honeycomb::dynamic_loads(Elf *elf) {
+  assert(geteuid() != 0 && getegid() != 0);
+
+  GElf_Ehdr ehdr;
+  if (! gelf_getehdr(elf, &ehdr)) {
+    fprintf(stderr, "elf_getehdr failed from %s\n", elf_errmsg(-1));
+    exit(-1);
+  }
+
+  Elf_Scn *scn = elf_nextscn(elf, NULL);
+  GElf_Shdr shdr;
+  std::string to_find = ".dynstr";
+  while (scn) {
+    if (NULL == gelf_getshdr(scn, &shdr)) {
+      fprintf(stderr, "getshdr() failed from %s\n", elf_errmsg(-1));
+      exit(-1);
+    }
+
+    char * nm = elf_strptr(elf, ehdr.e_shstrndx, shdr.sh_name);
+    if (NULL == nm) {
+      fprintf(stderr, "elf_strptr() failed from %s\n", elf_errmsg(-1));
+      exit(-1);
+    }
+
+    if (to_find == nm) {
+      break;
+    }
+
+    scn = elf_nextscn(elf, scn);
+  }
+
+  Elf_Data *data = NULL;
+  size_t n = 0;
+  string_set *lbrrs = new string_set(), *pths = new string_set();
+
+  pths->insert("/lib");
+  pths->insert("/usr/lib");
+  pths->insert("/usr/local/lib");
+
+  while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
+    char *bfr = static_cast<char *>(data->d_buf);
+    char *p = bfr + 1;
+    while (p < bfr + data->d_size) {
+      if (names_library(p)) {
+        lbrrs->insert(p);
+      } else if ('/' == *p) {
+        pths->insert(p);
+      }
+
+      size_t lngth = strlen(p) + 1;
+      n += lngth;
+      p += lngth;
+    }
+  }
+
+  return new std::pair<string_set *, string_set *>(lbrrs, pths);
+}
+
+bool Honeycomb::names_library(const std::string & name) {
+  return matches_pattern(name, "^lib.+\\.so[.0-9]*$", 0);
 }
 
 void Honeycomb::cp(std::string & source, std::string & destination) {
@@ -322,6 +438,8 @@ const char * const Honeycomb::to_string(long long int n, unsigned char base) {
   return bfr;
 }
 
+/*---------------------------- Permissions ------------------------------------*/
+
 void Honeycomb::temp_drop() {
   if (setresgid(-1, m_user, getegid()) || setresuid(-1, m_user, geteuid()) || getegid() != m_user || geteuid() != m_user ) {
     fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, std::strerror(errno));
@@ -349,4 +467,20 @@ void Honeycomb::restore_perms() {
         fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, std::strerror(errno));
         exit(-1); // we are in the fork
       }
+}
+
+bool Honeycomb::matches_pattern(const std::string & matchee, const char * pattern, int flags) {
+  regex_t xprsn;
+  if (regcomp(&xprsn, pattern, flags|REG_EXTENDED|REG_NOSUB)) {
+    fprintf(stderr, "Failed to compile regex\n");
+    exit(-1); // we are in the fork
+  }
+
+  if (0 == regexec(&xprsn, matchee.c_str(), 1, NULL, 0)) {
+    regfree(&xprsn);
+    return true;
+  }
+
+  regfree(&xprsn);
+  return false;
 }

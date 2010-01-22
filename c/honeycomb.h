@@ -71,7 +71,7 @@ private:
   std::string             m_kill_cmd;  // A special command to kill the process (if needed)
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
     std::string             m_skel;      // A skeleton choot directory to work from
-    bool                    do_chroot;   // Boolean to build a chroot (true/false)
+    bool                    dont_chroot; // Boolean to build a chroot (true/false)
   std::string             m_stdout;    // The stdout to use for the execution of the command
   std::string             m_stderr;    // The stderr to use for the execution of the command
   mount_type*             m_mount;     // A mount associated with the honeycomb
@@ -82,9 +82,10 @@ private:
   const char**            m_cenv;      // The string list of environment variables
   // Internal
   int                     m_cenv_c;    // The current count of the environment variables
+  string_set              m_already_copied;
 
 public:
-  Honeycomb() : m_tmp(0,256),m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_cenv(NULL) {
+  Honeycomb() : m_tmp(0,256),m_cd(""),dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_cenv(NULL) {
     ei::Serializer m_eis(2);
   }
   ~Honeycomb() { delete [] m_cenv; m_cenv = NULL; }
@@ -112,9 +113,14 @@ private:
   void temp_drop();
   void perm_drop();
   void restore_perms();
+  void copy_deps(const std::string & image);
+  std::pair<string_set *, string_set *> * dynamic_loads(Elf *elf);
+  bool names_library(const std::string & name);
   std::string find_binary(const std::string& file);
   void make_path(const std::string & path);
+  bool abs_path(const std::string & path);
   void cp(std::string & source, std::string & dest);
+  bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
 };
 
 /**
