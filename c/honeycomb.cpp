@@ -269,6 +269,12 @@ pid_t Honeycomb::execute() {
     fprintf(stderr, "Could not fork into new process :(\n");
     exit(-1);
   }
+  
+  if (m_nice != INT_MAX && setpriority(PRIO_PROCESS, chld, m_nice) < 0) {
+    fprintf(stderr, "Cannot set priority of pid %d", chld);
+    exit(-1);
+  }
+  
   return chld;
 }
 
