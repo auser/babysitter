@@ -18,6 +18,10 @@
 #include <set>
 #include <utility>
 
+// System includes
+#include <sys/stat.h>
+#include <sys/resource.h>
+
 // Erlang interface
 #include <ei.h>
 #include "ei++.h"
@@ -45,6 +49,18 @@ typedef struct _mount_ {
   std::string src;
   std::string dest;
 } mount_type;
+
+typedef struct _limits_ {
+  rlim_t AS;
+  rlim_t CORE;
+  rlim_t DATA;
+  rlim_t NOFILE;
+  rlim_t FSIZE;
+  rlim_t MEMLOCK;
+  rlim_t RSS;
+  rlim_t STACK;
+  rlim_t CPU;
+} resource_limits;
 
 typedef unsigned char byte;
 typedef int   exit_status_t;
@@ -76,6 +92,8 @@ private:
   std::string             m_stderr;    // The stderr to use for the execution of the command
   mount_type*             m_mount;     // A mount associated with the honeycomb
   std::list<std::string>  m_env;       // A list of environment variables to use when starting
+    // Resource sets
+    rlim_t                m_nofiles;     // Number of files
   long                    m_nice;      // The "niceness" level
   size_t                  m_size;      // The heap/stack size
   uid_t                   m_user;      // run as user (generated if not given)
@@ -87,6 +105,7 @@ private:
 public:
   Honeycomb() : m_tmp(0,256),m_cd(""),dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_cenv(NULL) {
     ei::Serializer m_eis(2);
+    m_nofiles = NULL;
   }
   ~Honeycomb() { delete [] m_cenv; m_cenv = NULL; }
   
@@ -121,6 +140,7 @@ private:
   bool abs_path(const std::string & path);
   void cp(std::string & source, std::string & dest);
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
+  void set_rlimit(const int res, const rlim_t limit);
 };
 
 /**

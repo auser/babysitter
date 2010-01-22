@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 // Erlang interface
 #include "ei++.h"
 
@@ -204,11 +205,51 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
       // Currently, we only support running binaries, not shell scripts
       copy_deps(binary_path);
       
+      // come back to our permissions
+      restore_perms();
+      
+      // Chroot
+      // Secure the chroot first
+      unsigned int fd, fd_max = 1023;
+      struct stat buf; struct rlimit lim;
+      if (! getrlimit(RLIMIT_NOFILE, &lim) && (fd_max < lim.rlim_max)) fd_max = lim.rlim_max;
+      
+      for (fd=0;fd < fd_max; fd++) {
+        if ( !fstat(fd, &buf) && S_ISDIR(buf.st_mode))
+          if (close(fd)) {
+            fprintf(stderr, "Could not close insecure directory/file: %i before chrooting\n", fd);
+            exit(-1);
+          }
+      }
+      
+      if (chroot(m_cd.c_str())) {
+        fprintf(stderr, "Could not chroot into %s\n", m_cd.c_str());
+        exit(-1);
+      }
+      if (chdir(m_cd.c_str())) {
+        fprintf(stderr, "Could not chdir into %s after chrooting\n", m_cd.c_str());
+        exit(-1);
+      }
+      
+      // Set resource limitations
+      // TODO: Make extensible
+      if(m_nofiles) set_rlimit(RLIMIT_NOFILE, m_nofiles);
     }
+  } else {
+    // Cd into the working directory directory
+    chdir(m_cd.c_str());
   }
   
   // Success!
   return 0;
+}
+
+void Honeycomb::set_rlimit(const int res, const rlim_t limit) {
+  struct rlimit lmt = { limit, limit };
+  if (setrlimit(res, &lmt)) {
+    fprintf(stderr, "Could not set resource limit: %d\n", res);
+    exit(-1);
+  }
 }
 
 pid_t Honeycomb::run() {
