@@ -222,10 +222,12 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
           }
       }
       
+      // Chroot please
       if (chroot(m_cd.c_str())) {
         fprintf(stderr, "Could not chroot into %s\n", m_cd.c_str());
         exit(-1);
       }
+      // Change directory
       if (chdir(m_cd.c_str())) {
         fprintf(stderr, "Could not chdir into %s after chrooting\n", m_cd.c_str());
         exit(-1);
@@ -233,15 +235,44 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
       
       // Set resource limitations
       // TODO: Make extensible
-      if(m_nofiles) set_rlimit(RLIMIT_NOFILE, m_nofiles);
+      temp_drop();
+      set_rlimits();
+      restore_perms();
+      exit(0); // Exit from the child pid
     }
   } else {
     // Cd into the working directory directory
     chdir(m_cd.c_str());
   }
   
+  // We are in the child pid
+  perm_drop(); // Drop into new user forever!!!!
+  
   // Success!
   return 0;
+}
+
+pid_t Honeycomb::execute() {
+  pid_t chld = fork();
+  if(chld) {
+    // Build the environment vars
+    const std::string shell = getenv("SHELL");
+    const std::string shell_args = "-c";
+    const char* argv[] = { shell.c_str(), shell_args.c_str(), m_cmd.c_str() };
+    
+    if (execve(m_cmd.c_str(), (char* const*)argv, (char* const*)m_cenv) < 0) {
+      fprintf(stderr, "Cannot execute '%s'", m_cmd.c_str());
+      return EXIT_FAILURE;
+    }
+  } else {
+    fprintf(stderr, "Could not fork into new process :(\n");
+    exit(-1);
+  }
+  return chld;
+}
+
+void Honeycomb::set_rlimits() {
+  if(m_nofiles) set_rlimit(RLIMIT_NOFILE, m_nofiles);
 }
 
 void Honeycomb::set_rlimit(const int res, const rlim_t limit) {
@@ -250,18 +281,6 @@ void Honeycomb::set_rlimit(const int res, const rlim_t limit) {
     fprintf(stderr, "Could not set resource limit: %d\n", res);
     exit(-1);
   }
-}
-
-pid_t Honeycomb::run() {
-  pid_t pid = fork();
-  if (pid < 0) {
-    m_err << "Could not launch new pid to start a new environment";
-    return -1;
-  } else {
-    // We are in the child pid
-  }
-  
-  return 0;
 }
 
 /*---------------------------- UTILS ------------------------------------*/

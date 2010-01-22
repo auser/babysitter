@@ -120,12 +120,10 @@ public:
   mount_type*  mount()    const { return m_mount; }
   
   int ei_decode(ei::Serializer& ei);
-  
-  /* Preparations for building the environment */
-  int build_environment(std::string confinement_root, mode_t confinement_mode);
-  pid_t run();
-  
+    
 private:
+  int build_environment(std::string confinement_root, mode_t confinement_mode);
+  pid_t execute();
   uid_t random_uid();
   int setup_defaults();
   const char * const to_string(long long int n, unsigned char base);
@@ -140,6 +138,8 @@ private:
   bool abs_path(const std::string & path);
   void cp(std::string & source, std::string & dest);
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
+  // Limits
+  void set_rlimits();
   void set_rlimit(const int res, const rlim_t limit);
 };
 
