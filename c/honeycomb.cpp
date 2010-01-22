@@ -4,9 +4,11 @@
 #include <fcntl.h>
 #include <sstream>
 #include <iomanip>
+#include <assert.h>
 // System
 #include <sys/types.h>
 #include <pwd.h>
+#include <sys/stat.h>
 // Erlang interface
 #include "ei++.h"
 
@@ -149,10 +151,72 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   return 0;
 }
 
-int Honeycomb::build_environment() {
-  
+int Honeycomb::build_environment(std::string confinement_root, mode_t confinement_mode = 040755) {
   /* Prepare as of the environment from the child process */
+  // First, get a random_uid to run as
+  m_user = random_uid();
+  gid_t egid = getegid();
   
+  // Create the root directory, the 'cd' if it's not specified
+  if (m_cmd.empty()) {
+    struct stat stt;
+    if (0 == stat(confinement_root.c_str(), &stt)) {
+      if (0 != stt.st_uid || 0 != stt.st_gid) {
+        m_err << confinement_root << " is not owned by root (0:0). Exiting..."; return -1;
+      }
+    } else if (ENOENT == errno) {
+      setegid(0);
+    
+      if(mkdir(confinement_root.c_str(), confinement_mode)) {
+        m_err << "Could not create the directory " << confinement_root; return -1;
+      }
+    } else {
+      m_err << "Unknown error: " << std::strerror(errno); return -1;
+    }
+    // The m_cd path is the confinement_root plus the user's uid
+    m_cd = confinement_root + "/" + to_string(m_user, 10);
+  
+    if (mkdir(m_cd.c_str(), confinement_mode)) {
+      m_err << "Could not create the new confinement root " << m_cd;
+    }
+    
+    if (chown(m_cd.c_str(), m_user, m_user)) {
+      m_err << "Could not chown to the effective user: " << m_user; return -1;
+    } 
+    setegid(egid); // Return to be the effective user
+  }
+  
+  // Next, create the chroot, if necessary which sets up a chroot
+  // environment in the confinement_root path
+  if (do_chroot) {
+    temp_drop(); // drop into new user
+    string_set pths;
+    pths.insert("/tmp");
+    pths.insert("/bin");
+    pths.insert("/lib");
+    pths.insert("/libexec");
+    pths.insert("/etc");
+    // Make these directories please
+    for (string_set::iterator i = pths.begin(); i != pths.end(); ++i) {
+      if (mkdir(m_cd.c_str(), confinement_mode)) {
+        m_err << "Could not build confinement directory: " << std::strerror(errno);
+        exit(1);
+      }
+    }
+    
+    // Find the binary command
+    std::string binary_path = find_binary(m_cmd);
+    std::string pth = m_cd + binary_path;
+    
+    cp(binary_path, pth);
+    
+  }
+  
+  // Success!
+  return 0;
+}
+
+pid_t Honeycomb::run() {
   pid_t pid = fork();
   if (pid < 0) {
     m_err << "Could not launch new pid to start a new environment";
@@ -161,9 +225,76 @@ int Honeycomb::build_environment() {
     // We are in the child pid
   }
   
-  // Success!
   return 0;
 }
+
+/*---------------------------- UTILS ------------------------------------*/
+std::string Honeycomb::find_binary(const std::string& file) {
+  assert(geteuid() != 0 && getegid() != 0); // We can't be root to run this.
+  
+  if ('/' == file[0] || ('.' == file[0] && '/' == file[1])) return file;
+  std::string pth = DEFAULT_PATH;
+  char *p2 = getenv("PATH");
+  if (p2) {pth = p2;}
+  
+  std::string::size_type i = 0;
+  std::string::size_type f = pth.find(":", i);
+  do {
+    std::string s = pth.substr(i, f - i) + "/" + file;
+    if (0 == access(s.c_str(), X_OK)) {return s;}
+  } while(std::string::npos != f);
+  if (!('/' == file[0] && ('.' == file[0] && '/' == file[1]))) {
+    fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
+    return NULL;
+  }
+  if (0 == access(file.c_str(), X_OK)) return file;
+  fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
+  return NULL;
+}
+
+void Honeycomb::make_path(const std::string & path) {
+  struct stat stt;
+  if (0 == stat(path.c_str(), &stt) && S_ISDIR(stt.st_mode)) return;
+
+  std::string::size_type lngth = path.length();
+  for (std::string::size_type i = 1; i < lngth; ++i) {
+    if (lngth - 1 == i || '/' == path[i]) {
+      std::string p = path.substr(0, i + 1);
+      if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
+        fprintf(stderr, "Could not create the directory %s", p.c_str());
+        exit(-1);
+      }
+    }
+  }
+}
+
+void Honeycomb::cp(std::string & source, std::string & destination) {
+  struct stat stt;
+  if (0 == stat(destination.c_str(), &stt)) {return;}
+
+  FILE *src = fopen(source.c_str(), "rb");
+  if (NULL == src) { exit(-1);}
+
+  FILE *dstntn = fopen(destination.c_str(), "wb");
+  if (NULL == dstntn) {
+    fclose(src);
+    exit(-1);
+  }
+
+  char bfr [4096];
+  while (true) {
+    size_t r = fread(bfr, 1, sizeof bfr, src);
+      if (0 == r || r != fwrite(bfr, 1, r, dstntn)) {
+        break;
+      }
+    }
+
+  fclose(src);
+  if (fclose(dstntn)) {
+    exit(-1);
+  }
+}
+
 
 const char *DEV_RANDOM = "/dev/urandom";
 uid_t Honeycomb::random_uid() {
@@ -182,4 +313,40 @@ uid_t Honeycomb::random_uid() {
 
   printf("Could not generate a good random UID after 10 attempts. Bummer!");
   exit(-1);
+}
+const char * const Honeycomb::to_string(long long int n, unsigned char base) {
+  static char bfr[32];
+  const char * frmt = "%lld";
+  if (16 == base) {frmt = "%llx";} else if (8 == base) {frmt = "%llo";}
+  snprintf(bfr, sizeof(bfr) / sizeof(bfr[0]), frmt, n);
+  return bfr;
+}
+
+void Honeycomb::temp_drop() {
+  if (setresgid(-1, m_user, getegid()) || setresuid(-1, m_user, geteuid()) || getegid() != m_user || geteuid() != m_user ) {
+    fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, std::strerror(errno));
+    exit(-1); // we are in the fork
+  }
+}
+void Honeycomb::perm_drop() {
+  uid_t ruid, euid, suid;
+  gid_t rgid, egid, sgid;
+
+  if (setresgid(m_user, m_user, m_user) || setresuid(m_user, m_user, m_user) || getresgid(&rgid, &egid, &sgid)
+      || getresuid(&ruid, &euid, &suid) || rgid != m_user || egid != m_user || sgid != m_user
+      || ruid != m_user || euid != m_user || suid != m_user || getegid() != m_user || geteuid() != m_user ) {
+    fprintf(stderr,"\nError setting user to %u\n",m_user);
+    err.write("Could not drop down");
+    exit(-1);
+  }
+}
+void Honeycomb::restore_perms() {
+  uid_t ruid, euid, suid;
+  gid_t rgid, egid, sgid;
+
+  if (getresgid(&rgid, &egid, &sgid) || getresuid(&ruid, &euid, &suid) || setresuid(-1, suid, -1) || setresgid(-1, sgid, -1)
+      || geteuid() != suid || getegid() != sgid ) {
+        fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, std::strerror(errno));
+        exit(-1); // we are in the fork
+      }
 }

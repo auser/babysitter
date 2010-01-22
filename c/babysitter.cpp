@@ -106,6 +106,10 @@ MapKillPidT  transient_pids;        // Map of pids of custom kill commands.
 #define SIGCHLD_MAX_SIZE 4096
 std::deque< PidStatusT > exited_children;  // deque of processed SIGCHLD events
 
+fd_set readfds;
+struct sigaction sact, sterm;
+int userid = 0;
+
 /*---------------------------- Functions ------------------------------------*/
 
 int   send_ok(int transId, pid_t pid = -1);
@@ -244,75 +248,77 @@ void usage() {
   exit(1);
 }
 
+/*-------------------------- Setup functions -----------------------------*/
+/**
+ * Setup the signal handlers for *this* process
+ **/
+void setup_signal_handlers() {
+  sterm.sa_handler = gotsignal;
+  sigemptyset(&sterm.sa_mask);
+  sigaddset(&sterm.sa_mask, SIGCHLD);
+  sterm.sa_flags = 0;
+  sigaction(SIGINT,  &sterm, NULL);
+  sigaction(SIGTERM, &sterm, NULL);
+  sigaction(SIGHUP,  &sterm, NULL);
+  sigaction(SIGPIPE, &sterm, NULL);
+
+  sact.sa_handler = NULL;
+  sact.sa_sigaction = gotsigchild;
+  sigemptyset(&sact.sa_mask);
+  sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
+  sigaction(SIGCHLD, &sact, NULL);
+  
+  // Deque of all pids that exited and have their exit status available.
+  exited_children.resize(SIGCHLD_MAX_SIZE);
+}
+
+int parse_the_command_line(int argc, char* argv[]) {
+  /**
+  * Command line processing (TODO: Move this into a function)
+  **/
+  char c;
+  while (-1 != (c = getopt(argc, argv, "a:Dhn"))) {
+    switch (c) {
+      case 'h':
+      case 'H':
+        usage();
+        return 1;
+      case 'D':
+        debug = true;
+        eis.debug(true);
+        break;
+      case 'a':
+        alarm_max_time = atoi(optarg);
+        break;
+      case 'n':
+        eis.set_handles(3,4);
+        break;
+      case 'u':
+        char* run_as_user = optarg;
+        struct passwd *pw = NULL;
+        if ((pw = getpwnam(run_as_user)) == NULL) {
+          fprintf(stderr, "User %s not found!\n", run_as_user);
+          exit(3);
+        }
+        userid = pw->pw_uid;
+        break;
+    }
+  }
+}
+
 //-------------------------------------------------------------------------
 // MAIN
 //-------------------------------------------------------------------------
 
 int main(int argc, char* argv[])
 {
-    fd_set readfds;
-    struct sigaction sact, sterm;
-    int userid = 0;
     
-    // Deque of all pids that exited and have their exit status available.
-    exited_children.resize(SIGCHLD_MAX_SIZE);
+    setup_signal_handlers();
+        
+    if (parse_the_command_line(argc, argv)) {
+      return -1;
+    }
     
-    /**
-     * Setup the signal handlers for *this* process
-     **/
-    sterm.sa_handler = gotsignal;
-    sigemptyset(&sterm.sa_mask);
-    sigaddset(&sterm.sa_mask, SIGCHLD);
-    sterm.sa_flags = 0;
-    sigaction(SIGINT,  &sterm, NULL);
-    sigaction(SIGTERM, &sterm, NULL);
-    sigaction(SIGHUP,  &sterm, NULL);
-    sigaction(SIGPIPE, &sterm, NULL);
-    
-    sact.sa_handler = NULL;
-    sact.sa_sigaction = gotsigchild;
-    sigemptyset(&sact.sa_mask);
-    sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
-    sigaction(SIGCHLD, &sact, NULL);
-    
-    /**
-     * Command line processing (TODO: Move this into a function)
-     **/
-    char c;
-    while (-1 != (c = getopt(argc, argv, "a:Dhn"))) {
-      switch (c) {
-        case 'h':
-        case 'H':
-         usage();
-         return 1;
-        case 'D':
-          debug = true;
-          eis.debug(true);
-          break;
-        case 'a':
-          alarm_max_time = atoi(optarg);
-          break;
-        case 'n':
-          eis.set_handles(3,4);
-          break;
-        case 'u':
-          char* run_as_user = optarg;
-          struct passwd *pw = NULL;
-          if ((pw = getpwnam(run_as_user)) == NULL) {
-            fprintf(stderr, "User %s not found!\n", run_as_user);
-            exit(3);
-          }
-          userid = pw->pw_uid;
-          break;
-      }
-    } 
-
-    /** 
-     * If we are root, switch to non-root user and set capabilities
-     * to be able to adjust niceness and run commands as other users.
-     * Currently, you MUST be root to run babysitter because root
-     * is the only user that has access to mounting loop-back devices
-     **/
     const int maxfd = eis.read_handle()+1;
 
     /**

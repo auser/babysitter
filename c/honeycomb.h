@@ -24,6 +24,7 @@
 
 /*---------------------------- Defines ------------------------------------*/
 #define BUF_SIZE 2048
+#define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
 /*---------------------------- TYPES ---------------------------------------*/
 typedef std::set<std::string> string_set;
@@ -34,7 +35,6 @@ class Honeycomb;
 class Bee;
 
 // TODO: Implement multiple mounts for bees
-//  and 
 typedef enum _mount_types_ {
   MOUNT_IMAGE,
   MOUNT_PACKAGED
@@ -70,18 +70,21 @@ private:
   std::string             m_cmd;       // The command to execute to start
   std::string             m_kill_cmd;  // A special command to kill the process (if needed)
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
+    std::string             m_skel;      // A skeleton choot directory to work from
+    bool                    do_chroot;   // Boolean to build a chroot (true/false)
   std::string             m_stdout;    // The stdout to use for the execution of the command
   std::string             m_stderr;    // The stderr to use for the execution of the command
   mount_type*             m_mount;     // A mount associated with the honeycomb
   std::list<std::string>  m_env;       // A list of environment variables to use when starting
   long                    m_nice;      // The "niceness" level
   size_t                  m_size;      // The heap/stack size
-  int                     m_user;      // run as user (generated if not given)
+  uid_t                   m_user;      // run as user (generated if not given)
   const char**            m_cenv;      // The string list of environment variables
-  int                     m_cenv_c;    // The current count of the environment variables (for internal use)
+  // Internal
+  int                     m_cenv_c;    // The current count of the environment variables
 
 public:
-  Honeycomb() : m_tmp(0,256),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_cenv(NULL) {
+  Honeycomb() : m_tmp(0,256),m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_cenv(NULL) {
     ei::Serializer m_eis(2);
   }
   ~Honeycomb() { delete [] m_cenv; m_cenv = NULL; }
@@ -89,20 +92,29 @@ public:
   const char*  strerror() const { return m_err.str().c_str(); }
   const char*  cmd()      const { return m_cmd.c_str(); }
   const char*  cd()       const { return m_cd.c_str(); }
+  const char*  skel()     const { return m_skel.c_str(); }
   char* const* env()      const { return (char* const*)m_cenv; }
   const char*  kill_cmd() const { return m_kill_cmd.c_str(); }
-  int          user()     const { return m_user; }
+  uid_t        user()     const { return m_user; }
   int          nice()     const { return m_nice; }
   mount_type*  mount()    const { return m_mount; }
   
   int ei_decode(ei::Serializer& ei);
   
   /* Preparations for building the environment */
-  int build_environment();
+  int build_environment(std::string confinement_root, mode_t confinement_mode);
+  pid_t run();
   
 private:
   uid_t random_uid();
   int setup_defaults();
+  const char * const to_string(long long int n, unsigned char base);
+  void temp_drop();
+  void perm_drop();
+  void restore_perms();
+  std::string find_binary(const std::string& file);
+  void make_path(const std::string & path);
+  void cp(std::string & source, std::string & dest);
 };
 
 /**
