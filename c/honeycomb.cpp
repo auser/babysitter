@@ -246,15 +246,16 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
     chdir(m_cd.c_str());
   }
   
-  // We are in the child pid
-  perm_drop(); // Drop into new user forever!!!!
-  
   // Success!
   return 0;
 }
 
 pid_t Honeycomb::execute() {
   pid_t chld = fork();
+  
+  // We are in the child pid
+  perm_drop(); // Drop into new user forever!!!!
+  
   if(chld) {
     // Build the environment vars
     const std::string shell = getenv("SHELL");
@@ -521,7 +522,6 @@ void Honeycomb::perm_drop() {
       || getresuid(&ruid, &euid, &suid) || rgid != m_user || egid != m_user || sgid != m_user
       || ruid != m_user || euid != m_user || suid != m_user || getegid() != m_user || geteuid() != m_user ) {
     fprintf(stderr,"\nError setting user to %u\n",m_user);
-    err.write("Could not drop down");
     exit(-1);
   }
 }

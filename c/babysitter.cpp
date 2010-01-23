@@ -334,8 +334,7 @@ int main(int argc, char* argv[])
       sigsetjmp(jbuf, 1); oktojump = 0;
         
       // If there are children that are exiting, we can't do anything until they have exited
-      while (!terminated && (exited_children.size() > 0 || signaled)) check_children(terminated);
-      // Check for pending signals arrived while we were in the signal handler
+b      // Check for pending signals arrived while we were in the signal handler
       check_pending();
       
       // If we are going to die, die
@@ -516,8 +515,6 @@ pid_t attempt_to_kill_child(const char* cmd, int user, int nice) {
 }
 
 /**
- * TODO: Move this HUGE method to a different file and break up the responsibilities
- * into real responsible methods...
  * Implemented now to get it going mainly
  **/
 pid_t start_child(const Honeycomb& op) 
@@ -525,99 +522,9 @@ pid_t start_child(const Honeycomb& op)
   ei::StringBuffer<128> err;
     
   dmesg("Building the chroot environment\n");
-  /**
-   * Create the chroot, thank you
-   **/  
-
-   /**
-    * Build up the environment variables
-    **/
-  int curr_env_vars;
-  /* Set default environment variables */
-  /* We need to set this so that the loader can find libs in /usr/local/lib. */
-  const char* default_env_vars[] = {
-   "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   "HOME=/mnt"
-  };
-  const int max_env_vars = 1000;
-  char *env_vars[max_env_vars];
-  
-  dmesg("Memcopy the default environment variables");
-  memcpy(env_vars, default_env_vars, (min((int)max_env_vars, (int)sizeof(default_env_vars)) * sizeof(char *)));
-  curr_env_vars = sizeof(default_env_vars) / sizeof(char *);
-  
-  dmesg("Adding user environment vars\n");
-  char* const* env = op.env();
-  if(env)
-    for(size_t i = 0; i < sizeof(env) / sizeof(char *); ++i)
-      env_vars[curr_env_vars++] = strdup(env[i]);
-  
-  dmesg("Done with the environment");
-  
-  pid_t pid = fork();
-  
-  switch (pid) {
-    case -1: 
-      err.write("Forking fail\n");
-      return -1;
-    case 0: {
-      // I am the child
-      // This will exit on failture
-      printf("\n------->>>> in build_and_execute_chroot <<<<-----------\n\n");
-
-      /**
-       * Setup the user and drop into effective user first
-       **/
-      uid_t real_user; // Save these users
-      if (op.user()) 
-        real_user = op.user();
-      else 
-        real_user = random_uid();
-
-      printf("--> The real user: %d\n", real_user);
-
-      // Set the process group IDS first
-      if (setresgid(-1, real_user, getegid()) || setresuid(-1, real_user, geteuid()) || getegid() != real_user || geteuid() != real_user ) {   
-        fprintf(stderr,"\nSetting Group ID %u\n",real_user);
-        perror("setresgid");
-        exit(-1);
-      }     
-
-     const char* const argv[] = { getenv("SHELL"), "-c", op.cmd(), (char*)NULL };
-     if (op.cd() != NULL && op.cd()[0] != '\0' && chdir(op.cd()) < 0) {
-       err.write("Cannot chdir to '%s'", op.cd());
-       perror(err.c_str());
-       return EXIT_FAILURE;
-     }
-      /**
-       * Drop down and execute
-       **/
-     uid_t ruid, euid, suid;
-     gid_t rgid, egid, sgid;
-
-     if (setresgid(real_user, real_user, real_user) || setresuid(real_user, real_user, real_user) || getresgid(&rgid, &egid, &sgid)
-         || getresuid(&ruid, &euid, &suid) || rgid != real_user || egid != real_user || sgid != real_user
-         || ruid != real_user || euid != real_user || suid != real_user || getegid() != real_user || geteuid() != real_user ) {
-       fprintf(stderr,"\nError setting user to %u\n",real_user);
-       err.write("Could not drop down");
-       exit(-1);
-     }
-     
-      if (execve((const char*)argv[0], (char* const*)argv, env_vars) < 0) {
-        err.write("Cannot execute '%s'", op.cd());
-        perror(err.c_str());
-        return EXIT_FAILURE;
-      }
-      return 0;
-    }
-    default:
-      // I am the parent
-      if (op.nice() != INT_MAX && setpriority(PRIO_PROCESS, pid, op.nice()) < 0) {
-        err.write("Cannot set priority of pid %d to %d", pid, op.nice());
-        perror(err.c_str());
-      }
-      return pid;
-  }
+  std::string 
+  op.build_environment("/var", 040755)
+  return op.execute();
 }
 
 int stop_child(Bee& bee, int transId, const TimeVal& now, bool notify) 
@@ -656,7 +563,7 @@ int stop_child(Bee& bee, int transId, const TimeVal& now, bool notify)
     }
     
     if (use_kill) {
-        // Use SIGTERM / SIGKILL to nuke the pid
+        // Use SIGTERM/SIGKILL
         int n;
         if (!bee.sigterm && (n = kill_child(bee.cmd_pid, SIGTERM, transId, notify)) == 0) {
             bee.deadline.set(now, 5);
