@@ -117,7 +117,7 @@ int   send_pid_status_term(const PidStatusT& stat);
 int   send_error_str(int transId, bool asAtom, const char* fmt, ...);
 int   send_pid_list(int transId, const MapChildrenT& children);
 
-pid_t start_child(const Honeycomb& op);
+pid_t start_child(Honeycomb& op);
 int   kill_child(pid_t pid, int sig, int transId, bool notify=true);
 int   check_children(int& isTerminated, bool notify = true);
 void  stop_child(pid_t pid, int transId, const TimeVal& now);
@@ -171,26 +171,6 @@ void dmesg(const char *fmt, ...) {
     fprintf(stderr, fmt, str);
   }
 }
-
-const char *DEV_RANDOM = "/dev/urandom";
-static uid_t random_uid() {
-  uid_t u;
-  for (unsigned char i = 0; i < 10; i++) {
-    int rndm = open(DEV_RANDOM, O_RDONLY);
-    if (sizeof(u) != read(rndm, reinterpret_cast<char *>(&u), sizeof(u))) {
-      continue;
-    }
-    close(rndm);
-
-    if (u > 0xFFFF) {
-      return u;
-    }
-  }
-
-  printf("Could not generate a good random UID after 10 attempts. Bummer!");
-  exit(-1);
-}
-
 
 // We've received a signal to process
 void gotsignal(int sig) {
@@ -304,6 +284,7 @@ int parse_the_command_line(int argc, char* argv[]) {
         break;
     }
   }
+  return 0;
 }
 
 //-------------------------------------------------------------------------
@@ -334,7 +315,7 @@ int main(int argc, char* argv[])
       sigsetjmp(jbuf, 1); oktojump = 0;
         
       // If there are children that are exiting, we can't do anything until they have exited
-b      // Check for pending signals arrived while we were in the signal handler
+      // Check for pending signals arrived while we were in the signal handler
       check_pending();
       
       // If we are going to die, die
@@ -517,13 +498,13 @@ pid_t attempt_to_kill_child(const char* cmd, int user, int nice) {
 /**
  * Implemented now to get it going mainly
  **/
-pid_t start_child(const Honeycomb& op) 
+pid_t start_child(Honeycomb& op) 
 {
   ei::StringBuffer<128> err;
     
   dmesg("Building the chroot environment\n");
-  std::string 
-  op.build_environment("/var", 040755)
+  const std::string base_dir = "/var/babysitter";
+  op.build_environment(base_dir, 040755);
   return op.execute();
 }
 

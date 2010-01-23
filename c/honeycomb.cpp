@@ -16,7 +16,7 @@
 // Erlang interface
 #include "ei++.h"
 
-#include "Honeycomb.h"
+#include "honeycomb.h"
 
 /*---------------------------- Implementation ------------------------------*/
 
@@ -52,17 +52,17 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
   int sz;
   std::string op_str, val;
-    
+  
   m_err.str("");
   delete [] m_cenv;
   m_cenv = NULL;
   m_env.clear();
   m_nice = INT_MAX;
     
-  if (m_eis.decodeString(m_cmd) < 0) {
-    m_err << "badarg: cmd string expected or string size too large";
+  if (ei.decodeString(m_cmd) < 0) {
+    m_err << "badarg: cmd string expected or string size too large" << m_cmd << "Command!";
     return -1;
-  } else if ((sz = m_eis.decodeListSize()) < 0) {
+  } else if ((sz = ei.decodeListSize()) < 0) {
     m_err << "option list expected";
     return -1;
   } else if (sz == 0) {
@@ -76,7 +76,7 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   const char* options[] = {"cd", "env", "kill", "nice", "user", "stdout", "stderr", "mount"};
   
   for(int i=0; i < sz; i++) {
-    if (m_eis.decodeTupleSize() != 2 || (int)(opt = (OptionT)m_eis.decodeAtomIndex(options, op_str)) < 0) {
+    if (ei.decodeTupleSize() != 2 || (int)(opt = (OptionT)ei.decodeAtomIndex(options, op_str)) < 0) {
       m_err << "badarg: cmd option must be an atom"; 
       return -1;
     }
@@ -86,27 +86,27 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
       case KILL:
       case USER: {
         // {cd, Dir::string()} | {kill, Cmd::string()} | {user, Cmd::string()} | etc.
-        if (m_eis.decodeString(val) < 0) {m_err << opt << " bad option"; return -1;}
+        if (ei.decodeString(val) < 0) {m_err << opt << " bad option"; return -1;}
         if (opt == CD) {m_cd = val;}
         else if (opt == KILL) {m_kill_cmd = val;}
         else if (opt == USER) {
           struct passwd *pw = getpwnam(val.c_str());
-          if (pw == NULL) {m_err << "Invalid user: " << val << " : " << std::strerror(errno); return -1;}
+          if (pw == NULL) {m_err << "Invalid user: " << val << " : " << ::strerror(errno); return -1;}
           m_user = pw->pw_uid;
         }
         break;
       }
       case NICE: {
-        if (m_eis.decodeInt(m_nice) < 0 || m_nice < -20 || m_nice > 20) {m_err << "Nice must be between -20 and 20"; return -1;}
+        if (ei.decodeInt(m_nice) < 0 || m_nice < -20 || m_nice > 20) {m_err << "Nice must be between -20 and 20"; return -1;}
         break;
       }
       case ENV: {
-        int env_sz = m_eis.decodeListSize();
+        int env_sz = ei.decodeListSize();
         if (env_sz < 0) {m_err << "Must pass a list for env option"; return -1;}
         
         for(int i=0; i < env_sz; i++) {
           std::string str;
-          if (m_eis.decodeString(str) >= 0) {
+          if (ei.decodeString(str) >= 0) {
             m_env.push_back(str);
             m_cenv[m_cenv_c+i] = m_env.back().c_str();
           } else {m_err << "Invalid env argument at " << i; return -1;}
@@ -120,9 +120,9 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
         int t = 0;
         int sz = 0;
         std::string str, fop;
-        t = m_eis.decodeType(sz);
-        if (t == ERL_ATOM_EXT) m_eis.decodeAtom(str);
-        else if (t == ERL_STRING_EXT) m_eis.decodeString(str);
+        t = ei.decodeType(sz);
+        if (t == ERL_ATOM_EXT) ei.decodeAtom(str);
+        else if (t == ERL_STRING_EXT) ei.decodeString(str);
         else {
           m_err << "Atom or string tuple required for " << op_str;
           return -1;
@@ -155,7 +155,7 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   return 0;
 }
 
-int Honeycomb::build_environment(std::string confinement_root, mode_t confinement_mode = 040755) {
+int Honeycomb::build_environment(std::string confinement_root, mode_t confinement_mode) {
   /* Prepare as of the environment from the child process */
   setup_defaults();
   // First, get a random_uid to run as
@@ -176,7 +176,7 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
         m_err << "Could not create the directory " << confinement_root; return -1;
       }
     } else {
-      m_err << "Unknown error: " << std::strerror(errno); return -1;
+      m_err << "Unknown error: " << ::strerror(errno); return -1;
     }
     // The m_cd path is the confinement_root plus the user's uid
     m_cd = confinement_root + "/" + to_string(m_user, 10);
@@ -243,8 +243,10 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
     }
   } else {
     // Cd into the working directory directory
-    chdir(m_cd.c_str());
-  }
+    if (chdir(m_cd.c_str())) {
+      fprintf(stderr, "Could not chdir into %s with no chrooting\n", m_cd.c_str());
+      exit(-1);
+    }  }
   
   // Success!
   return 0;
@@ -345,7 +347,7 @@ void Honeycomb::copy_deps(const std::string & image) {
   }
   int fl = open(image.c_str(), O_RDONLY);
   if (-1 == fl) {
-    fprintf(stderr, "Could not open %s - %s\n", image.c_str(), std::strerror(errno));
+    fprintf(stderr, "Could not open %s - %s\n", image.c_str(), ::strerror(errno));
     exit(-1);
   }
   Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
@@ -510,7 +512,7 @@ const char * const Honeycomb::to_string(long long int n, unsigned char base) {
 
 void Honeycomb::temp_drop() {
   if (setresgid(-1, m_user, getegid()) || setresuid(-1, m_user, geteuid()) || getegid() != m_user || geteuid() != m_user ) {
-    fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, std::strerror(errno));
+    fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, ::strerror(errno));
     exit(-1); // we are in the fork
   }
 }
@@ -531,7 +533,7 @@ void Honeycomb::restore_perms() {
 
   if (getresgid(&rgid, &egid, &sgid) || getresuid(&ruid, &euid, &suid) || setresuid(-1, suid, -1) || setresgid(-1, sgid, -1)
       || geteuid() != suid || getegid() != sgid ) {
-        fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, std::strerror(errno));
+        fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, ::strerror(errno));
         exit(-1); // we are in the fork
       }
 }

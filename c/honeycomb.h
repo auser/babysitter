@@ -22,6 +22,10 @@
 #include <sys/stat.h>
 #include <sys/resource.h>
 
+#include <gelf.h>
+
+using std::string;
+
 // Erlang interface
 #include <ei.h>
 #include "ei++.h"
@@ -46,8 +50,8 @@ typedef enum _mount_types_ {
 
 typedef struct _mount_ {
   mount_types mount_type;
-  std::string src;
-  std::string dest;
+  string src;
+  string dest;
 } mount_type;
 
 typedef struct _limits_ {
@@ -83,7 +87,7 @@ private:
   ei::StringBuffer<256>   m_tmp;       // Temporary storage
   ei::Serializer          m_eis;       // Erlang serializer
   std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
-  std::string             m_cmd;       // The command to execute to start
+  string             m_cmd;       // The command to execute to start
   std::string             m_kill_cmd;  // A special command to kill the process (if needed)
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
     std::string             m_skel;      // A skeleton choot directory to work from
@@ -120,10 +124,10 @@ public:
   mount_type*  mount()    const { return m_mount; }
   
   int ei_decode(ei::Serializer& ei);
-    
-private:
   int build_environment(std::string confinement_root, mode_t confinement_mode);
   pid_t execute();
+  
+private:
   uid_t random_uid();
   int setup_defaults();
   const char * const to_string(long long int n, unsigned char base);
@@ -131,7 +135,7 @@ private:
   void perm_drop();
   void restore_perms();
   void copy_deps(const std::string & image);
-  std::pair<string_set *, string_set *> * dynamic_loads(Elf *elf);
+  std::pair<string_set*, string_set*> * dynamic_loads(Elf *elf);
   bool names_library(const std::string & name);
   std::string find_binary(const std::string& file);
   void make_path(const std::string & path);
