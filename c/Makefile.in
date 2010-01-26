@@ -33,8 +33,9 @@ PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 
 INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) eipp babysitter
- 
+#OUTPUTFILES := $(INTERMEDIATES) eipp babysitter
+OUTPUTFILES := honeycomb eipp babysitter 
+
 DEFS = -DHAVE_CONFIG_H
  
 ERLDIR = @ERLDIR@

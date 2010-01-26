@@ -10,8 +10,8 @@ AC_CONFIG_SRCDIR([c/babysitter.cpp])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CXX
-AC_PATH_PROG(ERL, erl)
-AC_PATH_PROG(ERLC, erlc)
+# AC_PATH_PROG(ERL, erl)
+# AC_PATH_PROG(ERLC, erlc)
 
 # Erlang stuff
  
@@ -22,9 +22,20 @@ m4_define([AC_LANG(Erlang)],
 ])
  
 AC_ERLANG_SUBST_ROOT_DIR
-AC_ERLANG_SUBST_INSTALL_LIB_DIR
-AC_ERLANG_CHECK_LIB(erl_interface,
-                    [], [AC_MSG_FAILURE(cannot find erl_interface, [1])])
+AC_ERLANG_SUBST_INSTALL_LIB_DIR(@PROGRAM_NAME@, @PROGRAM_VERSION@)
+AC_ERLANG_NEED_ERLC
+AC_ERLANG_CHECK_LIB([stdlib], [
+                     echo "erlang standard library version installed: \"$ERLANG_LIB_VER_stdlib\""
+                    ], [AC_MSG_FAILURE(cannot find erlang stdlib, [1])])
+AC_ERLANG_CHECK_LIB([erl_interface],
+                    [echo "erl_interface version found: \"$ERLANG_LIB_VER_erl_interface\"",
+                     echo "erl_interface is installed",
+                     if [[ -d $ERL_INTERFACE/include ]]; then
+                      echo "erlang interface include library found";
+                     else
+                      AC_MSG_FAILURE(cannot find erl_interface include library, [1])
+                     fi
+                    ], [AC_MSG_FAILURE(cannot find erl_interface, [1])])
 
 ERLDIR=`awk -F= '/ROOTDIR=/ { print [$]2; exit; }' $ERL`
 AC_SUBST(ERL)

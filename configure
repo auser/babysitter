@@ -601,11 +601,13 @@ ERLDIR
 ERLBINDIR
 ERLANG_LIB_VER_erl_interface
 ERLANG_LIB_DIR_erl_interface
+ERLANG_LIB_VER_stdlib
+ERLANG_LIB_DIR_stdlib
 ERLANG_INSTALL_LIB_DIR
 ERLANG_ROOT_DIR
+ERL
 ERLCFLAGS
 ERLC
-ERL
 ac_ct_CXX
 CXXFLAGS
 CXX
@@ -3367,86 +3369,8 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-# Extract the first word of "erl", so it can be a program name with args.
-set dummy erl; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_path_ERL+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $ERL in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_ERL="$ERL" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_ERL="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-ERL=$ac_cv_path_ERL
-if test -n "$ERL"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ERL" >&5
-$as_echo "$ERL" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-# Extract the first word of "erlc", so it can be a program name with args.
-set dummy erlc; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_path_ERLC+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $ERLC in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_ERLC="$ERLC" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_ERLC="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-ERLC=$ac_cv_path_ERLC
-if test -n "$ERLC"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ERLC" >&5
-$as_echo "$ERLC" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
+# AC_PATH_PROG(ERL, erl)
+# AC_PATH_PROG(ERLC, erlc)
 
 # Erlang stuff
 
@@ -3737,6 +3661,203 @@ else
 $as_echo "$libdir/erlang/lib" >&6; }
 fi
 
+if test -n "$ERLC"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for erlc" >&5
+$as_echo_n "checking for erlc... " >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ERLC" >&5
+$as_echo "$ERLC" >&6; }
+else
+    if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}erlc", so it can be a program name with args.
+set dummy ${ac_tool_prefix}erlc; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_path_ERLC+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ERLC in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ERLC="$ERLC" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_ERLC="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ERLC=$ac_cv_path_ERLC
+if test -n "$ERLC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ERLC" >&5
+$as_echo "$ERLC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_ERLC"; then
+  ac_pt_ERLC=$ERLC
+  # Extract the first word of "erlc", so it can be a program name with args.
+set dummy erlc; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_path_ac_pt_ERLC+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_ERLC in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_ERLC="$ac_pt_ERLC" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_ac_pt_ERLC="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_ERLC=$ac_cv_path_ac_pt_ERLC
+if test -n "$ac_pt_ERLC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_ERLC" >&5
+$as_echo "$ac_pt_ERLC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_ERLC" = x; then
+    ERLC="not found"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    ERLC=$ac_pt_ERLC
+  fi
+else
+  ERLC="$ac_cv_path_ERLC"
+fi
+
+fi
+
+if test "$ERLC" = "not found"; then
+    as_fn_error "Erlang/OTP compiler (erlc) not found but required" "$LINENO" 5
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Erlang/OTP 'stdlib' library subdirectory" >&5
+$as_echo_n "checking for Erlang/OTP 'stdlib' library subdirectory... " >&6; }
+if test "${ac_cv_erlang_lib_dir_stdlib+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_ext=erl
+ ac_compile='$ERLC $ERLCFLAGS -b beam conftest.$ac_ext >&5'
+ ac_link='$ERLC $ERLCFLAGS -b beam conftest.$ac_ext >&5; echo "#!/bin/sh" > conftest$ac_exeext; echo "\"$ERL\" -s conftest -s init stop -noshell" >> conftest$ac_exeext; chmod +x conftest$ac_exeext'
+     if test "$cross_compiling" = yes; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error "cannot run test program while cross compiling
+See \`config.log' for more details." "$LINENO" 5; }
+else
+  cat > conftest.$ac_ext <<_ACEOF
+-module(conftest).
+-export([start/0]).
+
+start() ->
+	    ReturnValue = case code:lib_dir("stdlib") of
+	    {error, bad_name} ->
+		file:write_file("conftest.out", "not found\n"),
+		1;
+	    LibDir ->
+		file:write_file("conftest.out", LibDir),
+		0
+	    end,
+	    halt(ReturnValue)
+.
+
+_ACEOF
+if ac_fn_erl_try_run "$LINENO"; then :
+  ac_cv_erlang_lib_dir_stdlib=`cat conftest.out`
+	 rm -f conftest.out
+else
+  if test ! -f conftest.out; then
+	     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error "test Erlang program execution failed
+See \`config.log' for more details." "$LINENO" 5; }
+	 else
+	     ac_cv_erlang_lib_dir_stdlib="not found"
+	     rm -f conftest.out
+	 fi
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+     ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_erlang_lib_dir_stdlib" >&5
+$as_echo "$ac_cv_erlang_lib_dir_stdlib" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Erlang/OTP 'stdlib' library version" >&5
+$as_echo_n "checking for Erlang/OTP 'stdlib' library version... " >&6; }
+if test "${ac_cv_erlang_lib_ver_stdlib+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test "$ac_cv_erlang_lib_dir_stdlib" = "not found"; then :
+  ac_cv_erlang_lib_ver_stdlib="not found"
+else
+  ac_cv_erlang_lib_ver_stdlib=`$as_echo "$ac_cv_erlang_lib_dir_stdlib" | sed -n -e 's,^.*-\([^/-]*\)$,\1,p'`
+fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_erlang_lib_ver_stdlib" >&5
+$as_echo "$ac_cv_erlang_lib_ver_stdlib" >&6; }
+ERLANG_LIB_DIR_stdlib=$ac_cv_erlang_lib_dir_stdlib
+
+ERLANG_LIB_VER_stdlib=$ac_cv_erlang_lib_ver_stdlib
+
+if test "$ac_cv_erlang_lib_dir_stdlib" = "not found"; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+{ as_fn_set_status 1
+as_fn_error "cannot find erlang stdlib
+See \`config.log' for more details." "$LINENO" 5; }; }
+else
+
+                     echo "erlang standard library version installed: \"$ERLANG_LIB_VER_stdlib\""
+
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Erlang/OTP 'erl_interface' library subdirectory" >&5
 $as_echo_n "checking for Erlang/OTP 'erl_interface' library subdirectory... " >&6; }
 if test "${ac_cv_erlang_lib_dir_erl_interface+set}" = set; then :
@@ -3818,6 +3939,19 @@ $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 { as_fn_set_status 1
 as_fn_error "cannot find erl_interface
 See \`config.log' for more details." "$LINENO" 5; }; }
+else
+  echo "erl_interface version found: \"$ERLANG_LIB_VER_erl_interface\"",
+                     echo "erl_interface is installed",
+                     if [ -d $ERL_INTERFACE/include ]; then
+                      echo "erlang interface include library found";
+                     else
+                      { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+{ as_fn_set_status 1
+as_fn_error "cannot find erl_interface include library
+See \`config.log' for more details." "$LINENO" 5; }; }
+                     fi
+
 fi
 
 
@@ -6168,3 +6302,4 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
+
