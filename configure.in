@@ -28,13 +28,8 @@ AC_ERLANG_CHECK_LIB([stdlib], [
                      echo "erlang standard library version installed: \"$ERLANG_LIB_VER_stdlib\""
                     ], [AC_MSG_FAILURE(cannot find erlang stdlib, [1])])
 AC_ERLANG_CHECK_LIB([erl_interface],
-                    [echo "erl_interface version found: \"$ERLANG_LIB_VER_erl_interface\"",
-                     echo "erl_interface is installed",
-                     if [[ -d $ERL_INTERFACE/include ]]; then
-                      echo "erlang interface include library found";
-                     else
-                      AC_MSG_FAILURE(cannot find erl_interface include library, [1])
-                     fi
+                    [echo "erl_interface version found: \"$ERLANG_LIB_DIR_erl_interface\"",
+                     echo "erl_interface is installed at \"$ERLANG_LIB_DIR_erl_interface/include\"",
                     ], [AC_MSG_FAILURE(cannot find erl_interface, [1])])
 
 ERLDIR=`awk -F= '/ROOTDIR=/ { print [$]2; exit; }' $ERL`
@@ -58,6 +53,9 @@ Make sure sure this is available
 ]))
 
 # Custom proggies
+AC_MSG_CHECKING(libcap)
+AC_CHECK_LIB(cap,main,,AC_MSG_ERROR([babysitter requires libcap. Make sure this is installed before proceeding], [1]))
+
 AC_MSG_CHECKING(libelf)
 AC_ARG_WITH(libelf,
     [	--with-libelf=<path> prefix of the LibElf installation. e.g. /usr/local or /usr],

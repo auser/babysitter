@@ -25,7 +25,7 @@ endif
 # Defines
 CC = g++
 CPPFLAGS =  -I /usr/lib/erlang/lib/erl_interface-3.6.2/include -Wall -fPIC -I./
-LIBS = -lelf -lstdc++ 
+LIBS = -lcap -lelf -lstdc++ 
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
 UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
@@ -33,8 +33,8 @@ PACKAGE_NAME = babysitter
 PACKAGE_VERSION = 0.1
 
 INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-#OUTPUTFILES := $(INTERMEDIATES) eipp babysitter
-OUTPUTFILES := honeycomb eipp babysitter 
+OUTPUTFILES := $(INTERMEDIATES) eipp babysitter
+#OUTPUTFILES := honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
  

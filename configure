@@ -3940,17 +3940,8 @@ $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "cannot find erl_interface
 See \`config.log' for more details." "$LINENO" 5; }; }
 else
-  echo "erl_interface version found: \"$ERLANG_LIB_VER_erl_interface\"",
-                     echo "erl_interface is installed",
-                     if [ -d $ERL_INTERFACE/include ]; then
-                      echo "erlang interface include library found";
-                     else
-                      { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-{ as_fn_set_status 1
-as_fn_error "cannot find erl_interface include library
-See \`config.log' for more details." "$LINENO" 5; }; }
-                     fi
+  echo "erl_interface version found: \"$ERLANG_LIB_DIR_erl_interface\"",
+                     echo "erl_interface is installed at \"$ERLANG_LIB_DIR_erl_interface/include\"",
 
 fi
 
@@ -4057,6 +4048,51 @@ fi
 
 
 # Custom proggies
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking libcap" >&5
+$as_echo_n "checking libcap... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lcap" >&5
+$as_echo_n "checking for main in -lcap... " >&6; }
+if test "${ac_cv_lib_cap_main+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcap  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_cap_main=yes
+else
+  ac_cv_lib_cap_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_cap_main" >&5
+$as_echo "$ac_cv_lib_cap_main" >&6; }
+if test "x$ac_cv_lib_cap_main" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBCAP 1
+_ACEOF
+
+  LIBS="-lcap $LIBS"
+
+else
+  { as_fn_set_status 1
+as_fn_error "babysitter requires libcap. Make sure this is installed before proceeding" "$LINENO" 5; }
+fi
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking libelf" >&5
 $as_echo_n "checking libelf... " >&6; }
 
