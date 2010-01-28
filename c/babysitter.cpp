@@ -174,7 +174,7 @@ void dmesg(const char *fmt, ...) {
 
 // We've received a signal to process
 void gotsignal(int sig) {
-  if (debug) dmesg("Got signal: %d\n", sig);
+  //if (debug) dmesg("Got signal: %i\n", sig);
   if (oktojump) siglongjmp(jbuf, 1);
   switch (sig) {
     case SIGTERM:
@@ -504,8 +504,8 @@ pid_t start_child(Honeycomb& op)
     
   dmesg("Building the chroot environment\n");
   const std::string base_dir = "/var/babysitter";
-  op.build_environment(base_dir, 040755);
-  return op.execute();
+  //op.build_environment(base_dir, 040755);
+  return op.build_and_execute(base_dir, 040755);
 }
 
 int stop_child(Bee& bee, int transId, const TimeVal& now, bool notify) 
