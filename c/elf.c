@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
-        printf("lib exists: %s\n", full_path.c_str());
+        printf("\t%s\n", full_path.c_str());
       }
     }
   }  
