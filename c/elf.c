@@ -42,40 +42,31 @@ bool is_lib(const std::string &n) {
   return matches_pattern(n, "^lib(.*)+\\.so[.0-9]*$", 0);
 }
 
-int main(int argc, char *argv[])
-{
-
-int fd; 		// File Descriptor
-char* base_ptr;		// ptr to our object in memory
-char* file = argv[1];	// filename
-struct stat elf_stats;	// fstat struct
+std::pair<string_set *, string_set *> *linked_libraries(char *file) {
+  int fd;                      // File Descriptor
+  string_set *already_copied;  // Already copied libs
 
   /* open the offending file  */
   int fl = open(file, O_RDONLY);
   if (-1 == fl) {
     fprintf(stderr, "Could not open %s\n", file);
-    return(-1);
+    return NULL;
   }
-
+  
+  /* Make sure we are working with a version of libelf */
   if (EV_NONE == elf_version(EV_CURRENT)) {
     fprintf(stderr, "ELF libs failed to initialize\n");
-    return(-1);
+    return NULL;
   }
 
   // Start the elf interrogation
   Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
   if (NULL == elf) {
     fprintf(stderr, "elf_begin failed because %s\n", elf_errmsg(-1));
-    return(-1);
+    return NULL;
   }
 
-/* Check libelf version first */
-if (elf_version(EV_CURRENT) == EV_NONE) {
-  printf("WARNING Elf Library is out of date!\n");
-}
-
- 
-// Show deps
+  // Show deps
   GElf_Ehdr ehdr;
   if (!gelf_getehdr(elf, &ehdr)) {
     fprintf(stderr, "elf_getehdr failed from %s\n", elf_errmsg(-1));
@@ -83,8 +74,19 @@ if (elf_version(EV_CURRENT) == EV_NONE) {
   }
   
   // scanning the headers
-  string_set *lbrrs = new string_set(), *pths = new string_set();
+  string_set *libs = new string_set(), *paths = new string_set();
+  // include the standard library paths
+  paths->insert("");
+  paths->insert("/lib");
+  paths->insert("/usr/lib");
+  paths->insert("/usr/local/lib");
+  // include standard libraries to copy
+  libs->insert("libdl.so.2");
+  libs->insert("libm.so.2");
+  libs->insert("libpthread.so.0");
+  libs->insert("libattr.so.1");
   
+  // Start scanning the header 
   Elf_Scn *scn = elf_nextscn(elf, NULL);
   GElf_Shdr shdr;
   while (scn) {
@@ -93,36 +95,55 @@ if (elf_version(EV_CURRENT) == EV_NONE) {
       return NULL;
     }
 
+    // get the name of the section (could optimize)
     char * nm = elf_strptr(elf, ehdr.e_shstrndx, shdr.sh_name);
     if (NULL == nm) {
       fprintf(stderr, "elf_strptr() failed from %s\n", elf_errmsg(-1));
       return NULL;
     }
 
-    //if (SHT_DYNSYM == shdr.sh_type) break;
-  if (!strcmp(nm, ".interp") || !strcmp(nm, ".dynstr")) {
-    Elf_Data *data = NULL;
-    size_t n = 0;
-    while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
-      char *bfr = static_cast<char *>(data->d_buf);
-      char *p = bfr + 1;
-      while (p < bfr + data->d_size) {
-        if (is_lib(p)) {
-          printf("p: '%s'\n", p);
-          lbrrs->insert(p);
-        } else if (p[0] == '/') {
-          printf("Adding path: %s\n", p);
-          pths->insert(p);
+    // look through the headers for the .dynstr and .interp headers
+    if (strcmp(nm, ".bss")) {
+      Elf_Data *data = NULL;
+      size_t n = 0;
+      // for each header, find the name if it matches the library name regex
+      while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
+        char *bfr = static_cast<char *>(data->d_buf);
+        char *p = bfr + 1;
+        while (p < bfr + data->d_size) {
+          if (is_lib(p)) {
+            libs->insert(p);
+          }
+
+          size_t lngth = strlen(p) + 1;
+          n += lngth;
+          p += lngth;
         }
-
-      size_t lngth = strlen(p) + 1;
-      n += lngth;
-      p += lngth;
+      }
     }
+
+    scn = elf_nextscn(elf, scn);
   }
+ 
+  return new std::pair<string_set *, string_set*> (libs, paths);
 }
 
-  scn = elf_nextscn(elf, scn);
-}
-printf("Ready\n");
+int main(int argc, char **argv) {
+  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(argv[1]); 
+  
+  // iterate through
+  string_set obj = *dyn_libs->first;
+  // Go through the libs
+  for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
+    string_set paths = *dyn_libs->second;
+    bool found = false;
+
+    for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
+      std::string full_path = *pth+'/'+*ld;
+      if (fopen(full_path.c_str(), "rb") != NULL) {
+        printf("lib exists: %s\n", full_path.c_str());
+      }
+    }
+  }  
+  return 0;
 }
