@@ -229,7 +229,7 @@ DEBUG_MSG("forked... %i\n", child);
 DEBUG_MSG("running binary on path: %s\n at pth: %s\n", binary_path.c_str(), pth.c_str());
 
       // Currently, we only support running binaries, not shell scripts
-      // copy_deps(binary_path);
+      copy_deps(binary_path);
       
       //cp_r(binary_path, pth);
 
