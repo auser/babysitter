@@ -13,7 +13,7 @@ bool WorkerBee::build_chroot(char *path) {
   return true;
 }
 
-string_set * WorkerBee::libs() {
+string_set WorkerBee::libs() {
   printf("WorkerBee::libs()\n");
   std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(); 
   
@@ -27,7 +27,7 @@ string_set * WorkerBee::libs() {
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
         printf("\t%s\n", full_path.c_str());
-        m_libs->insert(full_path);
+        m_libs.insert(full_path);
       }
     }
   }

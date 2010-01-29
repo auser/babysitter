@@ -376,7 +376,7 @@ bool Honeycomb::abs_path(const std::string & path) {
 
 int Honeycomb::copy_deps(const std::string & file_path) {
   WorkerBee b(file_path.c_str());
-  string_set libs = *b.libs();
+  string_set libs = b.libs();
   for (string_set::iterator ld = libs.begin(); ld != libs.end(); ld++) {
     std::string p = *ld;
     printf("lib: %s\n", p.c_str());
