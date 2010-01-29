@@ -40,7 +40,7 @@ public:
   ~WorkerBee() {}
 
   string_set *libs_for(const std::string &str);
-  bool build_chroot(char *path);
+  bool build_chroot(std::string &path, string_set &executables);
 
 // Functions
 private:

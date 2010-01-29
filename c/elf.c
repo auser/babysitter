@@ -132,28 +132,20 @@ std::pair<string_set *, string_set *> *linked_libraries(char *file) {
 }
 
 int main(int argc, char **argv) {
-  /*
-  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(argv[1]); 
-  
-  // iterate through
-  string_set obj = *dyn_libs->first;
-  // Go through the libs
-  for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
-    string_set paths = *dyn_libs->second;
-    bool found = false;
-
-    for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
-      std::string full_path = *pth+'/'+*ld;
-      if (fopen(full_path.c_str(), "rb") != NULL) {
-        printf("\t%s\n", full_path.c_str());
-      }
-    }
-  }
-  */
   WorkerBee b;
-  string_set s_libs = *b.libs_for(argv[1]);
-  for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
-    printf("- %s\n", s->c_str());
+  // string_set s_libs = *b.libs_for(argv[1]);
+  // for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
+  //   printf("- %s\n", s->c_str());
+  // }
+  string_set s_executables;
+  s_executables.insert("/bin/ls");
+  s_executables.insert("/bin/bash");
+  
+  if (argv[1]) {
+    std::string root_path;
+    root_path = argv[1];
+    printf("-- building chroot: %s\n", root_path.c_str());
+    b.build_chroot(root_path, s_executables);
   }
   return 0;
 }

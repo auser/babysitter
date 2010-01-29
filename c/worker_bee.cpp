@@ -9,7 +9,19 @@
 #include "worker_bee.h"
 
 /** Build the chroot at the path **/
-bool WorkerBee::build_chroot(char *path) {
+bool WorkerBee::build_chroot(std::string &path, string_set &executables) {
+  // Make the root path
+  printf("Making directory at: %s\n", path.c_str());
+  make_path(strdup(path.c_str()));
+  
+  // Build the root libraries
+  for (string_set::iterator executable = executables.begin(); executable != executables.end(); ++executable) {
+    printf("Looking at executables: %s\n", executable->c_str());
+    string_set s_libs = *libs_for(*executable);
+    for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
+      printf("- %s\n", s->c_str());
+    }
+  }
   return true;
 }
 
@@ -174,7 +186,7 @@ int WorkerBee::make_path(const std::string & path) {
 
   std::string::size_type lngth = path.length();
   for (std::string::size_type i = 1; i < lngth; ++i) {
-    if (lngth - 1 == i || '/' == path[i]) {
+    if (lngth - 1 == i || path[i] == '/') {
       std::string p = path.substr(0, i + 1);
       if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
         fprintf(stderr, "Could not create the directory %s", p.c_str());
