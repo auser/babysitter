@@ -1,28 +1,34 @@
-#include <stdio.h>
-#include <string.h>
-#include <error.h>
-#include <string>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <gelf.h>
-#include <set>
-#include <regex.h>
+/** includes **/
+#include "worker_bee.h"
 
-#define ERR -1
+/** Build the chroot at the path **/
+bool WorkerBee::build_chroot(char *executable, char *path) {
+  return true;
+}
 
-typedef std::set<std::string> string_set;
+string_set * WorkerBee::libs_for(char *executable) {
+  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(argv[1]); 
+  
+  // iterate through
+  string_set obj = *dyn_libs->first;
+  // Go through the libs
+  for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
+    string_set paths = *dyn_libs->second;
+    bool found = false;
 
-Elf32_Ehdr *elf_header;		/* ELF header */
-Elf *elf;                       /* Our Elf pointer for libelf */
-Elf_Scn *scn;                   /* Section Descriptor */
-Elf_Data *edata;                /* Data Descriptor */
-GElf_Sym sym;			/* Symbol */
-GElf_Shdr shdr;                 /* Section Header */
+    for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
+      std::string full_path = *pth+'/'+*ld;
+      if (fopen(full_path.c_str(), "rb") != NULL) {
+        printf("\t%s\n", full_path.c_str());
+        full_path_libs->insert(full_path);
+      }
+    }
+  }
+  
+  return full_path_libs;
+}
 
-bool matches_pattern(const std::string & matchee, const char * pattern, int flags) {
+bool WorkerBee::matches_pattern(const std::string & matchee, const char * pattern, int flags) {
   regex_t xprsn;
   if (regcomp(&xprsn, pattern, flags|REG_EXTENDED|REG_NOSUB)) {
     fprintf(stderr, "Failed to compile regex\n");
@@ -38,11 +44,11 @@ bool matches_pattern(const std::string & matchee, const char * pattern, int flag
   return false;
 }
 
-bool is_lib(const std::string &n) {
+bool WorkerBee::is_lib(const std::string &n) {
   return matches_pattern(n, "^lib(.*)+\\.so[.0-9]*$", 0);
 }
 
-std::pair<string_set *, string_set *> *linked_libraries(char *file) {
+std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(char *file) {
   int fd;                      // File Descriptor
   string_set *already_copied;  // Already copied libs
 
@@ -126,24 +132,4 @@ std::pair<string_set *, string_set *> *linked_libraries(char *file) {
   }
  
   return new std::pair<string_set *, string_set*> (libs, paths);
-}
-
-int main(int argc, char **argv) {
-  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(argv[1]); 
-  
-  // iterate through
-  string_set obj = *dyn_libs->first;
-  // Go through the libs
-  for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
-    string_set paths = *dyn_libs->second;
-    bool found = false;
-
-    for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
-      std::string full_path = *pth+'/'+*ld;
-      if (fopen(full_path.c_str(), "rb") != NULL) {
-        printf("\t%s\n", full_path.c_str());
-      }
-    }
-  }
-  return 0;
 }
