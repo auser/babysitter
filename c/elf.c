@@ -150,8 +150,8 @@ int main(int argc, char **argv) {
     }
   }
   */
-  WorkerBee b(argv[1]);
-  string_set *s_libs = b.libs();
+  WorkerBee b();
+  string_set s_libs = b.libs_for(argv[1]);
   for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
     printf("- %s\n", s.c_str());
   }
