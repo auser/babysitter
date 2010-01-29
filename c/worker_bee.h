@@ -33,10 +33,10 @@ private:
   GElf_Sym sym;               // Symbols
   GElf_Shdr shdr;             // Section header
   string_set *full_path_libs; // Full path for the libs
-  std::string *m_executable;
+  std::string m_executable;
   
 public:
-  WorkerBee(char *executable) : m_executable(executable) {}
+  WorkerBee(std::string executable) : m_executable(executable) {}
   ~WorkerBee() {}
 
   string_set *libs();
@@ -46,6 +46,6 @@ public:
 private:
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
   bool is_lib(const std::string &n);
-  std::pair<string_set *, string_set *> *linked_libraries(char *file);
+  std::pair<string_set *, string_set *> *linked_libraries();
 
 };
