@@ -131,21 +131,24 @@ std::pair<string_set *, string_set *> *linked_libraries(char *file) {
   return new std::pair<string_set *, string_set*> (libs, paths);
 }
 
+
+
 int main(int argc, char **argv) {
   WorkerBee b;
-  // string_set s_libs = *b.libs_for(argv[1]);
-  // for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
-  //   printf("- %s\n", s->c_str());
-  // }
+
   string_set s_executables;
   s_executables.insert("/bin/ls");
   s_executables.insert("/bin/bash");
+  s_executables.insert("ruby");
+  
+  string_set s_dirs;
+  s_dirs.insert("/opt");
   
   if (argv[1]) {
     std::string root_path;
     root_path = argv[1];
     printf("-- building chroot: %s\n", root_path.c_str());
-    b.build_chroot(root_path, s_executables);
+    b.build_chroot(root_path, s_executables, s_dirs);
   }
   return 0;
 }

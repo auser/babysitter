@@ -9,24 +9,56 @@
 #include "worker_bee.h"
 
 /** Build the chroot at the path **/
-bool WorkerBee::build_chroot(std::string &path, string_set &executables) {
+bool WorkerBee::build_chroot(std::string &path, string_set &executables, string_set &extra_dirs) {
   // Make the root path
-  printf("Making directory at: %s\n", path.c_str());
   make_path(strdup(path.c_str()));
+  string_set already_copied;
   
   // Build the root libraries
   for (string_set::iterator executable = executables.begin(); executable != executables.end(); ++executable) {
-    printf("Looking at executables: %s\n", executable->c_str());
     string_set s_libs = *libs_for(*executable);
+    
     for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
-      printf("- %s\n", s->c_str());
+      if (already_copied.count(s->c_str())) {
+      } else {
+        printf("- %s\n", s->c_str());
+        already_copied.insert(s->c_str());
+      }
     }
   }
+  
+  string_set base_dirs;
+  base_dirs.insert("bin");
+  base_dirs.insert("usr");
+  base_dirs.insert("var");
+  base_dirs.insert("lib");
+  
+  // Add the extra directories requested
+  for (string_set::iterator dir = extra_dirs.begin(); dir != extra_dirs.end(); ++dir) base_dirs.insert(dir->c_str());
+  
+  for (string_set::iterator dir = base_dirs.begin(); dir != base_dirs.end(); ++dir) {
+    std::string full_path;
+    if ((*dir->c_str()) == '/') full_path = path + *dir; else full_path = path + '/' + *dir;
+      
+    printf("- dirs: %s\n", full_path.c_str());
+    make_path(full_path.c_str());
+  }
+    
   return true;
 }
 
 string_set *WorkerBee::libs_for(const std::string &executable) {
-  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(executable); 
+  std::pair<string_set *, string_set *> *dyn_libs;
+  
+  // If we are pointed at an absolute path to a binary
+  // then find the linked libraries of the executable
+  // If it's not found, then find it, then look up the libraries
+  if (abs_path(executable))
+    dyn_libs = linked_libraries(executable);
+  else {
+    std::string bin = find_binary(executable);
+    dyn_libs = linked_libraries(bin);
+  }
   string_set *libs = new string_set();
   
   // iterate through
