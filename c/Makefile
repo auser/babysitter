@@ -67,11 +67,11 @@ test_%.o: test_%.c %.o
 eipp:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c ei++.cpp
 
-honeycomb: honeycomb.cpp honeycomb.h worker_bee
+honeycomb: worker_bee honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
-worker_bee: worker_bee.c worker_bee.h
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c worker_bee.c
+worker_bee: worker_bee.cpp worker_bee.h
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c worker_bee.cpp
 
 babysitter:
 	mkdir -p `dirname $(EXECUTABLE)`

@@ -6,8 +6,8 @@ bool WorkerBee::build_chroot(char *path) {
   return true;
 }
 
-string_set * WorkerBee::libs(3) {
-  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(m_executable); 
+string_set * WorkerBee::libs() {
+  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(); 
   
   // iterate through
   string_set obj = *dyn_libs->first;
@@ -47,11 +47,11 @@ bool WorkerBee::is_lib(const std::string &n) {
   return matches_pattern(n, "^lib(.*)+\\.so[.0-9]*$", 0);
 }
 
-std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(char *file) {
-  /* open the offending file  */
-  int fl = open(file, O_RDONLY);
+std::pair<string_set *, string_set *> *WorkerBee::linked_libraries() {
+  /* open the offending m_executable  */
+  int fl = open(m_executable.c_str(), O_RDONLY);
   if (-1 == fl) {
-    fprintf(stderr, "Could not open %s\n", file);
+    fprintf(stderr, "Could not open %s\n", m_executable.c_str());
     return NULL;
   }
   
