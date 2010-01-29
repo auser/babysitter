@@ -14,7 +14,6 @@ bool WorkerBee::build_chroot(char *path) {
 }
 
 string_set *WorkerBee::libs_for(const std::string &executable) {
-  printf("WorkerBee::libs()\n");
   std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(executable); 
   string_set *libs = new string_set();
   
@@ -134,8 +133,6 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::st
 
     scn = elf_nextscn(elf, scn);
   }
-
-printf("outputting libs...\n");
  
   return new std::pair<string_set *, string_set*> (libs, paths);
 }
