@@ -47,5 +47,8 @@ private:
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
   bool is_lib(const std::string &n);
   std::pair<string_set *, string_set *> *linked_libraries(char *file);
-
+  /** Utilities **/
+  int make_path(const std::string & path);
+  int cp_r(std::string &source, std::string &dest);
+  int cp(std::string & source, std::string & destination);
 };

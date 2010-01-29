@@ -228,9 +228,9 @@ DEBUG_MSG("forked... %i\n", child);
 DEBUG_MSG("running binary on path: %s\n at pth: %s\n", binary_path.c_str(), pth.c_str());
 
       // Currently, we only support running binaries, not shell scripts
-      copy_deps(binary_path);
+      // copy_deps(binary_path);
       
-      cp_r(binary_path, pth);
+      //cp_r(binary_path, pth);
 
       if (chmod(pth.c_str(), S_IREAD|S_IEXEC|S_IWRITE)) {
         fprintf(stderr, "Could not change permissions to '%s' make it executable\n", pth.c_str());
@@ -373,23 +373,6 @@ bool Honeycomb::abs_path(const std::string & path) {
   return '/' == path[0] || ('.' == path[0] && '/' == path[1]);
 }
 
-int Honeycomb::make_path(const std::string & path) {
-  struct stat stt;
-  if (0 == stat(path.c_str(), &stt) && S_ISDIR(stt.st_mode)) return -1;
-
-  std::string::size_type lngth = path.length();
-  for (std::string::size_type i = 1; i < lngth; ++i) {
-    if (lngth - 1 == i || '/' == path[i]) {
-      std::string p = path.substr(0, i + 1);
-      if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
-        fprintf(stderr, "Could not create the directory %s", p.c_str());
-        return(-1);
-      }
-    }
-  }
-  return 0;
-}
-
 int Honeycomb::copy_deps(const std::string & file_path) {
   WorkerBee b(file_path.c_str());
   string_set *libs = b.libs();
@@ -456,45 +439,6 @@ std::pair<string_set *, string_set *> * Honeycomb::dynamic_loads(Elf *elf) {
 
   return new std::pair<string_set *, string_set *>(lbrrs, pths);
 }
-
-bool Honeycomb::names_library(const std::string & name) {
-  return matches_pattern(name, "^lib.+\\.so[.0-9]*$", 0);
-}
-
-int Honeycomb::cp_r(std::string &source, std::string &dest) {
-  make_path(dirname(strdup(dest.c_str()))); 
-  return cp(source, dest);
-}
-int Honeycomb::cp(std::string & source, std::string & destination) {
-  struct stat stt;
-  if (0 == stat(destination.c_str(), &stt)) {return -1;}
-
-  FILE *src = fopen(source.c_str(), "rb");
-  if (NULL == src) { return -1;}
-
-  FILE *dstntn = fopen(destination.c_str(), "wb");
-  if (NULL == dstntn) {
-    fclose(src);
-    return -1;
-  }
-
-DEBUG_MSG("Copying %s to %s\n", source.c_str(), destination.c_str());
-
-  char bfr [4096];
-  while (true) {
-    size_t r = fread(bfr, 1, sizeof bfr, src);
-      if (0 == r || r != fwrite(bfr, 1, r, dstntn)) {
-        break;
-      }
-    }
-
-  fclose(src);
-  if (fclose(dstntn)) {
-    return(-1);
-  }
-  return 0;
-}
-
 
 const char *DEV_RANDOM = "/dev/urandom";
 uid_t Honeycomb::random_uid() {

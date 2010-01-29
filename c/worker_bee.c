@@ -129,3 +129,51 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(char *file) {
  
   return new std::pair<string_set *, string_set*> (libs, paths);
 }
+
+int WorkerBee::cp_r(std::string &source, std::string &dest) {
+  make_path(dirname(strdup(dest.c_str()))); 
+  return cp(source, dest);
+}
+int WorkerBee::cp(std::string & source, std::string & destination) {
+  struct stat stt;
+  if (0 == stat(destination.c_str(), &stt)) {return -1;}
+
+  FILE *src = fopen(source.c_str(), "rb");
+  if (NULL == src) { return -1;}
+
+  FILE *dstntn = fopen(destination.c_str(), "wb");
+  if (NULL == dstntn) {
+    fclose(src);
+    return -1;
+  }
+
+  char bfr [4096];
+  while (true) {
+    size_t r = fread(bfr, 1, sizeof bfr, src);
+      if (0 == r || r != fwrite(bfr, 1, r, dstntn)) {
+        break;
+      }
+    }
+
+  fclose(src);
+  if (fclose(dstntn)) {
+    return(-1);
+  }
+  return 0;
+}
+int WorkerBee::make_path(const std::string & path) {
+  struct stat stt;
+  if (0 == stat(path.c_str(), &stt) && S_ISDIR(stt.st_mode)) return -1;
+
+  std::string::size_type lngth = path.length();
+  for (std::string::size_type i = 1; i < lngth; ++i) {
+    if (lngth - 1 == i || '/' == path[i]) {
+      std::string p = path.substr(0, i + 1);
+      if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
+        fprintf(stderr, "Could not create the directory %s", p.c_str());
+        return(-1);
+      }
+    }
+  }
+  return 0;
+}
