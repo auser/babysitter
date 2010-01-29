@@ -21,6 +21,7 @@
 
 /** defines **/
 #define ERR -1
+#define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
 /** types **/
 typedef std::set<std::string> string_set;
