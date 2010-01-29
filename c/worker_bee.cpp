@@ -1,4 +1,11 @@
 /** includes **/
+#include <stdio.h>
+#include <stdlib.h>
+#include <pwd.h>
+#include <unistd.h>
+#include <libgen.h>
+#include <errno.h>
+#include <sys/types.h>
 #include "worker_bee.h"
 
 /** Build the chroot at the path **/
@@ -7,6 +14,7 @@ bool WorkerBee::build_chroot(char *path) {
 }
 
 string_set * WorkerBee::libs() {
+  printf("WorkerBee::libs()\n");
   std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(); 
   
   // iterate through
@@ -126,6 +134,8 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries() {
 
     scn = elf_nextscn(elf, scn);
   }
+
+printf("outputting libs...\n");
  
   return new std::pair<string_set *, string_set*> (libs, paths);
 }

@@ -376,73 +376,13 @@ bool Honeycomb::abs_path(const std::string & path) {
 
 int Honeycomb::copy_deps(const std::string & file_path) {
   WorkerBee b(file_path.c_str());
+  printf("worker bee: %p\n", &b);
   string_set *libs = b.libs();
   for (string_set::iterator ld = (*libs).begin(); ld != (*libs).end(); ld++) {
     std::string p = *ld;
     printf("lib: %s\n", p.c_str());
   } 
   return 0;
-}
-
-/**
- * dynamic_loads (from line 443 of isolate.cpp)
- **/
-std::pair<string_set *, string_set *> * Honeycomb::dynamic_loads(Elf *elf) {
-  assert(geteuid() != 0 && getegid() != 0);
-
-  GElf_Ehdr ehdr;
-  if (! gelf_getehdr(elf, &ehdr)) {
-    fprintf(stderr, "elf_getehdr failed from %s\n", elf_errmsg(-1));
-    return NULL;
-  }
-
-  Elf_Scn *scn = elf_nextscn(elf, NULL);
-  GElf_Shdr shdr;
-  std::string to_find = ".dynstr";
-  while (scn) {
-    if (NULL == gelf_getshdr(scn, &shdr)) {
-      fprintf(stderr, "getshdr() failed from %s\n", elf_errmsg(-1));
-      return NULL;
-    }
-
-    char * nm = elf_strptr(elf, ehdr.e_shstrndx, shdr.sh_name);
-    if (NULL == nm) {
-      fprintf(stderr, "elf_strptr() failed from %s\n", elf_errmsg(-1));
-      return NULL;
-    }
-
-    if (to_find == nm) {
-      break;
-    }
-
-    scn = elf_nextscn(elf, scn);
-  }
-
-  Elf_Data *data = NULL;
-  size_t n = 0;
-  string_set *lbrrs = new string_set(), *pths = new string_set();
-
-  pths->insert("/lib");
-  pths->insert("/usr/lib");
-  pths->insert("/usr/local/lib");
-
-  while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
-    char *bfr = static_cast<char *>(data->d_buf);
-    char *p = bfr + 1;
-    while (p < bfr + data->d_size) {
-      if (names_library(p)) {
-        lbrrs->insert(p);
-      } else if ('/' == *p) {
-        pths->insert(p);
-      }
-
-      size_t lngth = strlen(p) + 1;
-      n += lngth;
-      p += lngth;
-    }
-  }
-
-  return new std::pair<string_set *, string_set *>(lbrrs, pths);
 }
 
 const char *DEV_RANDOM = "/dev/urandom";
@@ -505,18 +445,3 @@ int Honeycomb::restore_perms() {
   return 0;
 }
 
-bool Honeycomb::matches_pattern(const std::string & matchee, const char * pattern, int flags) {
-  regex_t xprsn;
-  if (regcomp(&xprsn, pattern, flags|REG_EXTENDED|REG_NOSUB)) {
-    fprintf(stderr, "Failed to compile regex\n");
-    return(-1); // we are in the fork
-  }
-
-  if (0 == regexec(&xprsn, matchee.c_str(), 1, NULL, 0)) {
-    regfree(&xprsn);
-    return true;
-  }
-
-  regfree(&xprsn);
-  return false;
-}
