@@ -32,7 +32,6 @@ using std::string;
 
 /*---------------------------- Defines ------------------------------------*/
 #define BUF_SIZE 2048
-#define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
 /* #define DEBUG */
 #define DEBUG 1
