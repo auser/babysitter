@@ -223,19 +223,19 @@ DEBUG_MSG("forked... %i\n", child);
     if(0 == child) {
       // Find the binary command
       // std::string binary_path = find_binary(m_cmd);
-      std::string pth = m_cd + binary_path;
+      // std::string pth = m_cd + binary_path;
       
       temp_drop();
 
       // Currently, we only support running binaries, not shell scripts
-      copy_deps(binary_path);
+      copy_deps(m_cmd);
       
       //cp_r(binary_path, pth);
 
-      if (chmod(pth.c_str(), S_IREAD|S_IEXEC|S_IWRITE)) {
-        fprintf(stderr, "Could not change permissions to '%s' make it executable\n", pth.c_str());
-        return -1;
-      }
+      // if (chmod(pth.c_str(), S_IREAD|S_IEXEC|S_IWRITE)) {
+      //   fprintf(stderr, "Could not change permissions to '%s' make it executable\n", pth.c_str());
+      //   return -1;
+      // }
       
       // come back to our permissions
       restore_perms();
