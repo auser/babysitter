@@ -33,13 +33,14 @@ private:
   GElf_Sym sym;               // Symbols
   GElf_Shdr shdr;             // Section header
   string_set *full_path_libs; // Full path for the libs
+  std::string *m_executable;
   
 public:
-  WorkerBee() {}
+  WorkerBee(char *executable) : m_executable(executable) {}
   ~WorkerBee() {}
 
-  string_set *libs_for(char *executable);
-  bool build_chroot(char *executable, char *path);
+  string_set *libs();
+  bool build_chroot(char *path);
 
 // Functions
 private:

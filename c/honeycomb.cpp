@@ -390,60 +390,9 @@ int Honeycomb::make_path(const std::string & path) {
   return 0;
 }
 
-int Honeycomb::copy_deps(const std::string & image) {
-DEBUG_MSG("image in copy_deps: %s\n", image.c_str());
-  if (EV_NONE == elf_version(EV_CURRENT)) {
-    fprintf(stderr, "ELF libs failed to initialize\n");
-    return(-1);
-  }
-
-  int fl = open(image.c_str(), O_RDONLY);
-  if (-1 == fl) {
-    fprintf(stderr, "Could not open %s - %s\n", image.c_str(), ::strerror(errno));
-    return(-1);
-  }
-  Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
-  if (NULL == elf) {
-    fprintf(stderr, "elf_begin failed because %s\n", elf_errmsg(-1));
-    return(-1);
-  }
-  if (ELF_K_ELF != elf_kind(elf)) {
-    fprintf(stderr, "%s is not an ELF object\n", (&image)->c_str());
-    return(-1);
-  }
-  
-  std::pair<string_set *, string_set *> *r = dynamic_loads(elf);
-  string_set libs = *r->first;
-  
-  // Go through the libs
-  for (string_set::iterator ld = libs.begin(); ld != libs.end(); ++ld) {
-    string_set pths = *r->second;
-    bool found = false;
-    
-    for (string_set::iterator pth = pths.begin(); pth != pths.end(); ++pth) {
-      std::string src = *pth + '/' + *ld;
-      if (m_already_copied.count(src)) {
-        found = true;
-        continue;
-      }
-      std::string dest = m_cd + src;
-
-std::string _a_path = *pth;
- 
-DEBUG_MSG("dest: %s from path: %s\n", dest.c_str(), _a_path.c_str());    
-  
-      cp_r(src, dest);
-
-      found = true;
-      m_already_copied.insert(src);
-      copy_deps(src);
-
-      if (!found) {fprintf(stderr, "Could not find the library %s\n", ld->c_str());}
-    }
-  }
-  
-  elf_end(elf);
-  close(fl);
+int Honeycomb::copy_deps(const std::string & file_path) {
+  WorkerBee b(file_path.c_str());
+  string_set *libs = b.libs();
   return 0;
 }
 

@@ -2,12 +2,12 @@
 #include "worker_bee.h"
 
 /** Build the chroot at the path **/
-bool WorkerBee::build_chroot(char *executable, char *path) {
+bool WorkerBee::build_chroot(char *path) {
   return true;
 }
 
-string_set * WorkerBee::libs_for(char *executable) {
-  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(executable); 
+string_set * WorkerBee::libs(3) {
+  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(m_executable); 
   
   // iterate through
   string_set obj = *dyn_libs->first;
