@@ -16,6 +16,7 @@ bool WorkerBee::build_chroot(char *path) {
 string_set WorkerBee::libs_for(std::string &executable) {
   printf("WorkerBee::libs()\n");
   std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(executable); 
+  std::set<std::string> libs;
   
   // iterate through
   string_set obj = *dyn_libs->first;
@@ -27,12 +28,12 @@ string_set WorkerBee::libs_for(std::string &executable) {
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
         printf("\t%s\n", full_path.c_str());
-        m_libs.insert(full_path);
+        libs.insert(full_path);
       }
     }
   }
   
-  return m_libs;
+  return libs;
 }
 
 bool WorkerBee::matches_pattern(const std::string & matchee, const char * pattern, int flags) {

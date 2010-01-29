@@ -37,9 +37,7 @@ private:
   string_set m_libs;          // Full path for the libs
   
 public:
-  WorkerBee() {
-    std::set<std::string> m_libs;
-  }
+  WorkerBee() {}
   ~WorkerBee() {}
 
   string_set libs_for(std::string &str);
