@@ -7,14 +7,13 @@ bool WorkerBee::build_chroot(char *executable, char *path) {
 }
 
 string_set * WorkerBee::libs_for(char *executable) {
-  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(argv[1]); 
+  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(executable); 
   
   // iterate through
   string_set obj = *dyn_libs->first;
   // Go through the libs
   for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
     string_set paths = *dyn_libs->second;
-    bool found = false;
 
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
       std::string full_path = *pth+'/'+*ld;
@@ -49,9 +48,6 @@ bool WorkerBee::is_lib(const std::string &n) {
 }
 
 std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(char *file) {
-  int fd;                      // File Descriptor
-  string_set *already_copied;  // Already copied libs
-
   /* open the offending file  */
   int fl = open(file, O_RDONLY);
   if (-1 == fl) {

@@ -35,6 +35,9 @@ private:
   string_set *full_path_libs; // Full path for the libs
   
 public:
+  WorkerBee() {}
+  ~WorkerBee() {}
+
   string_set *libs_for(char *executable);
   bool build_chroot(char *executable, char *path);
 
@@ -43,4 +46,5 @@ private:
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
   bool is_lib(const std::string &n);
   std::pair<string_set *, string_set *> *linked_libraries(char *file);
-}
+
+};

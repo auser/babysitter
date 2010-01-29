@@ -33,7 +33,7 @@ PACKAGE_NAME = babysitter
 PACKAGE_VERSION = 0.1
 
 INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) eipp babysitter
+OUTPUTFILES := $(INTERMEDIATES) worker_bee eipp babysitter
 #OUTPUTFILES := honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
@@ -67,8 +67,11 @@ test_%.o: test_%.c %.o
 eipp:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c ei++.cpp
 
-honeycomb: honeycomb.cpp honeycomb.h
+honeycomb: honeycomb.cpp honeycomb.h worker_bee
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
+
+worker_bee: worker_bee.c worker_bee.h
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c worker_bee.c
 
 babysitter:
 	mkdir -p `dirname $(EXECUTABLE)`
