@@ -151,6 +151,9 @@ int main(int argc, char **argv) {
   }
   */
   WorkerBee b(argv[1]);
-  b.libs();
+  string_set *s_libs = b.libs();
+  for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
+    printf("- %s\n", s.c_str());
+  }
   return 0;
 }
