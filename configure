@@ -4536,6 +4536,18 @@ fi
 done
 
 
+for ac_header in sys/capability.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/capability.h" "ac_cv_header_sys_capability_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_capability_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_CAPABILITY_H 1
+_ACEOF
+
+fi
+
+done
+
 for ac_header in fcntl.h limits.h string.h sys/time.h unistd.h unistd.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
