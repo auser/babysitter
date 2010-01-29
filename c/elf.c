@@ -11,6 +11,9 @@
 #include <set>
 #include <regex.h>
 
+/** Worker bee **/
+#include "worker_bee.h"
+
 #define ERR -1
 
 typedef std::set<std::string> string_set;
@@ -129,6 +132,7 @@ std::pair<string_set *, string_set *> *linked_libraries(char *file) {
 }
 
 int main(int argc, char **argv) {
+  /*
   std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(argv[1]); 
   
   // iterate through
@@ -145,5 +149,8 @@ int main(int argc, char **argv) {
       }
     }
   }
+  */
+  WorkerBee b(argv[1]);
+  b.libs();
   return 0;
 }

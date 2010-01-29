@@ -32,11 +32,12 @@ private:
   Elf_Data *edata;            // Data description
   GElf_Sym sym;               // Symbols
   GElf_Shdr shdr;             // Section header
-  string_set *full_path_libs; // Full path for the libs
+  string_set *m_libs; // Full path for the libs
   std::string m_executable;
   
 public:
   WorkerBee(std::string executable) : m_executable(executable) {}
+  WorkerBee() : m_libs(NULL) {}
   ~WorkerBee() {}
 
   string_set *libs();

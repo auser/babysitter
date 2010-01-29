@@ -27,12 +27,12 @@ string_set * WorkerBee::libs() {
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
         printf("\t%s\n", full_path.c_str());
-        full_path_libs->insert(full_path);
+        m_libs->insert(full_path);
       }
     }
   }
   
-  return full_path_libs;
+  return m_libs;
 }
 
 bool WorkerBee::matches_pattern(const std::string & matchee, const char * pattern, int flags) {
