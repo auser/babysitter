@@ -34,20 +34,19 @@ private:
   Elf_Data *edata;            // Data description
   GElf_Sym sym;               // Symbols
   GElf_Shdr shdr;             // Section header
-  string_set m_libs;          // Full path for the libs
   
 public:
   WorkerBee() {}
   ~WorkerBee() {}
 
-  string_set libs_for(std::string &str);
+  string_set *libs_for(const std::string &str);
   bool build_chroot(char *path);
 
 // Functions
 private:
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
   bool is_lib(const std::string &n);
-  std::pair<string_set *, string_set *> *linked_libraries(std::string &str);
+  std::pair<string_set *, string_set *> *linked_libraries(const std::string str);
   /** Utilities **/
   int make_path(const std::string & path);
   int cp_r(std::string &source, std::string &dest);

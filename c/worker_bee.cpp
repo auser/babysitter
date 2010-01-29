@@ -13,10 +13,10 @@ bool WorkerBee::build_chroot(char *path) {
   return true;
 }
 
-string_set WorkerBee::libs_for(std::string &executable) {
+string_set *WorkerBee::libs_for(const std::string &executable) {
   printf("WorkerBee::libs()\n");
   std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(executable); 
-  std::set<std::string> libs;
+  string_set *libs = new string_set();
   
   // iterate through
   string_set obj = *dyn_libs->first;
@@ -27,8 +27,7 @@ string_set WorkerBee::libs_for(std::string &executable) {
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
-        printf("\t%s\n", full_path.c_str());
-        libs.insert(full_path);
+        libs->insert(full_path);
       }
     }
   }
@@ -56,7 +55,7 @@ bool WorkerBee::is_lib(const std::string &n) {
   return matches_pattern(n, "^lib(.*)+\\.so[.0-9]*$", 0);
 }
 
-std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(std::string &executable) {
+std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::string executable) {
   /* open the offending executable  */
   int fl = open(executable.c_str(), O_RDONLY);
   if (-1 == fl) {

@@ -341,8 +341,8 @@ int Honeycomb::set_rlimit(const int res, const rlim_t limit) {
 
 /*---------------------------- UTILS ------------------------------------*/
 int Honeycomb::copy_deps(const std::string & file_path) {
-  WorkerBee b();
-  string_set libs = b.libs_for(file_path);
+  WorkerBee b;
+  string_set libs = *b.libs_for(file_path);
   for (string_set::iterator ld = libs.begin(); ld != libs.end(); ld++) {
     std::string p = *ld;
     printf("lib: %s\n", p.c_str());
