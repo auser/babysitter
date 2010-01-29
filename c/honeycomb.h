@@ -146,8 +146,6 @@ private:
   int restore_perms();
   int copy_deps(const std::string & image);
   std::pair<string_set*, string_set*> * dynamic_loads(Elf *elf);
-  std::string find_binary(const std::string& file);
-  bool abs_path(const std::string & path);
   // Limits
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);

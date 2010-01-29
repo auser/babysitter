@@ -222,11 +222,10 @@ DEBUG_MSG("forked... %i\n", child);
 
     if(0 == child) {
       // Find the binary command
-      std::string binary_path = find_binary(m_cmd);
+      // std::string binary_path = find_binary(m_cmd);
       std::string pth = m_cd + binary_path;
       
       temp_drop();
-DEBUG_MSG("running binary on path: %s\n at pth: %s\n", binary_path.c_str(), pth.c_str());
 
       // Currently, we only support running binaries, not shell scripts
       copy_deps(binary_path);
@@ -341,42 +340,9 @@ int Honeycomb::set_rlimit(const int res, const rlim_t limit) {
 }
 
 /*---------------------------- UTILS ------------------------------------*/
-std::string Honeycomb::find_binary(const std::string& file) {
-  // assert(geteuid() != 0 && getegid() != 0); // We can't be root to run this.
-  
-  if (abs_path(file)) return file;
-  
-  std::string pth = DEFAULT_PATH;
-  char *p2 = getenv("PATH");
-  if (p2) {pth = p2;}
-  
-  std::string::size_type i = 0;
-  std::string::size_type f = pth.find(":", i);
-  do {
-    std::string s = pth.substr(i, f - i) + "/" + file;
-    
-    if (0 == access(s.c_str(), X_OK)) {return s;}
-    i = f + 1;
-    f = pth.find(':', i);
-  } while(std::string::npos != f);
-  
-  if (!abs_path(file)) {
-    fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
-    return NULL;
-  }
-  if (0 == access(file.c_str(), X_OK)) return file;
-  
-  fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
-  return NULL;
-}
-
-bool Honeycomb::abs_path(const std::string & path) {
-  return '/' == path[0] || ('.' == path[0] && '/' == path[1]);
-}
-
 int Honeycomb::copy_deps(const std::string & file_path) {
-  WorkerBee b(file_path.c_str());
-  string_set libs = b.libs();
+  WorkerBee b();
+  string_set libs = b.libs_for(file_path.c_str());
   for (string_set::iterator ld = libs.begin(); ld != libs.end(); ld++) {
     std::string p = *ld;
     printf("lib: %s\n", p.c_str());

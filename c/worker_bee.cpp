@@ -13,9 +13,9 @@ bool WorkerBee::build_chroot(char *path) {
   return true;
 }
 
-string_set WorkerBee::libs() {
+string_set WorkerBee::libs_for(std::string executable) {
   printf("WorkerBee::libs()\n");
-  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(); 
+  std::pair<string_set *, string_set *> *dyn_libs = linked_libraries(executable); 
   
   // iterate through
   string_set obj = *dyn_libs->first;
@@ -55,11 +55,11 @@ bool WorkerBee::is_lib(const std::string &n) {
   return matches_pattern(n, "^lib(.*)+\\.so[.0-9]*$", 0);
 }
 
-std::pair<string_set *, string_set *> *WorkerBee::linked_libraries() {
-  /* open the offending m_executable  */
-  int fl = open(m_executable.c_str(), O_RDONLY);
+std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(std::string executable) {
+  /* open the offending executable  */
+  int fl = open(executable.c_str(), O_RDONLY);
   if (-1 == fl) {
-    fprintf(stderr, "Could not open %s\n", m_executable.c_str());
+    fprintf(stderr, "Could not open %s\n", executable.c_str());
     return NULL;
   }
   
@@ -186,4 +186,37 @@ int WorkerBee::make_path(const std::string & path) {
     }
   }
   return 0;
+}
+
+std::string WorkerBee::find_binary(const std::string& file) {
+  // assert(geteuid() != 0 && getegid() != 0); // We can't be root to run this.
+  
+  if (abs_path(file)) return file;
+  
+  std::string pth = DEFAULT_PATH;
+  char *p2 = getenv("PATH");
+  if (p2) {pth = p2;}
+  
+  std::string::size_type i = 0;
+  std::string::size_type f = pth.find(":", i);
+  do {
+    std::string s = pth.substr(i, f - i) + "/" + file;
+    
+    if (0 == access(s.c_str(), X_OK)) {return s;}
+    i = f + 1;
+    f = pth.find(':', i);
+  } while(std::string::npos != f);
+  
+  if (!abs_path(file)) {
+    fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
+    return NULL;
+  }
+  if (0 == access(file.c_str(), X_OK)) return file;
+  
+  fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
+  return NULL;
+}
+
+bool WorkerBee::abs_path(const std::string & path) {
+  return '/' == path[0] || ('.' == path[0] && '/' == path[1]);
 }

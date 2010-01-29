@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <gelf.h>
+#include <pwd.h>
 #include <set>
 #include <regex.h>
 
@@ -33,10 +34,8 @@ private:
   GElf_Sym sym;               // Symbols
   GElf_Shdr shdr;             // Section header
   string_set m_libs;          // Full path for the libs
-  std::string m_executable;
   
 public:
-  WorkerBee(std::string executable) : m_executable(executable) {}
   WorkerBee() {
     std::set<std::string> m_libs;
   }
@@ -54,5 +53,6 @@ private:
   int make_path(const std::string & path);
   int cp_r(std::string &source, std::string &dest);
   int cp(std::string & source, std::string & destination);
-
+  std::string find_binary(const std::string& file);
+  bool abs_path(const std::string & path);
 };
