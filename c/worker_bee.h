@@ -49,8 +49,8 @@ private:
   std::pair<string_set *, string_set *> *linked_libraries(const std::string str);
   /** Utilities **/
   int make_path(const std::string & path);
-  int cp_r(std::string &source, std::string &dest);
-  int cp(std::string & source, std::string & destination);
+  int cp_r(const std::string &source, const std::string &dest);
+  int cp(const std::string & source, const std::string & destination);
   std::string find_binary(const std::string& file);
   bool abs_path(const std::string & path);
 };

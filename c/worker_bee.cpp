@@ -13,37 +13,57 @@ bool WorkerBee::build_chroot(std::string &path, string_set &executables, string_
   // Make the root path
   make_path(strdup(path.c_str()));
   string_set already_copied;
+  std::string full_path;
   
-  // Build the root libraries
-  for (string_set::iterator executable = executables.begin(); executable != executables.end(); ++executable) {
-    string_set s_libs = *libs_for(*executable);
-    
-    for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
-      if (already_copied.count(s->c_str())) {
-      } else {
-        printf("- %s\n", s->c_str());
-        already_copied.insert(s->c_str());
-      }
-    }
-  }
-  
+  // The base directories  
   string_set base_dirs;
   base_dirs.insert("bin");
   base_dirs.insert("usr");
   base_dirs.insert("var");
   base_dirs.insert("lib");
+  base_dirs.insert("etc");
   
   // Add the extra directories requested
   for (string_set::iterator dir = extra_dirs.begin(); dir != extra_dirs.end(); ++dir) base_dirs.insert(dir->c_str());
   
   for (string_set::iterator dir = base_dirs.begin(); dir != base_dirs.end(); ++dir) {
-    std::string full_path;
     if ((*dir->c_str()) == '/') full_path = path + *dir; else full_path = path + '/' + *dir;
-      
-    printf("- dirs: %s\n", full_path.c_str());
+    
+    // Make the paths
     make_path(full_path.c_str());
   }
+  
+  // Build the root libraries
+  for (string_set::iterator executable = executables.begin(); executable != executables.end(); ++executable) {
+    // If we are pointed at an absolute path to a binary
+    // then find the linked libraries of the executable
+    // If it's not found, then find it, then look up the libraries
+    std::string res_bin;
+    if (abs_path(*executable))
+      res_bin = *executable;
+    else {
+      res_bin = find_binary(*executable);
+    }
     
+    string_set s_libs = *libs_for(res_bin);
+    
+    for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
+      if (already_copied.count(s->c_str())) {
+      } else {
+        if ((*s->c_str()) == '/') full_path = path + *s; else full_path = path + '/' + *s;
+        printf("- %s to %s\n", s->c_str(), full_path.c_str());
+        cp_r(s->c_str(), full_path.c_str());
+        already_copied.insert(s->c_str());
+      }
+    }
+    // Copy the executables
+    std::string bin_path = path + '/' + res_bin;
+    cp_r(res_bin.c_str(), bin_path.c_str());
+    if (chmod(bin_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
+      fprintf(stderr, "Could not change permissions to '%s' make it executable\n", bin_path.c_str());
+    }
+  }
+  
   return true;
 }
 
@@ -181,11 +201,11 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::st
   return new std::pair<string_set *, string_set*> (libs, paths);
 }
 
-int WorkerBee::cp_r(std::string &source, std::string &dest) {
+int WorkerBee::cp_r(const std::string &source, const std::string &dest) {
   make_path(dirname(strdup(dest.c_str()))); 
   return cp(source, dest);
 }
-int WorkerBee::cp(std::string & source, std::string & destination) {
+int WorkerBee::cp(const std::string & source, const std::string & destination) {
   struct stat stt;
   if (0 == stat(destination.c_str(), &stt)) {return -1;}
 

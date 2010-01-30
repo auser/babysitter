@@ -139,6 +139,7 @@ int main(int argc, char **argv) {
   string_set s_executables;
   s_executables.insert("/bin/ls");
   s_executables.insert("/bin/bash");
+  s_executables.insert("/usr/bin/whoami");
   s_executables.insert("ruby");
   
   string_set s_dirs;
