@@ -24,7 +24,12 @@
 #define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
 /** types **/
+struct 	_bee_file {
+  char *file_path;
+  bool is_link;
+} bee_file;
 typedef std::set<std::string> string_set;
+typedef std::set<bee_file> bee_files_set;
 
 class WorkerBee {
 private:
@@ -40,7 +45,7 @@ public:
   ~WorkerBee() {}
 
   string_set *libs_for(const std::string &str);
-  bool build_chroot(std::string &path, string_set &executables, string_set &extra_dirs);
+  bool build_chroot(const std::string &path, string_set &executables, string_set &extra_dirs);
 
 // Functions
 private:

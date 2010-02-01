@@ -143,7 +143,7 @@ private:
   int temp_drop();
   int perm_drop();
   int restore_perms();
-  int copy_deps(const std::string & image);
+  int copy_deps(const std::string & root_path, const std::string & binary_path);
   std::pair<string_set*, string_set*> * dynamic_loads(Elf *elf);
   // Limits
   void set_rlimits();

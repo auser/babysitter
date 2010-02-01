@@ -9,7 +9,7 @@
 #include "worker_bee.h"
 
 /** Build the chroot at the path **/
-bool WorkerBee::build_chroot(std::string &path, string_set &executables, string_set &extra_dirs) {
+bool WorkerBee::build_chroot(const std::string &path, string_set &executables, string_set &extra_dirs) {
   // Make the root path
   make_path(strdup(path.c_str()));
   string_set already_copied;
@@ -45,13 +45,14 @@ bool WorkerBee::build_chroot(std::string &path, string_set &executables, string_
       res_bin = find_binary(*executable);
     }
     
+    // The libraries for the resolved binary 
     string_set s_libs = *libs_for(res_bin);
     
+    // collect the libraries and copy them to the full path of the chroot
     for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
       if (already_copied.count(s->c_str())) {
       } else {
         if ((*s->c_str()) == '/') full_path = path + *s; else full_path = path + '/' + *s;
-        printf("- %s to %s\n", s->c_str(), full_path.c_str());
         cp_r(s->c_str(), full_path.c_str());
         already_copied.insert(s->c_str());
       }
@@ -63,7 +64,7 @@ bool WorkerBee::build_chroot(std::string &path, string_set &executables, string_
       fprintf(stderr, "Could not change permissions to '%s' make it executable\n", bin_path.c_str());
     }
   }
-  
+  printf("Library found\n");
   return true;
 }
 
@@ -83,6 +84,8 @@ string_set *WorkerBee::libs_for(const std::string &executable) {
   
   // iterate through
   string_set obj = *dyn_libs->first;
+  char link_buf[1024];
+  struct stat lib_stat;
   // Go through the libs
   for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
     string_set paths = *dyn_libs->second;
@@ -90,6 +93,22 @@ string_set *WorkerBee::libs_for(const std::string &executable) {
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
+
+if (lstat(full_path.c_str(), &lib_stat) < 0) {
+  fprintf(stderr, "%s: Error: %s\n", full_path.c_str(), strerror(errno));
+  return NULL;
+}
+if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
+ memset(link_buf, 0, 1024);
+ if (readlink(full_path.c_str(), link_buf, 1024)) {
+   fprintf(stderr, "Error: %s: %s\n", full_path.c_str(), strerror(errno));
+ }
+
+ printf("----- %s is a link to %s -----\n", full_path.c_str(), link_buf);
+ std::string link_str; 
+ link_str = *pth+'/'+link_buf;
+ libs->insert(link_str);
+}
         libs->insert(full_path);
       }
     }

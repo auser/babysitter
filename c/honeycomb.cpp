@@ -228,7 +228,8 @@ DEBUG_MSG("forked... %i\n", child);
       temp_drop();
 
       // Currently, we only support running binaries, not shell scripts
-      copy_deps(m_cmd);
+      printf("----- Build the chroot please\n");
+      copy_deps(m_cd, m_cmd);
       
       //cp_r(binary_path, pth);
 
@@ -340,14 +341,22 @@ int Honeycomb::set_rlimit(const int res, const rlim_t limit) {
 }
 
 /*---------------------------- UTILS ------------------------------------*/
-int Honeycomb::copy_deps(const std::string & file_path) {
+int Honeycomb::copy_deps(const std::string & root_path, const std::string & file_path) {
   WorkerBee b;
-  string_set libs = *b.libs_for(file_path);
-  for (string_set::iterator ld = libs.begin(); ld != libs.end(); ld++) {
-    std::string p = *ld;
-    printf("lib: %s\n", p.c_str());
-  } 
-  return 0;
+
+  string_set s_executables;
+  s_executables.insert("/bin/ls");
+  s_executables.insert("/bin/bash");
+  s_executables.insert("/usr/bin/whoami");
+  s_executables.insert("ruby");
+
+  string_set s_dirs;
+  s_dirs.insert("/opt");
+
+  printf("-- building chroot: %s\n", root_path.c_str());
+  b.build_chroot(root_path, s_executables, s_dirs);
+
+  return 0; 
 }
 
 const char *DEV_RANDOM = "/dev/urandom";
