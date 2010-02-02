@@ -24,6 +24,7 @@
 #define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
 /** types **/
+// Beefiles are for chroots
 class BeeFile {
 private:
   std::string m_file_path;
@@ -43,7 +44,7 @@ public:
   void set_sym_origin(const char *nfp) {m_sym_origin = nfp;}
   void set_is_link(bool b) {m_is_link = b;}
 };
-
+// Simply so we can filter through the bee files using an iterator
 class BeeCompare {
 public:
   bool operator()(BeeFile b1, BeeFile b2) {
