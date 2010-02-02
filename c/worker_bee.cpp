@@ -98,7 +98,6 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
 
   // iterate through
   string_set obj = *dyn_libs->first;
-  char link_buf[1024];
   struct stat lib_stat;
   // Go through the libs
   for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
@@ -118,8 +117,11 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
           fprintf(stderr, "[lstat] Error: %s\n", full_path.c_str(), strerror(errno));
         }
 			  // Are we looking at a symlink
-        if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
+        // if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
+        if (S_ISLNK(lib_stat.st_mode))
+          char link_buf[1024];
           memset(link_buf, 0, 1024);
+          
           if (readlink(full_path.c_str(), link_buf, 1024)) {
             fprintf(stderr, "[readlink] Error: %s: %s\n", full_path.c_str(), strerror(errno));
           }
@@ -128,8 +130,7 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
           /** If we are looking at a symlink, then create a new BeeFile object and 
            * insert it into the library path, noting that the other is a symlink
            **/ 
-          std::string link_str;
-          link_str = *pth+'/'+link_buf;
+          std::string link_str (link_buf);
           BeeFile lbf;
           // Set the data on the BeeFile object
           lbf.set_file_path(link_str.c_str());
