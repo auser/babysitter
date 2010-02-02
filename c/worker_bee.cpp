@@ -115,13 +115,13 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
         
         // Make sure the file can be "stat'd"
         if (lstat(full_path.c_str(), &lib_stat) < 0) {
-          fprintf(stderr, "%s: Error: %s\n", full_path.c_str(), strerror(errno));
+          fprintf(stderr, "[lstat] Error: %s\n", full_path.c_str(), strerror(errno));
         }
 			  // Are we looking at a symlink
         if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
           memset(link_buf, 0, 1024);
           if (readlink(full_path.c_str(), link_buf, 1024)) {
-            fprintf(stderr, "Error: %s: %s\n", full_path.c_str(), strerror(errno));
+            fprintf(stderr, "[readlink] Error: %s: %s\n", full_path.c_str(), strerror(errno));
           }
           
           printf("----- %s is a link to %s -----\n", full_path.c_str(), link_buf);
