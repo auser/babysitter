@@ -27,6 +27,8 @@
 class BeeFile {
 private:
   std::string m_file_path;
+  // If there is a symlink, use this to point to the original file
+  std::string m_sym_origin;
   bool m_is_link;
 
 public:
@@ -34,9 +36,11 @@ public:
   ~BeeFile() {}
 
   std::string file_path() {return m_file_path;}
+  std::string sym_origin() {return m_sym_link;}
   bool  is_link() {return m_is_link;}
   // Really REALLY simple setters
   void set_file_path(const char *nfp) {m_file_path = nfp;}
+  void set_sym_origin(const char *nfp) {m_sym_origin = nfp;}
   void set_is_link(bool b) {m_is_link = b;}
 };
 

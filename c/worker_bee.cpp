@@ -53,21 +53,31 @@ bool WorkerBee::build_chroot(const std::string &path, string_set &executables, s
       BeeFile bee = *bf;
       std::string s (bee.file_path());
       
+      // Don't copy if the file is already copied
       if (already_copied.count(s)) {
       } else {
-        if (s == "/") full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
-        cp_r(s, full_path);
+        // If it is a symlink, then make a symlink, otherwise copy the file
+        // If the library starts with a '/' then don't add one, otherwise, do
+        // i.e. if libs/hi.so.1 turns into full_path/libs/hi.so.1 otherwise libs.so.1 turns into full_path/libs.so.1
+        if (*s.c_str() == "/") full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
+        if (bf.is_link()) {
+          // make symlink
+          symlink(bf.sym_origin().c_str(), bf.file_path().c_str());
+        } else {
+          // Copy the file (recursively)
+          cp_r(s, full_path);
+        }
+        // Add it to the already_copied set and move on
         already_copied.insert(s);
       }
     }
-    // Copy the executables
+    // Copy the executables and make them executable
     std::string bin_path = path + '/' + res_bin;
     cp_r(res_bin.c_str(), bin_path.c_str());
     if (chmod(bin_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
       fprintf(stderr, "Could not change permissions to '%s' make it executable\n", bin_path.c_str());
     }
   }
-  printf("Library found\n");
   return true;
 }
 
@@ -91,37 +101,45 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
   char link_buf[1024];
   struct stat lib_stat;
   // Go through the libs
-for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
+  for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
     string_set paths = *dyn_libs->second;
-
+    
+    // Go through each of the paths
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
-
-	BeeFile bf;
+        
+        // Create a bee_file object
+        BeeFile bf;
         bf.set_file_path(full_path.c_str());
-
-	if (lstat(full_path.c_str(), &lib_stat) < 0) {
+        
+        // Make sure the file can be "stat'd"
+        if (lstat(full_path.c_str(), &lib_stat) < 0) {
           fprintf(stderr, "%s: Error: %s\n", full_path.c_str(), strerror(errno));
         }
-			  
+			  // Are we looking at a symlink
         if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
-	  memset(link_buf, 0, 1024);
+          memset(link_buf, 0, 1024);
           if (readlink(full_path.c_str(), link_buf, 1024)) {
-	    fprintf(stderr, "Error: %s: %s\n", full_path.c_str(), strerror(errno));
-	  }
-
+            fprintf(stderr, "Error: %s: %s\n", full_path.c_str(), strerror(errno));
+          }
+          
           printf("----- %s is a link to %s -----\n", full_path.c_str(), link_buf);
-          std::string link_str; 
+          /** If we are looking at a symlink, then create a new BeeFile object and 
+           * insert it into the library path, noting that the other is a symlink
+           **/ 
+          std::string link_str;
           link_str = *pth+'/'+link_buf;
           BeeFile lbf;
+          // Set the data on the BeeFile object
           lbf.set_file_path(link_str.c_str());
+          lbf.set_sym_origin(full_path.c_str());
           bf.set_is_link(true);
           libs->insert(lbf);
         } else {
           bf.set_is_link(false);
         }
-
+        
         libs->insert(bf);
       }
     }
