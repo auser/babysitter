@@ -46,15 +46,18 @@ bool WorkerBee::build_chroot(const std::string &path, string_set &executables, s
     }
     
     // The libraries for the resolved binary 
-    string_set s_libs = *libs_for(res_bin);
+    bee_files_set *s_libs = libs_for(res_bin);
     
     // collect the libraries and copy them to the full path of the chroot
-    for (string_set::iterator s = s_libs.begin(); s != s_libs.end(); ++s) {
-      if (already_copied.count(s->c_str())) {
+    for (bee_files_set::iterator bf = s_libs->begin(); bf != s_libs->end(); ++bf) {
+      BeeFile bee = *bf;
+      std::string s (bee.file_path());
+      
+      if (already_copied.count(s)) {
       } else {
-        if ((*s->c_str()) == '/') full_path = path + *s; else full_path = path + '/' + *s;
-        cp_r(s->c_str(), full_path.c_str());
-        already_copied.insert(s->c_str());
+        if (s == "/") full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
+        cp_r(s, full_path);
+        already_copied.insert(s);
       }
     }
     // Copy the executables
@@ -68,7 +71,7 @@ bool WorkerBee::build_chroot(const std::string &path, string_set &executables, s
   return true;
 }
 
-string_set *WorkerBee::libs_for(const std::string &executable) {
+bee_files_set *WorkerBee::libs_for(const std::string &executable) {
   std::pair<string_set *, string_set *> *dyn_libs;
   
   // If we are pointed at an absolute path to a binary
@@ -80,36 +83,46 @@ string_set *WorkerBee::libs_for(const std::string &executable) {
     std::string bin = find_binary(executable);
     dyn_libs = linked_libraries(bin);
   }
-  string_set *libs = new string_set();
-  
+  //string_set *libs = new string_set();
+  bee_files_set *libs = new bee_files_set();  
+
   // iterate through
   string_set obj = *dyn_libs->first;
   char link_buf[1024];
   struct stat lib_stat;
   // Go through the libs
-  for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
+for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
     string_set paths = *dyn_libs->second;
 
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
 
-if (lstat(full_path.c_str(), &lib_stat) < 0) {
-  fprintf(stderr, "%s: Error: %s\n", full_path.c_str(), strerror(errno));
-  return NULL;
-}
-if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
- memset(link_buf, 0, 1024);
- if (readlink(full_path.c_str(), link_buf, 1024)) {
-   fprintf(stderr, "Error: %s: %s\n", full_path.c_str(), strerror(errno));
- }
+	BeeFile bf;
+        bf.set_file_path(full_path.c_str());
 
- printf("----- %s is a link to %s -----\n", full_path.c_str(), link_buf);
- std::string link_str; 
- link_str = *pth+'/'+link_buf;
- libs->insert(link_str);
-}
-        libs->insert(full_path);
+	if (lstat(full_path.c_str(), &lib_stat) < 0) {
+          fprintf(stderr, "%s: Error: %s\n", full_path.c_str(), strerror(errno));
+        }
+			  
+        if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
+	  memset(link_buf, 0, 1024);
+          if (readlink(full_path.c_str(), link_buf, 1024)) {
+	    fprintf(stderr, "Error: %s: %s\n", full_path.c_str(), strerror(errno));
+	  }
+
+          printf("----- %s is a link to %s -----\n", full_path.c_str(), link_buf);
+          std::string link_str; 
+          link_str = *pth+'/'+link_buf;
+          BeeFile lbf;
+          lbf.set_file_path(link_str.c_str());
+          bf.set_is_link(true);
+          libs->insert(lbf);
+        } else {
+          bf.set_is_link(false);
+        }
+
+        libs->insert(bf);
       }
     }
   }
