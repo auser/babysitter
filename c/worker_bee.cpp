@@ -8,6 +8,18 @@
 #include <sys/types.h>
 #include "worker_bee.h"
 
+// Build a base directory
+bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group) {
+  make_path(strdup(path.c_str()));
+  
+  if (chown(path.c_str(), user, group) != 0) {
+	  fprintf(stderr, "Could not change owner of '%s' to %i\n", path.c_str(), user);
+    return false;
+	}
+  
+  return true;
+}
+
 /** Build the chroot at the path **/
 bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_dirs) {
   // Make the root path
@@ -21,6 +33,7 @@ bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, s
   base_dirs.insert("usr");
   base_dirs.insert("var");
   base_dirs.insert("lib");
+  base_dirs.insert("home");
   base_dirs.insert("etc");
   
   // Add the extra directories requested
@@ -90,9 +103,15 @@ bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, s
     // Copy the executables and make them executable
     std::string bin_path = path + '/' + res_bin;
     cp_r(res_bin.c_str(), bin_path.c_str());
+    
+    if (chown(bin_path.c_str(), user, group) != 0) {
+		  fprintf(stderr, "Could not change owner of '%s' to %i\n", bin_path.c_str(), user);
+		}
+		
     if (chmod(bin_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
       fprintf(stderr, "Could not change permissions to '%s' make it executable\n", bin_path.c_str());
     }
+		
   }
   return true;
 }

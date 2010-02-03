@@ -41,10 +41,10 @@ public:
   struct stat file_stats() {return m_file_stats;}
   bool        is_link() {return m_is_link;}
   // Really REALLY simple setters
-  void set_file_path(const char *nfp) {m_file_path = nfp;}
-  void set_sym_origin(const char *nfp) {m_sym_origin = nfp;}
-  void set_file_stats(struct stat mode) {m_file_stats = mode;}
-  void set_is_link(bool b) {m_is_link = b;}
+  void        set_file_path(const char *nfp) {m_file_path = nfp;}
+  void        set_sym_origin(const char *nfp) {m_sym_origin = nfp;}
+  void        set_file_stats(struct stat mode) {m_file_stats = mode;}
+  void        set_is_link(bool b) {m_is_link = b;}
 };
 
 class BeeCompare {
@@ -69,6 +69,7 @@ public:
   ~WorkerBee() {}
 
   bee_files_set *libs_for(const std::string &str);
+  bool build_base_dir(const std::string &path, uid_t user, gid_t group);
   bool build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_dirs);
 
 // Functions
