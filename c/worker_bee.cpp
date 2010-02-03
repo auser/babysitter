@@ -60,7 +60,7 @@ bool WorkerBee::build_chroot(const std::string &path, string_set &executables, s
         // If the library starts with a '/' then don't add one, otherwise, do
         // i.e. if libs/hi.so.1 turns into full_path/libs/hi.so.1 otherwise libs.so.1 turns into full_path/libs.so.1
         if (s.c_str()[0] == '/') full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
-        printf("<<< %s >>>\n", full_path.c_str());
+        
         if (bee.is_link()) {
           // make symlink
           make_path(dirname(strdup(full_path.c_str()))); 
@@ -109,8 +109,8 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
 
   // iterate through
   string_set obj = *dyn_libs->first;
-  char link_buf[1024];
   struct stat lib_stat;
+  char link_buf[1024];
   // Go through the libs
   for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
     string_set paths = *dyn_libs->second;
@@ -131,7 +131,8 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
         }
         bf.set_file_stats(lib_stat);
 			  // Are we looking at a symlink
-        if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
+        // if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
+        if (S_ISLNK(lib_stat.st_mode)) {
           memset(link_buf, 0, 1024);
           if (!readlink(full_path.c_str(), link_buf, 1024)) {
             fprintf(stderr, "[readlink] Error: %s: %s\n", full_path.c_str(), strerror(errno));
