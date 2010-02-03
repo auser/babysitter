@@ -95,7 +95,7 @@ private:
   ei::StringBuffer<256>   m_tmp;       // Temporary storage
   ei::Serializer          m_eis;       // Erlang serializer
   std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
-  string             m_cmd;       // The command to execute to start
+  std::string             m_cmd;       // The command to execute to start
   std::string             m_kill_cmd;  // A special command to kill the process (if needed)
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
     std::string             m_skel;      // A skeleton choot directory to work from

@@ -33,8 +33,8 @@ PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 
 INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) worker_bee eipp babysitter
-#OUTPUTFILES := honeycomb eipp babysitter 
+OUTPUTFILES := $(INTERMEDIATES) worker_bee babysitter
+#OUTPUTFILES := config_parser honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
  
@@ -66,6 +66,9 @@ test_%.o: test_%.c %.o
 
 eipp:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c ei++.cpp
+
+config_parser:
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c config_parser.cpp
 
 honeycomb: worker_bee honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
