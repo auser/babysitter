@@ -69,7 +69,7 @@ public:
   ~WorkerBee() {}
 
   bee_files_set *libs_for(const std::string &str);
-  bool build_chroot(const std::string &path, string_set &executables, string_set &extra_dirs);
+  bool build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_dirs);
 
 // Functions
 private:

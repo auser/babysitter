@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
   if (argv[1]) {
     const std::string root_path = argv[1];
     printf("-- building chroot: %s\n", root_path.c_str());
-    b.build_chroot(root_path, s_executables, s_dirs);
+    b.build_chroot(root_path, 1000, 1000, s_executables, s_dirs);
   }
   return 0;
 }

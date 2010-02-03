@@ -178,6 +178,7 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
   setup_defaults();
   // First, get a random_uid to run as
   m_user = random_uid();
+  m_group = m_user;
   gid_t egid = getegid();
   
   // Create the root directory, the 'cd' if it's not specified
@@ -354,7 +355,7 @@ int Honeycomb::copy_deps(const std::string & root_path, const std::string & file
   s_dirs.insert("/opt");
 
   printf("-- building chroot: %s\n", root_path.c_str());
-  b.build_chroot(root_path, s_executables, s_dirs);
+  b.build_chroot(root_path, m_user, m_group, s_executables, s_dirs);
 
   return 0; 
 }

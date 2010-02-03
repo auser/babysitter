@@ -109,13 +109,14 @@ private:
   long                    m_nice;      // The "niceness" level
   size_t                  m_size;      // The heap/stack size
   uid_t                   m_user;      // run as user (generated if not given)
+  gid_t                   m_group;     // run as this group
   const char**            m_cenv;      // The string list of environment variables
   // Internal
   int                     m_cenv_c;    // The current count of the environment variables
   string_set              m_already_copied;
 
 public:
-  Honeycomb() : m_tmp(0,256),m_cd(""),m_dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_cenv(NULL) {
+  Honeycomb() : m_tmp(0,256),m_cd(""),m_dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL) {
     ei::Serializer m_eis(2);
     m_nofiles = NULL;
   }
@@ -128,6 +129,7 @@ public:
   char* const* env()      const { return (char* const*)m_cenv; }
   const char*  kill_cmd() const { return m_kill_cmd.c_str(); }
   uid_t        user()     const { return m_user; }
+  gid_t        group()    const { return m_group; }
   int          nice()     const { return m_nice; }
   mount_type*  mount()    const { return m_mount; }
   

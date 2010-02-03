@@ -9,7 +9,7 @@
 #include "worker_bee.h"
 
 /** Build the chroot at the path **/
-bool WorkerBee::build_chroot(const std::string &path, string_set &executables, string_set &extra_dirs) {
+bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_dirs) {
   // Make the root path
   make_path(strdup(path.c_str()));
   string_set already_copied;
@@ -75,13 +75,18 @@ bool WorkerBee::build_chroot(const std::string &path, string_set &executables, s
         struct stat file_stats = bee.file_stats();
         mode_t mode = file_stats.st_mode;
   			
-        if (chmod(full_path.c_str(), mode)) {
+  			if (chown(full_path.c_str(), user, group) != 0) {
+  			  fprintf(stderr, "Could not change owner of '%s' to %i\n", full_path.c_str(), user);
+  			}
+  			
+        if (chmod(full_path.c_str(), mode) != 0) {
           fprintf(stderr, "Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
         }
         // Add it to the already_copied set and move on
         already_copied.insert(s);
       }
     }
+    
     // Copy the executables and make them executable
     std::string bin_path = path + '/' + res_bin;
     cp_r(res_bin.c_str(), bin_path.c_str());
