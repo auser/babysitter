@@ -10,7 +10,7 @@
  * # but can be overridden with shell scripts
  * # 
  * # The available actions are:
- * # default.bundle: 
+ * # default.bundle: "TODO"
  * # default.mount: 
  * # default.start: 
  * # default.stop:
@@ -49,6 +49,8 @@ public:
   
   std::string name() {return m_name;}
   string_dict dict() {return m_dict;}
+  
+  void set_name(std::string n) {m_name = n;}
 };
 
 typedef ConfigDefinition config_definition;
@@ -67,4 +69,5 @@ public:
   
 private:
   int parse_line(const char *line, int len);
+  ConfigDefinition parse_config_line(const char *line, int len);
 };

@@ -8,6 +8,41 @@
 #include <sys/types.h>
 #include "config_parser.h"
 
+ConfigDefinition ConfigParser::parse_config_line(const char *orig_line, int orig_len) {
+  ConfigDefinition cd;
+  char _namespace[BUFFER], _action[BUFFER], _hooks[BUFFER], _exec[BUFFER];
+  int curr_pos = 0;
+  char line[BUFFER];
+  int len = 0;
+  
+  memset(_namespace, 0, BUFFER);
+  memset(_action, 0, BUFFER);
+  memset(_hooks, 0, BUFFER);
+  memset(_exec, 0, BUFFER);
+  
+  // Iterate through the entire string and remove all spaces
+  for (int i = 0; i < orig_len; i++) {
+    
+  }
+  // Get the namespace
+  for (int i = 0; ((i <= len) && (line[i] != SPLIT_CHAR) && (line[i] != '.')); i++) {
+    _namespace[curr_pos++] = line[i];
+  }
+  _namespace[curr_pos++] = 0;
+  for (int i = curr_pos; ((i <= len) && (line[i] != SPLIT_CHAR) && (line[i] != '.')); i++) {
+    _action[(i-curr_pos)] = line[i];
+  }
+  _action[curr_pos++] = 0;
+  curr_pos = curr_pos + strlen(_action);
+  for (int i = curr_pos; ((i <= len) && (line[i] != SPLIT_CHAR) && (line[i] != '.')); i++) {
+    _hooks[(i-curr_pos)] = line[i];
+  }
+    
+  printf("namespace: %s\naction: %s\nhooks: %s\n", _namespace, _action, _hooks);
+  cd.set_name(line);
+  
+  return cd;
+}
 int ConfigParser::parse_line(const char *line, int len) {
   if (len < 0) {
     return -1;
@@ -15,7 +50,9 @@ int ConfigParser::parse_line(const char *line, int len) {
     // We are in a comment
     return 0;
   } else {
-    printf("line: %s", line);
+    ConfigDefinition cd = parse_config_line(line, len);
+    m_definitions.insert(std::pair<std::string, config_definition>(cd.name(), cd));
+    printf("line: %s", cd.name().c_str());
   }
   return 0;
 }
