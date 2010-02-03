@@ -6,8 +6,8 @@
  **/
 /** includes **/
 #include <stdio.h>
-#include <string.h>
 #include <error.h>
+#include <string.h>
 #include <string>
 #include <stdlib.h>
 #include <unistd.h>
@@ -30,6 +30,7 @@ private:
   std::string m_file_path;
   // If there is a symlink, use this to point to the original file
   std::string m_sym_origin;
+  struct stat m_file_stats;
   bool m_is_link;
 
 public:
@@ -37,19 +38,19 @@ public:
   ~BeeFile() {}
 
   std::string file_path() {return m_file_path;}
-  std::string sym_origin() {return m_sym_link;}
-  bool  is_link() {return m_is_link;}
+  std::string sym_origin() {return m_sym_origin;}
+  struct stat file_stats() {return m_file_stats;}
+  bool        is_link() {return m_is_link;}
   // Really REALLY simple setters
   void set_file_path(const char *nfp) {m_file_path = nfp;}
   void set_sym_origin(const char *nfp) {m_sym_origin = nfp;}
+  void set_file_stats(struct stat mode) {m_file_stats = mode;}
   void set_is_link(bool b) {m_is_link = b;}
 };
 // Simply so we can filter through the bee files using an iterator
 class BeeCompare {
 public:
-  bool operator()(BeeFile b1, BeeFile b2) {
-    return (strcmp(b1.file_path().c_str(), b2.file_path().c_str()) > 0);
-  }
+  bool operator()(BeeFile b1, BeeFile b2) {return (strcmp(b1.file_path().c_str(), b2.file_path().c_str()) > 0);}
 };
 
 typedef std::set<std::string> string_set;

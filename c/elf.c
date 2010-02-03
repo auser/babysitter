@@ -24,6 +24,8 @@ int main(int argc, char **argv) {
   s_executables.insert("/bin/bash");
   s_executables.insert("/usr/bin/whoami");
   s_executables.insert("ruby");
+  s_executables.insert("touch");
+  s_executables.insert("rm");
   
   string_set s_dirs;
   s_dirs.insert("/opt");
