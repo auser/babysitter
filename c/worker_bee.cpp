@@ -59,13 +59,24 @@ bool WorkerBee::build_chroot(const std::string &path, string_set &executables, s
         // If it is a symlink, then make a symlink, otherwise copy the file
         // If the library starts with a '/' then don't add one, otherwise, do
         // i.e. if libs/hi.so.1 turns into full_path/libs/hi.so.1 otherwise libs.so.1 turns into full_path/libs.so.1
-        if (*s.c_str() == "/") full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
-        if (bf.is_link()) {
+        if (s.c_str()[0] == '/') full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
+        printf("<<< %s >>>\n", full_path.c_str());
+        if (bee.is_link()) {
           // make symlink
-          symlink(bf.sym_origin().c_str(), bf.file_path().c_str());
+          make_path(dirname(strdup(full_path.c_str()))); 
+          if (symlink(bee.sym_origin().c_str(), full_path.c_str())) {
+            fprintf(stderr, "Could not make a symlink: %s to %s because %s\n", bee.sym_origin().c_str(), full_path.c_str(), strerror(errno));
+          }
         } else {
           // Copy the file (recursively)
           cp_r(s, full_path);
+        }
+        // Change the permissions to match the original file
+        struct stat file_stats = bee.file_stats();
+        mode_t mode = file_stats.st_mode;
+  			
+        if (chmod(full_path.c_str(), mode)) {
+          fprintf(stderr, "Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
         }
         // Add it to the already_copied set and move on
         already_copied.insert(s);
@@ -106,6 +117,7 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
     
     // Go through each of the paths
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
+      std::string path (*pth);
       std::string full_path = *pth+'/'+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
         
@@ -114,26 +126,35 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
         bf.set_file_path(full_path.c_str());
         
         // Make sure the file can be "stat'd"
-        if (lstat(full_path.c_str(), &lib_stat) < 0) {
-          fprintf(stderr, "[lstat] Error: %s\n", full_path.c_str(), strerror(errno));
+        if (stat(full_path.c_str(), &lib_stat) < 0) {
+          fprintf(stderr, "[lstat] Error: %s: %s\n", full_path.c_str(), strerror(errno));
         }
+        bf.set_file_stats(lib_stat);
 			  // Are we looking at a symlink
         if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
           memset(link_buf, 0, 1024);
-          if (readlink(full_path.c_str(), link_buf, 1024)) {
+          if (!readlink(full_path.c_str(), link_buf, 1024)) {
             fprintf(stderr, "[readlink] Error: %s: %s\n", full_path.c_str(), strerror(errno));
           }
           
-          printf("----- %s is a link to %s -----\n", full_path.c_str(), link_buf);
           /** If we are looking at a symlink, then create a new BeeFile object and 
            * insert it into the library path, noting that the other is a symlink
-           **/ 
-          std::string link_str;
-          link_str = *pth+'/'+link_buf;
+          **/ 
+          std::string link_dir (dirname(strdup(full_path.c_str())));
+          // std::string link_path (link_buf);
+          std::string link_path;
+          if (path == "") 
+            link_path = link_dir + "/" + link_buf; 
+          else 
+            link_path = (path+"/"+link_buf);
+          
           BeeFile lbf;
           // Set the data on the BeeFile object
-          lbf.set_file_path(link_str.c_str());
-          lbf.set_sym_origin(full_path.c_str());
+          lbf.set_file_path(link_path.c_str());
+          // full_path.c_str()
+          bf.set_file_path(full_path.c_str()); // This is redundant, but just for clarity
+
+          bf.set_sym_origin(link_buf);
           bf.set_is_link(true);
           libs->insert(lbf);
         } else {
@@ -141,6 +162,7 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
         }
         
         libs->insert(bf);
+        break; // We found it! Move on, yo
       }
     }
   }
