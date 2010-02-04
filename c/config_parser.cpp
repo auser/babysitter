@@ -8,51 +8,112 @@
 #include <sys/types.h>
 #include "config_parser.h"
 
-ConfigDefinition ConfigParser::parse_config_line(const char *orig_line, int orig_len) {
+ConfigDefinition ConfigParser::parse_config_line(const char *line, int len, int linenum) {
   ConfigDefinition cd;
-  char _namespace[BUFFER], _action[BUFFER], _hooks[BUFFER], _exec[BUFFER];
+ 
   int curr_pos = 0;
-  char line[BUFFER];
-  int len = 0;
+  int pos = 0;
+  int i = 0;
+  char dummy[BUFFER];
+  int state = 0;
+  bool found = false;
+
+  memset(dummy, 0, BUFFER);
   
-  memset(_namespace, 0, BUFFER);
-  memset(_action, 0, BUFFER);
-  memset(_hooks, 0, BUFFER);
-  memset(_exec, 0, BUFFER);
-  
-  // Iterate through the entire string and remove all spaces
-  for (int i = 0; i < orig_len; i++) {
+  do {
+    if (line[i] == SPLIT_CHAR) found = true;
     
+    if ((line[i] != '.') && (line[i] != SPLIT_CHAR)) {
+      if (!isspace(line[i])) {
+        dummy[pos++] = line[i];
+      }
+    } else {
+      dummy[pos+1] = 0;
+#ifdef DEBUG
+      printf("%i = %s\n", state, dummy);
+#endif
+      switch(state) {
+        case 0: 
+          cd.set_name(dummy);
+          break;
+        case 1:
+          cd.set_action(dummy);
+          break;
+        case 2:
+          if (strcmp(dummy, "before") == 0)
+            cd.set_before(dummy);
+          else if (strcmp(dummy, "after") == 0)
+            cd.set_after(dummy);
+          else {
+            fprintf(stderr, "Config error: [line %i] %s\nHook %s not supported. The only supported hooks are before and after. Please check your syntax.", linenum, line, dummy);
+            exit(-1);
+          }
+          break;
+        default:
+          // Should never get here
+          fprintf(stderr, "Hey! How in the world did you get here (linenum: %i)? Please report this bug.\n", linenum);
+          exit(-1);
+      }
+      memset(dummy, 0, BUFFER);
+      state++; pos = 0;
+    }
+    curr_pos++;
+    i++;
+  } while ((i < len) && (!found));
+
+  pos=0;curr_pos++;
+  // we are past the split_char
+  while (curr_pos <= len) {
+    dummy[pos++] = line[curr_pos++];
   }
-  // Get the namespace
-  for (int i = 0; ((i <= len) && (line[i] != SPLIT_CHAR) && (line[i] != '.')); i++) {
-    _namespace[curr_pos++] = line[i];
-  }
-  _namespace[curr_pos++] = 0;
-  for (int i = curr_pos; ((i <= len) && (line[i] != SPLIT_CHAR) && (line[i] != '.')); i++) {
-    _action[(i-curr_pos)] = line[i];
-  }
-  _action[curr_pos++] = 0;
-  curr_pos = curr_pos + strlen(_action);
-  for (int i = curr_pos; ((i <= len) && (line[i] != SPLIT_CHAR) && (line[i] != '.')); i++) {
-    _hooks[(i-curr_pos)] = line[i];
-  }
-    
-  printf("namespace: %s\naction: %s\nhooks: %s\n", _namespace, _action, _hooks);
-  cd.set_name(line);
+  dummy[pos+1] = 0;
   
+  cd.set_command(dummy);
+
+
+#ifdef DEBUG  
+  printf("----%s----\n", line);
+  printf("Config definition:\n");
+  printf("\tname: '%s'\n", cd.name().c_str());
+  printf("\taction: '%s'\n", cd.action().c_str());
+  printf("\tbefore: '%s'\n", cd.before().c_str() );
+  printf("\tafter: '%s'\n", cd.after().c_str());
+  printf("\tcommand: '%s'\n", cd.command().c_str());
+  printf("-------\n");
+#endif
+
   return cd;
 }
-int ConfigParser::parse_line(const char *line, int len) {
+int ConfigParser::parse_line(const char *line, int len, int linenum) {
   if (len < 0) {
     return -1;
   } else if (line[0] == '#') {
     // We are in a comment
     return 0;
   } else {
-    ConfigDefinition cd = parse_config_line(line, len);
-    m_definitions.insert(std::pair<std::string, config_definition>(cd.name(), cd));
-    printf("line: %s", cd.name().c_str());
+    ConfigDefinition parsed_config_line = parse_config_line(line, len, linenum);
+		
+		if (m_definitions.count(parsed_config_line.name()) > 0) {
+			// Update existing config definition object
+			if(parsed_config_line.before() != "") {
+				m_definitions[parsed_config_line.name()].set_before((parsed_config_line.command()));
+			} else if ((parsed_config_line.after() != "")) {
+				m_definitions[parsed_config_line.name()].set_after((parsed_config_line.command()));
+			} else {
+				m_definitions[parsed_config_line.name()].set_command((parsed_config_line.command()));
+			}
+		} else {
+			// Insert new config definition object
+			if(parsed_config_line.before() != "") {
+				parsed_config_line.set_before(parsed_config_line.command());
+			} else if ((parsed_config_line.after() != "")) {
+				parsed_config_line.set_after(parsed_config_line.command());
+			} else {
+				parsed_config_line.set_command(parsed_config_line.command());
+			}
+			// insert	
+			m_definitions.insert(std::pair<std::string, config_definition>(parsed_config_line.name(), parsed_config_line));
+		}
   }
   return 0;
 }
@@ -77,18 +138,41 @@ int ConfigParser::parse_file(std::string filename) {
   
   while ( fgets(line, BUFFER, fp) != NULL ) {
     linenum++;
-    len = (int)strlen(line);
+    len = (int)strlen(line)-1;
     
-    // Chomp line
-    while ((len>=0) && ((line[len]=='\n') || (isspace(line[len])))) {
-      line[len]=0;
+    // Chomp the beginning of the line
+    for(int i = 0; i < len; ++i) {
+      if ( isspace(line[i]) ) {        
+        for (int j = 0; j < len; ++j) {
+          line[j] = line[j+1];
+        }
+        line[len--] = 0;
+      } else {
+        break;
+      }
+    }
+    // Chomp the end of the line
+    while ((len>=0) && (isspace(line[len])) ) {
+      line[len] = 0;
       len--;
     }
     
     // Skip new lines
     if (line[0] == '\n') continue;
     // Parse the line into the m_dictionary
-    parse_line(line, len);
+    parse_line(line, len, linenum);
   }
+
+	// Now we have all the lines in a config_definition instance in the m_dictionary
+	std::map<std::string, config_definition>::iterator it;
+	
+	for (it = m_definitions.begin(); it != m_definitions.end(); it++) {
+		ConfigDefinition cd = it->second;
+		printf("- %s\n", it->first.c_str());
+		printf("\t- %s\n", cd.before().c_str());
+		printf("\t- %s\n", cd.command().c_str());
+		printf("\t- %s\n", cd.after().c_str());
+	}
+
   return 0;
 }

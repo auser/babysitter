@@ -3,7 +3,7 @@ SHELL = /bin/sh
  
 top_srcdir = ..
 srcdir = .
-prefix = /usr/local
+prefix = /opt/babysitter
 exec_prefix = ${prefix}
 bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
