@@ -21,7 +21,7 @@ bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group)
 }
 
 /** Build the chroot at the path **/
-bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_dirs) {
+bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_files, string_set &extra_dirs) {
   // Make the root path
   make_path(strdup(path.c_str()));
   string_set already_copied;
@@ -44,6 +44,13 @@ bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, s
     
     // Make the paths
     make_path(full_path.c_str());
+  }
+  
+  for (string_set::iterator file = extra_files.begin(); file != extra_files.end(); ++file) {
+    if ((*file).c_str()[0] == '/') full_path = path + (*file).c_str(); else full_path = path + '/' + (*file).c_str();
+    
+    make_path(dirname(strdup(full_path.c_str())));
+    cp_r(*file, full_path);
   }
   
   // Build the root libraries

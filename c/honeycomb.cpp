@@ -353,9 +353,11 @@ int Honeycomb::copy_deps(const std::string & root_path, const std::string & file
 
   string_set s_dirs;
   s_dirs.insert("/opt");
-
+  
+  string_set s_extra_files;
+  
   printf("-- building chroot: %s\n", root_path.c_str());
-  b.build_chroot(root_path, m_user, m_group, s_executables, s_dirs);
+  b.build_chroot(root_path, m_user, m_group, s_executables, s_extra_files, s_dirs);
 
   return 0; 
 }
