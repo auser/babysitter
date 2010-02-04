@@ -38,27 +38,32 @@
 
 class ConfigDefinition {
 private:
-  std::string           m_name; // The name of the type of app
-  std::string           m_action;    // The action (i.e. bundle/start/stop, etc)
-  std::string           m_before;    // The before hook
-  std::string           m_after;     // The after hook
-  std::string           m_command;   // The command
+  std::string           m_name;       // The name of the type of app
+  std::string           m_namespace;
+  std::string           m_action;     // The action (i.e. bundle/start/stop, etc)
+  std::string           m_before;     // The before hook
+  std::string           m_after;      // The after hook
+  std::string           m_command;    // The command
   
 public:
   ConfigDefinition() : m_name(""),m_action(""),m_before(""),m_after(""),m_command("") {}
   ~ConfigDefinition() {}
   
   std::string name()      {return m_name;}
+  std::string _namespace(){return m_namespace;}
   std::string action()    {return m_action;}
   std::string before()    {return m_before;}
   std::string after()     {return m_after;}
   std::string command()   {return m_command;}
   
-  void set_name(std::string n) {m_name = n;}
+  void set_namespace(std::string n) {m_namespace = n;}
   void set_action(std::string n) {m_action = n;}
   void set_before(std::string n) {m_before = n;}
   void set_after(std::string n) {m_after = n;}
-  void set_command(std::string n) {m_command = n;}  
+  void set_command(std::string n) {m_command = n;}
+  void finish() {m_name = m_namespace + "." + m_action;}
+  
+  void dump();
 };
 
 typedef ConfigDefinition config_definition;
@@ -74,6 +79,8 @@ public:
   std::map<std::string, config_definition> definitions() {return m_definitions;}
   
   int parse_file(std::string filename);
+  ConfigDefinition* find_config_for(std::string config_name);
+  void dump();
   
 private:
   int parse_line(const char *line, int len, int linenum);

@@ -72,7 +72,6 @@
 #include <sys/time.h>
 
 // Our own includes
-#include "honeycomb.h"
 #include "babysitter.h"
 #include <ei.h>
 #include "ei++.h"
@@ -109,6 +108,9 @@ std::deque< PidStatusT > exited_children;  // deque of processed SIGCHLD events
 fd_set readfds;
 struct sigaction sact, sterm;
 int userid = 0;
+// Configs
+std::string config_file_path;
+ConfigParser config;
 
 /*---------------------------- Functions ------------------------------------*/
 
@@ -122,6 +124,8 @@ int   kill_child(pid_t pid, int sig, int transId, bool notify=true);
 int   check_children(int& isTerminated, bool notify = true);
 void  stop_child(pid_t pid, int transId, const TimeVal& now);
 int   stop_child(Bee& bee, int transId, const TimeVal& now, bool notify = true);
+
+void  setup_defaults();
 
 /**
  * We received a signal for the child pid process
@@ -252,6 +256,10 @@ void setup_signal_handlers() {
   exited_children.resize(SIGCHLD_MAX_SIZE);
 }
 
+void setup_defaults() {
+  config_file_path = "/etc/beehive/hooks.conf";
+}
+
 int parse_the_command_line(int argc, char* argv[]) {
   /**
   * Command line processing (TODO: Move this into a function)
@@ -287,18 +295,25 @@ int parse_the_command_line(int argc, char* argv[]) {
   return 0;
 }
 
+ConfigParser config_parser() {
+  return config;
+}
+
 //-------------------------------------------------------------------------
 // MAIN
 //-------------------------------------------------------------------------
 
 int main(int argc, char* argv[])
 {
-    
+    setup_defaults();
     setup_signal_handlers();
-        
+    
     if (parse_the_command_line(argc, argv)) {
       return -1;
     }
+    
+    // Parse the config
+    config.parse_file(config_file_path);
     
     const int maxfd = eis.read_handle()+1;
 

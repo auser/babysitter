@@ -34,14 +34,14 @@ ConfigDefinition ConfigParser::parse_config_line(const char *line, int len, int 
 #endif
       switch(state) {
         case 0: 
-          cd.set_name(dummy);
+          cd.set_namespace(dummy);
           break;
         case 1:
           cd.set_action(dummy);
           break;
         case 2:
           if (strcmp(dummy, "before") == 0)
-            cd.set_before(dummy);
+            cd.set_before();
           else if (strcmp(dummy, "after") == 0)
             cd.set_after(dummy);
           else {
@@ -69,7 +69,7 @@ ConfigDefinition ConfigParser::parse_config_line(const char *line, int len, int 
   dummy[pos+1] = 0;
   
   cd.set_command(dummy);
-
+  cd.finish();
 
 #ifdef DEBUG  
   printf("----%s----\n", line);
@@ -92,7 +92,7 @@ int ConfigParser::parse_line(const char *line, int len, int linenum) {
     return 0;
   } else {
     ConfigDefinition parsed_config_line = parse_config_line(line, len, linenum);
-    std::string action_name (parse_config_line.name() + "." + parse_config_line.action());
+    std::string action_name (parsed_config_line.name());
 		
 		if (m_definitions.count(action_name) > 0) {
 			// Update existing config definition object
@@ -165,15 +165,31 @@ int ConfigParser::parse_file(std::string filename) {
   }
 
 	// Now we have all the lines in a config_definition instance in the m_dictionary
-	std::map<std::string, config_definition>::iterator it;
+  return 0;
+}
+
+// Dump for debugging
+void ConfigDefinition::dump() {
+  printf("- %s -\n", m_name.c_str());
+	printf("\t- %s\n", m_before.c_str());
+	printf("\t- %s\n", m_command.c_str());
+	printf("\t- %s\n", m_after.c_str());
+}
+
+void ConfigParser::dump() {
+  std::map<std::string, config_definition>::iterator it;
 	
 	for (it = m_definitions.begin(); it != m_definitions.end(); it++) {
 		ConfigDefinition cd = it->second;
-		printf("- %s\n", it->first.c_str());
-		printf("\t- %s\n", cd.before().c_str());
-		printf("\t- %s\n", cd.command().c_str());
-		printf("\t- %s\n", cd.after().c_str());
+    cd.dump();
 	}
+}
 
-  return 0;
+ConfigDefinition* ConfigParser::find_config_for(std::string config_name) {
+  std::map<std::string, config_definition>::iterator it;
+	
+	for (it = m_definitions.begin(); it != m_definitions.end(); it++) {
+    if (it->first == config_name) return &(it->second);
+	}
+  return NULL;
 }

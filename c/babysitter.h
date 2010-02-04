@@ -1,3 +1,6 @@
+#include "config_parser.h"
+#include "honeycomb.h"
+
 //-------------------------------------------------------------------------
 // Helpers
 //-------------------------------------------------------------------------
@@ -13,3 +16,5 @@ const std::string HELP_MESSAGE =
 " -b [path]         Path to base all the chroot environments on (not yet functional)\n"
 ;
 
+void  setup_defaults();
+ConfigParser config_parser();
