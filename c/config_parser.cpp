@@ -92,15 +92,16 @@ int ConfigParser::parse_line(const char *line, int len, int linenum) {
     return 0;
   } else {
     ConfigDefinition parsed_config_line = parse_config_line(line, len, linenum);
+    std::string action_name (parse_config_line.name() + "." + parse_config_line.action());
 		
-		if (m_definitions.count(parsed_config_line.name()) > 0) {
+		if (m_definitions.count(action_name) > 0) {
 			// Update existing config definition object
 			if(parsed_config_line.before() != "") {
-				m_definitions[parsed_config_line.name()].set_before((parsed_config_line.command()));
+				m_definitions[action_name].set_before((parsed_config_line.command()));
 			} else if ((parsed_config_line.after() != "")) {
-				m_definitions[parsed_config_line.name()].set_after((parsed_config_line.command()));
+				m_definitions[action_name].set_after((parsed_config_line.command()));
 			} else {
-				m_definitions[parsed_config_line.name()].set_command((parsed_config_line.command()));
+				m_definitions[action_name].set_command((parsed_config_line.command()));
 			}
 		} else {
 			// Insert new config definition object
@@ -112,7 +113,7 @@ int ConfigParser::parse_line(const char *line, int len, int linenum) {
 				parsed_config_line.set_command(parsed_config_line.command());
 			}
 			// insert	
-			m_definitions.insert(std::pair<std::string, config_definition>(parsed_config_line.name(), parsed_config_line));
+			m_definitions.insert(std::pair<std::string, config_definition>(action_name, parsed_config_line));
 		}
   }
   return 0;
