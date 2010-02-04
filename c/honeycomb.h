@@ -30,6 +30,8 @@ using std::string;
 #include <ei.h>
 #include "ei++.h"
 
+#include "config_parser.h"
+
 /*---------------------------- Defines ------------------------------------*/
 #define BUF_SIZE 2048
 
@@ -114,9 +116,10 @@ private:
   // Internal
   int                     m_cenv_c;    // The current count of the environment variables
   string_set              m_already_copied;
+  ConfigParser            m_config; // Set by us, on instantiation. Access to the config file
 
 public:
-  Honeycomb() : m_tmp(0,256),m_cd(""),m_dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL) {
+  Honeycomb(ConfigParser cp) : m_tmp(0,256),m_cd(""),m_dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL),m_config(cp) {
     ei::Serializer m_eis(2);
     m_nofiles = NULL;
   }

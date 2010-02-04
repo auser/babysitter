@@ -41,7 +41,7 @@ ConfigDefinition ConfigParser::parse_config_line(const char *line, int len, int 
           break;
         case 2:
           if (strcmp(dummy, "before") == 0)
-            cd.set_before();
+            cd.set_before(dummy);
           else if (strcmp(dummy, "after") == 0)
             cd.set_after(dummy);
           else {

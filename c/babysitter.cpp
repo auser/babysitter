@@ -108,6 +108,7 @@ std::deque< PidStatusT > exited_children;  // deque of processed SIGCHLD events
 fd_set readfds;
 struct sigaction sact, sterm;
 int userid = 0;
+
 // Configs
 std::string config_file_path;
 ConfigParser config;
@@ -383,7 +384,7 @@ int main(int argc, char* argv[])
           case EXECUTE:
           case SHELL: {
             // {shell, Cmd::string(), Options::list()}
-            Honeycomb po;
+            Honeycomb po (config);
             if (arity != 3 || po.ei_decode(eis) < 0) {
               send_error_str(transId, false, po.strerror());
               continue;
