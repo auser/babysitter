@@ -102,7 +102,6 @@ private:
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
   std::string             m_app_type;  // The type of the application
     std::string             m_skel;      // A skeleton choot directory to work from
-    bool                    m_dont_chroot; // Boolean to build a chroot (true/false)
   std::string             m_stdout;    // The stdout to use for the execution of the command
   std::string             m_stderr;    // The stderr to use for the execution of the command
   mount_type*             m_mount;     // A mount associated with the honeycomb
@@ -120,7 +119,7 @@ private:
   ConfigParser            m_config; // Set by us, on instantiation. Access to the config file
 
 public:
-  Honeycomb(ConfigParser cp) : m_tmp(0,256),m_cd(""),m_dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL),m_config(cp),m_app_type("rack") {
+  Honeycomb(ConfigParser cp) : m_tmp(0,256),m_cd(""),m_app_type("rack"),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL),m_config(cp) {
     ei::Serializer m_eis(2);
     m_nofiles = NULL;
   }

@@ -6,6 +6,7 @@
 #include <libgen.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/resource.h>
 #include "worker_bee.h"
 
 // Build a base directory

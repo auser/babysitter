@@ -14,8 +14,8 @@ int main(int argc, char **argv) {
   }
   
   ConfigDefinition *cd;
-  if (cd = cp.find_config_for("rack.bundle")) cd->dump();
-  if (cd = cp.find_config_for("rack.start")) cd->dump();
+  if ((cd = cp.find_config_for("rack.bundle")) != NULL) cd->dump();
+  if ((cd = cp.find_config_for("rack.start")) != NULL) cd->dump();
   
   return 0;
 }

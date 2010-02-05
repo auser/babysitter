@@ -102,4 +102,4 @@ AC_TYPE_PID_T
 AC_TYPE_UID_T
 AC_CHECK_FUNCS([gettimeofday memset alarm atexit mkdir regcomp select strchr strdup strerror sigtimedwait])
 
-AC_OUTPUT([c/Makefile erl/Makefile Makefile])
+AC_OUTPUT([c/Makefile erl/Makefile test/c/Makefile Makefile])
