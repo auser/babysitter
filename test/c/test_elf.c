@@ -1,5 +1,5 @@
 // Compile:
-// make && g++ -o elf ../c/elf.c ../c/worker_bee.o -lelf && ./elf /tmp/test && tree /tmp/test
+// make && g++ -o test_elf test_elf.c worker_bee.o -lelf && ./test_elf /tmp/test && tree /tmp/test
 
 #include <stdio.h>
 #include <string.h>
@@ -29,10 +29,12 @@ int main(int argc, char **argv) {
   s_executables.insert("ruby");
   s_executables.insert("touch");
   s_executables.insert("rm");
+  s_executables.insert("cat");
   
   string_set s_dirs;
   s_dirs.insert("/opt");
   std::string root_path;
+  
   string_set s_extra_files;
   
   if (argv[1]) {

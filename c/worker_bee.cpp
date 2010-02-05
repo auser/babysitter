@@ -23,7 +23,7 @@ bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group)
 }
 
 /** Build the chroot at the path **/
-bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_files, string_set &extra_dirs) {
+int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_files, string_set &extra_dirs) {
   // Make the root path
   make_path(strdup(path.c_str()));
   string_set already_copied;
@@ -56,7 +56,7 @@ bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, s
   }
   
   // Build the root libraries
-  for (string_set::iterator executable = executables.begin(); executable != executables.end(); ++executable) {
+  for (string_set::iterator executable = executables.begin(); executable != executables.end(); executable++) {
     // If we are pointed at an absolute path to a binary
     // then find the linked libraries of the executable
     // If it's not found, then find it, then look up the libraries
@@ -67,62 +67,63 @@ bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, s
       res_bin = find_binary(*executable);
     }
     
-    // The libraries for the resolved binary 
-    bee_files_set *s_libs = libs_for(res_bin);
+    if (res_bin != "") {
+      // The libraries for the resolved binary 
+      bee_files_set *s_libs = libs_for(res_bin);
     
-    // collect the libraries and copy them to the full path of the chroot
-    for (bee_files_set::iterator bf = s_libs->begin(); bf != s_libs->end(); ++bf) {
-      BeeFile bee = *bf;
-      std::string s (bee.file_path());
+      // collect the libraries and copy them to the full path of the chroot
+      for (bee_files_set::iterator bf = s_libs->begin(); bf != s_libs->end(); ++bf) {
+        BeeFile bee = *bf;
+        std::string s (bee.file_path());
       
-      // Don't copy if the file is already copied
-      if (already_copied.count(s)) {
-      } else {
-        // If it is a symlink, then make a symlink, otherwise copy the file
-        // If the library starts with a '/' then don't add one, otherwise, do
-        // i.e. if libs/hi.so.1 turns into full_path/libs/hi.so.1 otherwise libs.so.1 turns into full_path/libs.so.1
-        if (s.c_str()[0] == '/') full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
-        
-        if (bee.is_link()) {
-          // make symlink
-          make_path(dirname(strdup(full_path.c_str()))); 
-          if (symlink(bee.sym_origin().c_str(), full_path.c_str())) {
-            fprintf(stderr, "Could not make a symlink: %s to %s because %s\n", bee.sym_origin().c_str(), full_path.c_str(), strerror(errno));
-          }
+        // Don't copy if the file is already copied
+        if (already_copied.count(s)) {
         } else {
-          // Copy the file (recursively)
-          cp_r(s, full_path);
-        }
-        // Change the permissions to match the original file
-        struct stat file_stats = bee.file_stats();
-        mode_t mode = file_stats.st_mode;
+          // If it is a symlink, then make a symlink, otherwise copy the file
+          // If the library starts with a '/' then don't add one, otherwise, do
+          // i.e. if libs/hi.so.1 turns into full_path/libs/hi.so.1 otherwise libs.so.1 turns into full_path/libs.so.1
+          if (s.c_str()[0] == '/') full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
+        
+          if (bee.is_link()) {
+            // make symlink
+            make_path(dirname(strdup(full_path.c_str()))); 
+            if (symlink(bee.sym_origin().c_str(), full_path.c_str())) {
+              fprintf(stderr, "Could not make a symlink: %s to %s because %s\n", bee.sym_origin().c_str(), full_path.c_str(), strerror(errno));
+            }
+          } else {
+            // Copy the file (recursively)
+            cp_r(s, full_path);
+          }
+          // Change the permissions to match the original file
+          struct stat file_stats = bee.file_stats();
+          mode_t mode = file_stats.st_mode;
   			
-  			if (chown(full_path.c_str(), user, group) != 0) {
-  			  fprintf(stderr, "Could not change owner of '%s' to %i\n", full_path.c_str(), user);
-  			}
+    			if (chown(full_path.c_str(), user, group) != 0) {
+    			  fprintf(stderr, "Could not change owner of '%s' to %i\n", full_path.c_str(), user);
+    			}
   			
-        if (chmod(full_path.c_str(), mode) != 0) {
-          fprintf(stderr, "Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
+          if (chmod(full_path.c_str(), mode) != 0) {
+            fprintf(stderr, "Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
+          }
+          // Add it to the already_copied set and move on
+          already_copied.insert(s);
         }
-        // Add it to the already_copied set and move on
-        already_copied.insert(s);
       }
-    }
     
-    // Copy the executables and make them executable
-    std::string bin_path = path + '/' + res_bin;
-    cp_r(res_bin.c_str(), bin_path.c_str());
+      // Copy the executables and make them executable
+      std::string bin_path = path + '/' + res_bin;
+      cp_r(res_bin.c_str(), bin_path.c_str());
     
-    if (chown(bin_path.c_str(), user, group) != 0) {
-		  fprintf(stderr, "Could not change owner of '%s' to %i\n", bin_path.c_str(), user);
-		}
+      if (chown(bin_path.c_str(), user, group) != 0) {
+  		  fprintf(stderr, "Could not change owner of '%s' to %i\n", bin_path.c_str(), user);
+  		}
 		
-    if (chmod(bin_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
-      fprintf(stderr, "Could not change permissions to '%s' make it executable\n", bin_path.c_str());
-    }
-		
+      if (chmod(bin_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
+        fprintf(stderr, "Could not change permissions to '%s' make it executable\n", bin_path.c_str());
+      }
+    }		
   }
-  return true;
+  return 0;
 }
 
 int WorkerBee::secure_chroot(std::string m_cd) {
@@ -218,6 +219,7 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
 
           bf.set_sym_origin(link_buf);
           bf.set_is_link(true);
+          
           libs->insert(lbf);
         } else {
           bf.set_is_link(false);
@@ -260,76 +262,88 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::st
     return NULL;
   }
   
-  /* Make sure we are working with a version of libelf */
-  if (EV_NONE == elf_version(EV_CURRENT)) {
-    fprintf(stderr, "ELF libs failed to initialize\n");
-    return NULL;
-  }
-
-  // Start the elf interrogation
-  Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
-  if (NULL == elf) {
-    fprintf(stderr, "elf_begin failed because %s\n", elf_errmsg(-1));
-    return NULL;
-  }
-
-  // Show deps
-  GElf_Ehdr ehdr;
-  if (!gelf_getehdr(elf, &ehdr)) {
-    fprintf(stderr, "elf_getehdr failed from %s\n", elf_errmsg(-1));
-    return NULL;
-  }
+  int sh_length = 10;
+  char *buf[sh_length];
+  memset(buf, 0, sh_length);
+  const char *shell = "#!/";
   
-  // scanning the headers
-  string_set *libs = new string_set(), *paths = new string_set();
-  // include the standard library paths
-  paths->insert(""); // So we get full-path libraries included
-  paths->insert("/lib");
-  paths->insert("/usr/lib");
-  paths->insert("/usr/local/lib");
-  // include standard libraries to copy
-  libs->insert("libdl.so.2");
-  libs->insert("libm.so.2");
-  libs->insert("libpthread.so.0");
-  libs->insert("libattr.so.1");
+  FILE *src = fopen(executable.c_str(), "rb");
+  read(src, buf, sh_length);
   
-  // Start scanning the header 
-  Elf_Scn *scn = elf_nextscn(elf, NULL);
-  GElf_Shdr shdr;
-  while (scn) {
-    if (NULL == gelf_getshdr(scn, &shdr)) {
-      fprintf(stderr, "getshdr() failed from %s\n", elf_errmsg(-1));
+  if (strcmp(buf, shell) == 0) {
+    printf("We are looking at a shell script: %s\n", executable.c_str());
+  } else {
+    /* Make sure we are working with a version of libelf */
+    if (EV_NONE == elf_version(EV_CURRENT)) {
+      fprintf(stderr, "ELF libs failed to initialize\n");
       return NULL;
     }
 
-    // get the name of the section (could optimize)
-    char * nm = elf_strptr(elf, ehdr.e_shstrndx, shdr.sh_name);
-    if (NULL == nm) {
-      fprintf(stderr, "elf_strptr() failed from %s\n", elf_errmsg(-1));
-      return NULL;
+    // Start the elf interrogation
+    Elf *elf = elf_begin(fl, ELF_C_READ, NULL);
+    if (NULL == elf) {
+      fprintf(stderr, "elf_begin failed because %s\n", elf_errmsg(-1));
+      // return NULL;
     }
 
-    // look through the headers for the .dynstr and .interp headers
-    if (strcmp(nm, ".bss")) {
-      Elf_Data *data = NULL;
-      size_t n = 0;
-      // for each header, find the name if it matches the library name regex
-      while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
-        char *bfr = static_cast<char *>(data->d_buf);
-        char *p = bfr + 1;
-        while (p < bfr + data->d_size) {
-          if (is_lib(p)) {
-            libs->insert(p);
+    // Show deps
+    GElf_Ehdr ehdr;
+    if (!gelf_getehdr(elf, &ehdr)) {
+      fprintf(stderr, "elf_getehdr failed from %s\n", elf_errmsg(-1));
+      // return NULL;
+    }
+  
+    // scanning the headers
+    string_set *libs = new string_set(), *paths = new string_set();
+    // include the standard library paths
+    paths->insert(""); // So we get full-path libraries included
+    paths->insert("/lib");
+    paths->insert("/usr/lib");
+    paths->insert("/usr/local/lib");
+    // include standard libraries to copy
+    libs->insert("libdl.so.2");
+    libs->insert("libm.so.2");
+    libs->insert("libpthread.so.0");
+    libs->insert("libattr.so.1");
+  
+    // Start scanning the header 
+    Elf_Scn *scn = elf_nextscn(elf, NULL);
+    GElf_Shdr shdr;
+    while (scn) {
+      if (NULL == gelf_getshdr(scn, &shdr)) {
+        fprintf(stderr, "getshdr() failed from %s\n", elf_errmsg(-1));
+        return NULL;
+      }
+
+      // get the name of the section (could optimize)
+      char * nm = elf_strptr(elf, ehdr.e_shstrndx, shdr.sh_name);
+      if (NULL == nm) {
+        fprintf(stderr, "elf_strptr() failed from %s\n", elf_errmsg(-1));
+        return NULL;
+      }
+
+      // look through the headers for the .dynstr and .interp headers
+      if (strcmp(nm, ".bss")) {
+        Elf_Data *data = NULL;
+        size_t n = 0;
+        // for each header, find the name if it matches the library name regex
+        while (n < shdr.sh_size && (data = elf_getdata(scn, data)) ) {
+          char *bfr = static_cast<char *>(data->d_buf);
+          char *p = bfr + 1;
+          while (p < bfr + data->d_size) {
+            if (is_lib(p)) {
+              libs->insert(p);
+            }
+
+            size_t lngth = strlen(p) + 1;
+            n += lngth;
+            p += lngth;
           }
-
-          size_t lngth = strlen(p) + 1;
-          n += lngth;
-          p += lngth;
         }
       }
-    }
 
-    scn = elf_nextscn(elf, scn);
+      scn = elf_nextscn(elf, scn);
+    }
   }
  
   return new std::pair<string_set *, string_set*> (libs, paths);
@@ -385,6 +399,8 @@ int WorkerBee::make_path(const std::string & path) {
 
 std::string WorkerBee::find_binary(const std::string& file) {
   // assert(geteuid() != 0 && getegid() != 0); // We can't be root to run this.
+  
+  if (file == "") return "";
   
   if (abs_path(file)) return file;
   

@@ -138,11 +138,10 @@ public:
   const char*  app_type() const { return m_app_type.c_str(); }
   
   int ei_decode(ei::Serializer& ei);
-  int build_and_execute(std::string confinement_root, mode_t confinement_mode);
+  int bundle_environment(std::string confinement_root, mode_t confinement_mode);
   
 private:
   pid_t execute();
-  int build_environment(std::string confinement_root, mode_t confinement_mode);
   uid_t random_uid();
   int setup_defaults();
   const char * const to_string(long long int n, unsigned char base);
@@ -155,8 +154,8 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  ConfigDefinition config_for(std::string action);
-  int exec(std::string cmd); // Run a hook on the system
+  ConfigDefinition *config_for(std::string action);
+  int comb_exec(std::string cmd); // Run a hook on the system
   void exec_hook(std::string action, std::string stage);
   int bundle(const std::string & root_path, const std::string & file_path);  
   

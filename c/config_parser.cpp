@@ -189,7 +189,9 @@ ConfigDefinition* ConfigParser::find_config_for(std::string config_name) {
   std::map<std::string, config_definition>::iterator it;
 	
 	for (it = m_definitions.begin(); it != m_definitions.end(); it++) {
-    if (it->first == config_name) return &(it->second);
+    if (it->first == config_name) {
+      return &(it->second);
+    }
 	}
   return NULL;
 }

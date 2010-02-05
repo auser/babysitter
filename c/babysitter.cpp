@@ -369,8 +369,8 @@ int main(int argc, char* argv[])
         }
         
         // Available commands from erlang    
-        enum CmdTypeT { EXECUTE, SHELL, STOP, KILL, LIST } cmd;
-        const char* cmds[] = {"run","shell","stop","kill","list"};
+        enum CmdTypeT { BUNDLE, EXECUTE, SHELL, STOP, KILL, LIST } cmd;
+        const char* cmds[] = {"bundle", "run","shell","stop","kill","list"};
 
         // Determine which of the commands was called
         if ((int)(cmd = (CmdTypeT) eis.decodeAtomIndex(cmds, command)) < 0) {
@@ -381,6 +381,10 @@ int main(int argc, char* argv[])
         }
 
         switch (cmd) {
+          case BUNDLE: {
+            
+            break;
+          }
           case EXECUTE:
           case SHELL: {
             // {shell, Cmd::string(), Options::list()}
@@ -521,7 +525,8 @@ pid_t start_child(Honeycomb& op)
   dmesg("Building the chroot environment\n");
   const std::string base_dir = "/var/babysitter";
   //op.build_environment(base_dir, 040755);
-  return op.build_and_execute(base_dir, 040755);
+  // return op.build_and_execute(base_dir, 040755);
+  return 0;
 }
 
 int stop_child(Bee& bee, int transId, const TimeVal& now, bool notify) 

@@ -161,18 +161,6 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   return 0;
 }
 
-int Honeycomb::build_and_execute(std::string confinement_root, mode_t confinement_mode) {
-  if (build_environment(confinement_root, confinement_mode)) {
-   fprintf(stderr, "Failed to build_environment in '%s'\n", confinement_root.c_str());
-   return -1;
-  }
-  if (execute()) {
-   fprintf(stderr, "Failed to execute in '%s'\n", confinement_root.c_str());
-   return -1;
-  }
-  return 0;
-}
-
 int Honeycomb::bundle(const std::string & root_path, const std::string & file_path) {
   WorkerBee b;
 
@@ -180,7 +168,10 @@ int Honeycomb::bundle(const std::string & root_path, const std::string & file_pa
   s_executables.insert("/bin/ls");
   s_executables.insert("/bin/bash");
   s_executables.insert("/usr/bin/whoami");
-  s_executables.insert("ruby");
+  s_executables.insert("/usr/bin/env");
+  s_executables.insert("ruby1.8");
+  s_executables.insert("irb");
+  s_executables.insert("cat");
   s_executables.insert(file_path);
 
   string_set s_dirs;
@@ -193,16 +184,20 @@ int Honeycomb::bundle(const std::string & root_path, const std::string & file_pa
   return 0;
 }
 
-ConfigDefinition Honeycomb::config_for(std::string action) {
-  return *m_config.find_config_for(m_app_type + "." + action);
+ConfigDefinition *Honeycomb::config_for(std::string action) {
+  return m_config.find_config_for(m_app_type + "." + action);
 }
 
 // Run a hook on the system
-int Honeycomb::exec(std::string cmd) {
+int Honeycomb::comb_exec(std::string cmd) {
   const std::string shell = getenv("SHELL");
+  printf("shell: %s\n", shell.c_str());
+  
   const std::string shell_args = "-c";
   const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str() };
 
+  printf("cmd: %s\n", cmd.c_str());
+  
   if (execve(cmd.c_str(), (char* const*)argv, (char* const*)m_cenv) < 0) {
     fprintf(stderr, "Cannot execute '%s' because '%s'", m_cmd.c_str(), ::strerror(errno));
     return EXIT_FAILURE;
@@ -212,15 +207,20 @@ int Honeycomb::exec(std::string cmd) {
 
 // Execute a hook
 void Honeycomb::exec_hook(std::string action, std::string stage) {
-  if (stage == "before")
-    exec(config_for(action).before());
-  else if (stage == "after")
-    exec(config_for(action).after());
-  else
-    return;
+  ConfigDefinition *cd = config_for(action);
+  if (cd != NULL) {
+    cd->dump();
+    std::string cmd;
+    if (stage == "before")
+      cmd = cd->before();
+    else if (stage == "after")
+      cmd = cd->after();
+  
+    if (!cmd.empty()) comb_exec(cmd);
+  }
 }
 
-int Honeycomb::build_environment(std::string confinement_root, mode_t confinement_mode) {
+int Honeycomb::bundle_environment(std::string confinement_root, mode_t confinement_mode) {
   /* Prepare as of the environment from the child process */
   setup_defaults();
   // First, get a random_uid to run as
@@ -237,6 +237,7 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
         exit(-1);
       }
     } else if (ENOENT == errno) {
+      fprintf(stderr, "Error: %s\n", ::strerror(errno));
       setegid(0);
     } else {
       fprintf(stderr, "Unknown error: %s Exiting...\n", ::strerror(errno));
@@ -260,10 +261,13 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
   // START BUNDLING
   temp_drop(); // Drop out of our root permissions
   exec_hook("bundle", "before");
-  std::string bundle_cmd (config_for("bundle").command());
-  if (bundle_cmd != "")
-    exec(bundle_cmd);
-  else
+  ConfigDefinition *cd = config_for("bundle");
+
+  if (cd != NULL) {
+    std::string bundle_cmd (cd->command());
+    if (bundle_cmd != "")
+      comb_exec(bundle_cmd);
+  } else
     bundle(m_cd, m_cmd);
   exec_hook("bundle", "after");
   
@@ -373,6 +377,7 @@ int Honeycomb::temp_drop() {
     fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, ::strerror(errno));
     return -1; // we are in the fork
   }
+  printf("Dropped into user %d\n", m_user);
   return 0;
 }
 int Honeycomb::perm_drop() {
