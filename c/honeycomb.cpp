@@ -190,14 +190,15 @@ int Honeycomb::bundle(const std::string & root_path, const std::string & file_pa
   
   printf("-- bundling: %s\n", m_cd.c_str());
   b.build_chroot(m_cd, m_user, m_group, s_executables, s_extra_files, s_dirs);
+  return 0;
 }
 
-ConfigDefinition *config_for(std::string action) {
-  return m_config.find_config_for(m_app_type + "." + action);
+ConfigDefinition Honeycomb::config_for(std::string action) {
+  return *m_config.find_config_for(m_app_type + "." + action);
 }
 
 // Run a hook on the system
-int exec(std::string *cmd) {
+int Honeycomb::exec(std::string cmd) {
   const std::string shell = getenv("SHELL");
   const std::string shell_args = "-c";
   const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str() };
@@ -206,10 +207,11 @@ int exec(std::string *cmd) {
     fprintf(stderr, "Cannot execute '%s' because '%s'", m_cmd.c_str(), ::strerror(errno));
     return EXIT_FAILURE;
   }
+  return 0;
 }
 
 // Execute a hook
-void exec_hook(std::string action, std::string stage) {
+void Honeycomb::exec_hook(std::string action, std::string stage) {
   if (stage == "before")
     exec(config_for(action).before());
   else if (stage == "after")
@@ -258,7 +260,8 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
   // START BUNDLING
   temp_drop(); // Drop out of our root permissions
   exec_hook("bundle", "before");
-  if (std::string bundle_cmd = config_for("bundle") != NULL)
+  std::string bundle_cmd (config_for("bundle").command());
+  if (bundle_cmd != "")
     exec(bundle_cmd);
   else
     bundle(m_cd, m_cmd);

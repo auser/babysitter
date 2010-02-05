@@ -33,6 +33,7 @@ PACKAGE_NAME = babysitter
 PACKAGE_VERSION = 0.1
 
 INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
+COMPILED_Os = $(wildcard ../../c/*.o)
 OUTPUTFILES := $(INTERMEDIATES)
 
 DEFS = -DHAVE_CONFIG_H
@@ -50,7 +51,7 @@ test_%.o: test_%.c %.o
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
 
 .cpp.o:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o test $<
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $@ $(COMPILED_Os) $< $(INC_LIBS)
 
 clean:
 	rm -rf *.o *.a $(OUTPUTFILES)

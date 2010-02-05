@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/resource.h>
+#include "honeycomb.h"
 #include "worker_bee.h"
 
 // Build a base directory
@@ -124,7 +125,7 @@ bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, s
   return true;
 }
 
-int secure_chroot() {
+int WorkerBee::secure_chroot(std::string m_cd) {
   // Secure the chroot first
   unsigned int fd, fd_max;
   struct stat buf; struct rlimit lim;

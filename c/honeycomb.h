@@ -154,6 +154,12 @@ private:
   // Limits
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
+  // Building
+  ConfigDefinition config_for(std::string action);
+  int exec(std::string cmd); // Run a hook on the system
+  void exec_hook(std::string action, std::string stage);
+  int bundle(const std::string & root_path, const std::string & file_path);  
+  
 };
 
 /**
