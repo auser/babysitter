@@ -173,6 +173,51 @@ int Honeycomb::build_and_execute(std::string confinement_root, mode_t confinemen
   return 0;
 }
 
+int Honeycomb::bundle(const std::string & root_path, const std::string & file_path) {
+  WorkerBee b;
+
+  string_set s_executables;
+  s_executables.insert("/bin/ls");
+  s_executables.insert("/bin/bash");
+  s_executables.insert("/usr/bin/whoami");
+  s_executables.insert("ruby");
+  s_executables.insert(file_path);
+
+  string_set s_dirs;
+  s_dirs.insert("/opt");
+  
+  string_set s_extra_files;
+  
+  printf("-- bundling: %s\n", m_cd.c_str());
+  b.build_chroot(m_cd, m_user, m_group, s_executables, s_extra_files, s_dirs);
+}
+
+ConfigDefinition *config_for(std::string action) {
+  return m_config.find_config_for(m_app_type + "." + action);
+}
+
+// Run a hook on the system
+int exec(std::string *cmd) {
+  const std::string shell = getenv("SHELL");
+  const std::string shell_args = "-c";
+  const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str() };
+
+  if (execve(cmd.c_str(), (char* const*)argv, (char* const*)m_cenv) < 0) {
+    fprintf(stderr, "Cannot execute '%s' because '%s'", m_cmd.c_str(), ::strerror(errno));
+    return EXIT_FAILURE;
+  }
+}
+
+// Execute a hook
+void exec_hook(std::string action, std::string stage) {
+  if (stage == "before")
+    exec(config_for(action).before());
+  else if (stage == "after")
+    exec(config_for(action).after());
+  else
+    return;
+}
+
 int Honeycomb::build_environment(std::string confinement_root, mode_t confinement_mode) {
   /* Prepare as of the environment from the child process */
   setup_defaults();
@@ -186,115 +231,44 @@ int Honeycomb::build_environment(std::string confinement_root, mode_t confinemen
     struct stat stt;
     if (0 == stat(confinement_root.c_str(), &stt)) {
       if (0 != stt.st_uid || 0 != stt.st_gid) {
-        m_err << confinement_root << " is not owned by root (0:0). Exiting..."; return -1;
+        fprintf(stderr, "%s is not owned by root (0:0). Exiting...\n", confinement_root.c_str());
+        exit(-1);
       }
     } else if (ENOENT == errno) {
       setegid(0);
-    
-      if(mkdir(confinement_root.c_str(), confinement_mode)) {
-        m_err << "Could not create the directory " << confinement_root; return -1;
-      }
     } else {
-      m_err << "Unknown error: " << ::strerror(errno); return -1;
+      fprintf(stderr, "Unknown error: %s Exiting...\n", ::strerror(errno));
+      exit(-1);
     }
     // The m_cd path is the confinement_root plus the user's uid
     m_cd = confinement_root + "/" + to_string(m_user, 10);
   
+    // Not sure if this and the next step is appropriate here anymore... *thinking about it*
     if (mkdir(m_cd.c_str(), confinement_mode)) {
       m_err << "Could not create the new confinement root " << m_cd;
     }
     
+    // Make the directory owned by the user
     if (chown(m_cd.c_str(), m_user, m_user)) {
       m_err << "Could not chown to the effective user: " << m_user; return -1;
     } 
     setegid(egid); // Return to be the effective user
   }
   
-  DEBUG_MSG("Created root directory at: '%s'\n", m_cd.c_str());
-
-  DEBUG_MSG("Don't choot says: %i\n", m_dont_chroot);
-
-  // Next, create the chroot, if necessary which sets up a chroot
-  // environment in the confinement_root path
-  if (!m_dont_chroot) {
-    pid_t child = fork();
-    
-DEBUG_MSG("forked... %i\n", child);
-
-    if(0 == child) {
-      // Find the binary command
-      // std::string binary_path = find_binary(m_cmd);
-      // std::string pth = m_cd + binary_path;
-      
-      temp_drop();
-
-      // Currently, we only support running binaries, not shell scripts
-      printf("----- Build the chroot please\n");
-      copy_deps(m_cd, m_cmd);
-      
-      //cp_r(binary_path, pth);
-
-      // if (chmod(pth.c_str(), S_IREAD|S_IEXEC|S_IWRITE)) {
-      //   fprintf(stderr, "Could not change permissions to '%s' make it executable\n", pth.c_str());
-      //   return -1;
-      // }
-      
-      // come back to our permissions
-      restore_perms();
-      
-      // Chroot
-      // Secure the chroot first
-      unsigned int fd, fd_max;
-      struct stat buf; struct rlimit lim;
-      if (! getrlimit(RLIMIT_NOFILE, &lim) && (fd_max < lim.rlim_max)) fd_max = lim.rlim_max;
-      
-      // compute the number of file descriptors that can be open
-#ifdef OPEN_MAX
-  fd_max = OPEN_MAX;
-#elif defined(NOFILE)
-  fd_max = NOFILE;
-#else
-  fd_max = getdtablesize();
-#endif
-
-      // close all file descriptors except stdin,stdout,stderr
-      // because they are security issues
-      DEBUG_MSG("Securing the chroot environment at '%s'\n", m_cd.c_str());
-      for (fd=2;fd < fd_max; fd++) {
-        if ( !fstat(fd, &buf) && S_ISDIR(buf.st_mode))
-          if (close(fd)) {
-            fprintf(stderr, "Could not close insecure directory/file: %i before chrooting\n", fd);
-            return(-1);
-          }
-      }
-      
-      // Change directory
-      if (chdir(m_cd.c_str())) {
-        fprintf(stderr, "Could not chdir into %s before chrooting\n", m_cd.c_str());
-        return(-1);
-      }
-
-      // Chroot please
-      if (chroot(m_cd.c_str())) {
-        fprintf(stderr, "Could not chroot into %s\n", m_cd.c_str());
-        return(-1);
-      }
-      
-      // Set resource limitations
-      // TODO: Make extensible
-      temp_drop();
-      set_rlimits();
-      restore_perms();
-      exit(0);
-      return(0); // Exit from the child pid
-    }
-  } else {
-    // Cd into the working directory directory
-    if (chdir(m_cd.c_str())) {
-      fprintf(stderr, "Could not chdir into %s with no chrooting\n", m_cd.c_str());
-      return(-1);
-    }  }
+  // START BUNDLING
+  temp_drop(); // Drop out of our root permissions
+  exec_hook("bundle", "before");
+  if (std::string bundle_cmd = config_for("bundle") != NULL)
+    exec(bundle_cmd);
+  else
+    bundle(m_cd, m_cmd);
+  exec_hook("bundle", "after");
   
+  // Set our resource limits (TODO: Move to mounting?)
+  set_rlimits();
+  // come back to our permissions
+  restore_perms();
+        
   // Success!
   return 0;
 }

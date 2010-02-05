@@ -1,3 +1,6 @@
+// Compile:
+// make && g++ -o elf ../c/elf.c ../c/worker_bee.o -lelf && ./elf /tmp/test && tree /tmp/test
+
 #include <stdio.h>
 #include <string.h>
 #include <error.h>
@@ -30,11 +33,12 @@ int main(int argc, char **argv) {
   string_set s_dirs;
   s_dirs.insert("/opt");
   std::string root_path;
+  string_set s_extra_files;
   
   if (argv[1]) {
     root_path = argv[1];
     printf("-- building chroot: %s\n", root_path.c_str());
-    b.build_chroot(root_path, 1000, 1000, s_executables, s_dirs);
+    b.build_chroot(root_path, 1000, 1000, s_executables, s_extra_files, s_dirs);
   }
   if (argv[2]) {
     root_path = argv[2];

@@ -1,5 +1,6 @@
+// Compile:
+// make && g++ -o test_config ../c/test_config.c ../c/config_parser.o && ./test_config ../../docs/sample_config.conf 
 #include <stdio.h>
-
 #include "babysitter.h"
 
 #define ERR -1

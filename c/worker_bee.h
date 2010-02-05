@@ -72,7 +72,8 @@ public:
   bee_files_set *libs_for(const std::string &str);
   bool build_base_dir(const std::string &path, uid_t user, gid_t group);
   bool build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &ef, string_set &extra_dirs);
-
+  int secure_chroot();
+  
 // Functions
 private:
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);

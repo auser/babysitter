@@ -100,6 +100,7 @@ private:
   std::string             m_cmd;       // The command to execute to start
   std::string             m_kill_cmd;  // A special command to kill the process (if needed)
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
+  std::string             m_app_type;  // The type of the application
     std::string             m_skel;      // A skeleton choot directory to work from
     bool                    m_dont_chroot; // Boolean to build a chroot (true/false)
   std::string             m_stdout;    // The stdout to use for the execution of the command
@@ -119,7 +120,7 @@ private:
   ConfigParser            m_config; // Set by us, on instantiation. Access to the config file
 
 public:
-  Honeycomb(ConfigParser cp) : m_tmp(0,256),m_cd(""),m_dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL),m_config(cp) {
+  Honeycomb(ConfigParser cp) : m_tmp(0,256),m_cd(""),m_dont_chroot(false),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL),m_config(cp),m_app_type("rack") {
     ei::Serializer m_eis(2);
     m_nofiles = NULL;
   }
@@ -135,6 +136,7 @@ public:
   gid_t        group()    const { return m_group; }
   int          nice()     const { return m_nice; }
   mount_type*  mount()    const { return m_mount; }
+  const char*  app_type() const { return m_app_type.c_str(); }
   
   int ei_decode(ei::Serializer& ei);
   int build_and_execute(std::string confinement_root, mode_t confinement_mode);

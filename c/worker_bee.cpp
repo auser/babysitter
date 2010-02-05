@@ -123,6 +123,34 @@ bool WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, s
   return true;
 }
 
+int secure_chroot() {
+  // Secure the chroot first
+  unsigned int fd, fd_max;
+  struct stat buf; struct rlimit lim;
+  if (! getrlimit(RLIMIT_NOFILE, &lim) && (fd_max < lim.rlim_max)) fd_max = lim.rlim_max;
+
+  // compute the number of file descriptors that can be open
+#ifdef OPEN_MAX
+  fd_max = OPEN_MAX;
+#elif defined(NOFILE)
+  fd_max = NOFILE;
+#else
+  fd_max = getdtablesize();
+#endif
+
+  // close all file descriptors except stdin,stdout,stderr
+  // because they are security issues
+  DEBUG_MSG("Securing the chroot environment at '%s'\n", m_cd.c_str());
+  for (fd=2;fd < fd_max; fd++) {
+    if ( !fstat(fd, &buf) && S_ISDIR(buf.st_mode))
+      if (close(fd)) {
+        fprintf(stderr, "Could not close insecure directory/file: %i before chrooting\n", fd);
+        return(-1);
+      }
+  }
+  return 0;
+}
+
 bee_files_set *WorkerBee::libs_for(const std::string &executable) {
   std::pair<string_set *, string_set *> *dyn_libs;
   
