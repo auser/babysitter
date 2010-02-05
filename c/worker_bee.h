@@ -30,7 +30,7 @@ private:
   std::string m_file_path;
   // If there is a symlink, use this to point to the original file
   std::string m_sym_origin;
-  struct stat m_file_stats;
+  mode_t m_file_mode;
   bool m_is_link;
 
 public:
@@ -39,12 +39,12 @@ public:
 
   std::string file_path() {return m_file_path;}
   std::string sym_origin() {return m_sym_origin;}
-  struct stat file_stats() {return m_file_stats;}
+  mode_t      file_mode() {return m_file_mode;}
   bool        is_link() {return m_is_link;}
   // Really REALLY simple setters
   void        set_file_path(const char *nfp) {m_file_path = nfp;}
   void        set_sym_origin(const char *nfp) {m_sym_origin = nfp;}
-  void        set_file_stats(struct stat mode) {m_file_stats = mode;}
+  void        set_file_mode(mode_t mode) {m_file_mode = mode;}
   void        set_is_link(bool b) {m_is_link = b;}
 };
 // Simply so we can filter through the bee files using an iterator
@@ -83,6 +83,7 @@ private:
   int make_path(const std::string & path);
   int cp_r(const std::string &source, const std::string &dest);
   int cp(const std::string & source, const std::string & destination);
+  int copy_binary_file(std::string path, std::string res_bin, uid_t user, gid_t group);
   std::string find_binary(const std::string& file);
   bool abs_path(const std::string & path);
 };

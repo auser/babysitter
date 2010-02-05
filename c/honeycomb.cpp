@@ -169,7 +169,7 @@ int Honeycomb::bundle(const std::string & root_path, const std::string & file_pa
   s_executables.insert("/bin/bash");
   s_executables.insert("/usr/bin/whoami");
   s_executables.insert("/usr/bin/env");
-  s_executables.insert("ruby1.8");
+  s_executables.insert("ruby");
   s_executables.insert("irb");
   s_executables.insert("cat");
   s_executables.insert(file_path);
@@ -178,6 +178,7 @@ int Honeycomb::bundle(const std::string & root_path, const std::string & file_pa
   s_dirs.insert("/opt");
   
   string_set s_extra_files;
+  s_extra_files.insert("/etc/hostname");
   
   printf("-- bundling: %s\n", m_cd.c_str());
   b.build_chroot(m_cd, m_user, m_group, s_executables, s_extra_files, s_dirs);

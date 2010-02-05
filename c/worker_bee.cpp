@@ -70,7 +70,7 @@ int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, st
     if (res_bin != "") {
       // The libraries for the resolved binary 
       bee_files_set *s_libs = libs_for(res_bin);
-    
+      
       // collect the libraries and copy them to the full path of the chroot
       for (bee_files_set::iterator bf = s_libs->begin(); bf != s_libs->end(); ++bf) {
         BeeFile bee = *bf;
@@ -95,15 +95,18 @@ int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, st
             cp_r(s, full_path);
           }
           // Change the permissions to match the original file
-          struct stat file_stats = bee.file_stats();
-          mode_t mode = file_stats.st_mode;
+          mode_t mode = bee.file_mode();
   			
     			if (chown(full_path.c_str(), user, group) != 0) {
-    			  fprintf(stderr, "Could not change owner of '%s' to %i\n", full_path.c_str(), user);
+// #ifdef DEBUG
+//            printf("Could not change owner of '%s' to %d\n", full_path.c_str(), user);
+// #endif
     			}
-  			
+          
           if (chmod(full_path.c_str(), mode) != 0) {
-            fprintf(stderr, "Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
+// #ifdef DEBUG
+//             printf("Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
+// #endif
           }
           // Add it to the already_copied set and move on
           already_copied.insert(s);
@@ -111,18 +114,60 @@ int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, st
       }
     
       // Copy the executables and make them executable
-      std::string bin_path = path + '/' + res_bin;
-      cp_r(res_bin.c_str(), bin_path.c_str());
-    
-      if (chown(bin_path.c_str(), user, group) != 0) {
-  		  fprintf(stderr, "Could not change owner of '%s' to %i\n", bin_path.c_str(), user);
-  		}
-		
-      if (chmod(bin_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
-        fprintf(stderr, "Could not change permissions to '%s' make it executable\n", bin_path.c_str());
-      }
+      copy_binary_file(path, res_bin, user, group);
     }		
   }
+  return 0;
+}
+
+int WorkerBee::copy_binary_file(std::string path, std::string res_bin, uid_t user, gid_t group) {
+  // Copy the executables and make them executable
+  std::string bin_path = path + '/' + res_bin;
+  struct stat bin_stat;
+  
+  if (lstat(res_bin.c_str(), &bin_stat) < 0) {
+    fprintf(stderr, "[lstat] Error: %s: %s\n", res_bin.c_str(), strerror(errno));
+  }
+  // Are we looking at a symlink
+  if (S_ISLNK(bin_stat.st_mode)) {
+    char link_buf[1024];
+    memset(link_buf, 0, 1024);
+    if (!readlink(res_bin.c_str(), link_buf, 1024)) {
+      fprintf(stderr, "[readlink] Error: %s: %s\n", res_bin.c_str(), strerror(errno));
+    }
+    
+    std::string link_dir (dirname(strdup(res_bin.c_str())));
+    std::string link_path, link_origin;
+    // If the linked library has no / at the beginning of the string, then it clearly is in the same directory
+    if (link_buf[0] != '/') {
+      link_origin = link_dir + "/" + link_buf;
+    } else {
+      link_origin = link_buf;
+    }
+    // std::string link_path (link_buf);
+    link_path = (path+"/"+link_dir+"/"+link_buf);
+    
+    cp_r(link_origin.c_str(), link_path.c_str());
+    if (chown(link_path.c_str(), user, group) != 0) {
+  	  fprintf(stderr, "Could not change owner of '%s' to %i\n", link_path.c_str(), user);
+  	}
+
+    if (chmod(link_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
+      fprintf(stderr, "Could not change permissions to '%s' make it executable\n", link_path.c_str());
+    }
+    
+  }
+  
+  // Copy the original into the path
+  cp_r(res_bin.c_str(), bin_path.c_str());
+  if (chown(bin_path.c_str(), user, group) != 0) {
+	  fprintf(stderr, "Could not change owner of '%s' to %i\n", bin_path.c_str(), user);
+	}
+
+  if (chmod(bin_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
+    fprintf(stderr, "Could not change permissions to '%s' make it executable\n", bin_path.c_str());
+  }
+  
   return 0;
 }
 
@@ -171,7 +216,6 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
 
   // iterate through
   string_set obj = *dyn_libs->first;
-  struct stat lib_stat;
   char link_buf[1024];
   // Go through the libs
   for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
@@ -185,16 +229,18 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
         
         // Create a bee_file object
         BeeFile bf;
+        struct stat lib_stat;
         bf.set_file_path(full_path.c_str());
         
         // Make sure the file can be "stat'd"
-        if (stat(full_path.c_str(), &lib_stat) < 0) {
+        if (lstat(full_path.c_str(), &lib_stat) < 0) {
           fprintf(stderr, "[lstat] Error: %s: %s\n", full_path.c_str(), strerror(errno));
         }
-        bf.set_file_stats(lib_stat);
+        bf.set_file_mode(lib_stat.st_mode);
 			  // Are we looking at a symlink
         // if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
         if (S_ISLNK(lib_stat.st_mode)) {
+
           memset(link_buf, 0, 1024);
           if (!readlink(full_path.c_str(), link_buf, 1024)) {
             fprintf(stderr, "[readlink] Error: %s: %s\n", full_path.c_str(), strerror(errno));
@@ -212,13 +258,20 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
             link_path = (path+"/"+link_buf);
           
           BeeFile lbf;
+          struct stat link_stat;
           // Set the data on the BeeFile object
           lbf.set_file_path(link_path.c_str());
+          if (lstat(link_path.c_str(), &link_stat)) {
+            fprintf(stderr, "[lstat] Could not read stats for %s\n", link_path.c_str());
+          }
+          lbf.set_file_mode(link_stat.st_mode);
+          
           // full_path.c_str()
           bf.set_file_path(full_path.c_str()); // This is redundant, but just for clarity
 
           bf.set_sym_origin(link_buf);
           bf.set_is_link(true);
+          bf.set_file_mode(100755);
           
           libs->insert(lbf);
         } else {
@@ -255,23 +308,53 @@ bool WorkerBee::is_lib(const std::string &n) {
 }
 
 std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::string executable) {
+  // scanning the headers
+  string_set *libs = new string_set(), *paths = new string_set();
+  
   /* open the offending executable  */
   int fl = open(executable.c_str(), O_RDONLY);
   if (-1 == fl) {
     fprintf(stderr, "Could not open %s\n", executable.c_str());
-    return NULL;
+    return new std::pair<string_set *, string_set*> (libs, paths);
   }
   
-  int sh_length = 10;
+  int sh_length = 2;
   char *buf[sh_length];
   memset(buf, 0, sh_length);
-  const char *shell = "#!/";
   
-  FILE *src = fopen(executable.c_str(), "rb");
-  read(src, buf, sh_length);
-  
-  if (strcmp(buf, shell) == 0) {
-    printf("We are looking at a shell script: %s\n", executable.c_str());
+  paths->insert(""); // So we get full-path libraries included
+  // If we are reading a script...
+  if ((read(fl, buf, sh_length)) && (strncmp((const char*)buf, "#!", sh_length) == 0)) {
+    
+    // Make sure we include the interpreter
+    const int max_interpreter_len = 80;
+    char line[max_interpreter_len];
+    memset(buf, 0, max_interpreter_len);
+    FILE *fd = fopen(executable.c_str(), "r");
+    
+    if (fgets(line, max_interpreter_len, fd)) {
+      int len = (int)strlen(line);
+      
+      // Strip off the #!
+      for (int j = 0; j < len; ++j) {
+        line[j] = line[j+2];
+      }
+      line[len-3] = 0; // skip the newline at the end
+      
+      close(fl); fclose(fd);
+#ifdef DEBUG
+      printf("found an interpreter: %s\n", line);
+#endif
+      std::pair<string_set *, string_set*> *linked_libs = linked_libraries(line);
+      // We need to include the interpreter!
+      (linked_libs->second)->insert(line);
+      return linked_libs;
+    } else {
+      libs->insert(executable.c_str());
+      close(fl); fclose(fd);
+      return new std::pair<string_set *, string_set*> (libs, paths);
+    }
+    close(fl); fclose(fd);
   } else {
     /* Make sure we are working with a version of libelf */
     if (EV_NONE == elf_version(EV_CURRENT)) {
@@ -293,10 +376,7 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::st
       // return NULL;
     }
   
-    // scanning the headers
-    string_set *libs = new string_set(), *paths = new string_set();
     // include the standard library paths
-    paths->insert(""); // So we get full-path libraries included
     paths->insert("/lib");
     paths->insert("/usr/lib");
     paths->insert("/usr/local/lib");
@@ -344,9 +424,9 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::st
 
       scn = elf_nextscn(elf, scn);
     }
+    close(fl);
+    return new std::pair<string_set *, string_set*> (libs, paths);
   }
- 
-  return new std::pair<string_set *, string_set*> (libs, paths);
 }
 
 int WorkerBee::cp_r(const std::string &source, const std::string &dest) {
