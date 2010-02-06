@@ -23,7 +23,10 @@ int main(int argc, char **argv) {
   
   Honeycomb comb (config);
   printf("---- bundle_environment(%s) ----\n", root.c_str());
-  if (comb.bundle_environment(root, 040755))
+  string_set s_executables;
+  string_set s_dirs;
+  string_set s_extra_files;
+  if (comb.bundle_environment(root, 040755, s_executables, s_dirs, s_extra_files))
     printf("There was an error!\n");
   printf("-----------\n");
   

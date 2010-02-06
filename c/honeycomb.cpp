@@ -161,10 +161,10 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   return 0;
 }
 
-int Honeycomb::bundle(const std::string & root_path, const std::string & file_path) {
+int Honeycomb::bundle(const std::string & root_path, const std::string &file_path, string_set s_executables, string_set s_dirs, string_set s_extra_files) {
   WorkerBee b;
 
-  string_set s_executables;
+  // string_set s_executables;
   s_executables.insert("/bin/ls");
   s_executables.insert("/bin/bash");
   s_executables.insert("/usr/bin/whoami");
@@ -174,14 +174,13 @@ int Honeycomb::bundle(const std::string & root_path, const std::string & file_pa
   s_executables.insert("cat");
   s_executables.insert(file_path);
 
-  string_set s_dirs;
+  // string_set s_dirs;
   s_dirs.insert("/var/lib/gems/1.8");
   s_dirs.insert("/usr/lib/ruby");
   
-  string_set s_extra_files;
+  // string_set s_extra_files;
   s_extra_files.insert("/etc/hostname");
   
-  printf("-- bundling: %s\n", m_cd.c_str());
   b.build_chroot(m_cd, m_user, m_group, s_executables, s_extra_files, s_dirs);
   return 0;
 }
@@ -222,7 +221,7 @@ void Honeycomb::exec_hook(std::string action, std::string stage) {
   }
 }
 
-int Honeycomb::bundle_environment(std::string confinement_root, mode_t confinement_mode) {
+int Honeycomb::bundle_environment(std::string confinement_root, mode_t confinement_mode, string_set s_executables, string_set s_dirs, string_set s_extra_files) {
   /* Prepare as of the environment from the child process */
   setup_defaults();
   // First, get a random_uid to run as
@@ -270,7 +269,7 @@ int Honeycomb::bundle_environment(std::string confinement_root, mode_t confineme
     if (bundle_cmd != "")
       comb_exec(bundle_cmd);
   } else
-    bundle(m_cd, m_cmd);
+    bundle(m_cd, m_cmd, s_executables, s_dirs, s_extra_files);
   exec_hook("bundle", "after");
   
   // Set our resource limits (TODO: Move to mounting?)
@@ -379,7 +378,9 @@ int Honeycomb::temp_drop() {
     fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, ::strerror(errno));
     return -1; // we are in the fork
   }
+#ifdef DEBUG
   printf("Dropped into user %d\n", m_user);
+#endif
   return 0;
 }
 int Honeycomb::perm_drop() {
