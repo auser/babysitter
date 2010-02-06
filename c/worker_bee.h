@@ -74,6 +74,8 @@ public:
   int  build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &ef, string_set &extra_dirs);
   int  secure_chroot(std::string m_cd);
   
+  int cp_rf(std::string directory, std::string path);
+  
 // Functions
 private:
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
@@ -81,7 +83,8 @@ private:
   std::pair<string_set *, string_set *> *linked_libraries(const std::string str);
   /** Utilities **/
   int make_path(const std::string & path);
-  int cp_r(const std::string &source, const std::string &dest);
+  int mkdir_r(const std::string & path);
+  int cp_f(const std::string &source, const std::string &dest);
   int cp(const std::string & source, const std::string & destination);
   int copy_binary_file(std::string path, std::string res_bin, uid_t user, gid_t group);
   std::string find_binary(const std::string& file);

@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/resource.h>
+#include <dirent.h> 
+
 #include "honeycomb.h"
 #include "worker_bee.h"
 
@@ -23,7 +25,12 @@ bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group)
 }
 
 /** Build the chroot at the path **/
-int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &extra_files, string_set &extra_dirs) {
+int WorkerBee::build_chroot(const std::string &path, 
+                            uid_t user, 
+                            gid_t group, 
+                            string_set &executables, 
+                            string_set &extra_files,
+                            string_set &extra_dirs) {
   // Make the root path
   make_path(strdup(path.c_str()));
   string_set already_copied;
@@ -42,17 +49,24 @@ int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, st
   for (string_set::iterator dir = extra_dirs.begin(); dir != extra_dirs.end(); ++dir) base_dirs.insert(dir->c_str());
   
   for (string_set::iterator dir = base_dirs.begin(); dir != base_dirs.end(); ++dir) {
-    if ((*dir->c_str()) == '/') full_path = path + *dir; else full_path = path + '/' + *dir;
+    if ((*dir->c_str()) == FS_SLASH) full_path = path + *dir; else full_path = path + FS_SLASH + *dir;
     
     // Make the paths
     make_path(full_path.c_str());
   }
   
+  // Now recursively copy the extra_dirs
+  for (string_set::iterator dir = extra_dirs.begin(); dir != extra_dirs.end(); ++dir) {
+    std::string s_dir (path + "/" + *dir);
+    mkdir_r(strdup(s_dir.c_str()));
+    cp_rf(*dir, s_dir.c_str());
+  }
+  
   for (string_set::iterator file = extra_files.begin(); file != extra_files.end(); ++file) {
-    if ((*file).c_str()[0] == '/') full_path = path + (*file).c_str(); else full_path = path + '/' + (*file).c_str();
+    if ((*file).c_str()[0] == FS_SLASH) full_path = path + (*file).c_str(); else full_path = path + FS_SLASH + (*file).c_str();
     
     make_path(dirname(strdup(full_path.c_str())));
-    cp_r(*file, full_path);
+    cp_f(*file, full_path);
   }
   
   // Build the root libraries
@@ -80,9 +94,9 @@ int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, st
         if (already_copied.count(s)) {
         } else {
           // If it is a symlink, then make a symlink, otherwise copy the file
-          // If the library starts with a '/' then don't add one, otherwise, do
+          // If the library starts with a FS_SLASH then don't add one, otherwise, do
           // i.e. if libs/hi.so.1 turns into full_path/libs/hi.so.1 otherwise libs.so.1 turns into full_path/libs.so.1
-          if (s.c_str()[0] == '/') full_path = path + s.c_str(); else full_path = path + '/' + s.c_str();
+          if (s.c_str()[0] == FS_SLASH) full_path = path + s.c_str(); else full_path = path + FS_SLASH + s.c_str();
         
           if (bee.is_link()) {
             // make symlink
@@ -92,21 +106,21 @@ int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, st
             }
           } else {
             // Copy the file (recursively)
-            cp_r(s, full_path);
+            cp_f(s, full_path);
           }
           // Change the permissions to match the original file
           mode_t mode = bee.file_mode();
   			
     			if (chown(full_path.c_str(), user, group) != 0) {
-// #ifdef DEBUG
-//            printf("Could not change owner of '%s' to %d\n", full_path.c_str(), user);
-// #endif
+#ifdef DEBUG
+           printf("Could not change owner of '%s' to %d\n", full_path.c_str(), user);
+#endif
     			}
           
           if (chmod(full_path.c_str(), mode) != 0) {
-// #ifdef DEBUG
-//             printf("Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
-// #endif
+#ifdef DEBUG
+            printf("Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
+#endif
           }
           // Add it to the already_copied set and move on
           already_copied.insert(s);
@@ -120,9 +134,41 @@ int WorkerBee::build_chroot(const std::string &path, uid_t user, gid_t group, st
   return 0;
 }
 
+/**
+* Recursively copy a direcotry
+**/
+int WorkerBee::cp_rf(std::string directory, std::string path) {
+  DIR           *d;
+  struct dirent *dir;
+  
+  d = opendir( directory.c_str() );
+  if( d == NULL ) {
+    return 1;
+  }
+  while( ( dir = readdir( d ) ) ) {
+    if( strcmp( dir->d_name, "." ) == 0 || strcmp( dir->d_name, ".." ) == 0 ) continue;
+
+    if( dir->d_type == DT_DIR ) {
+      std::string next_dir (directory + "/" + dir->d_name);
+      mkdir_r(next_dir);
+      cp_rf( next_dir, path + "/" + dir->d_name );
+    } else {
+      std::string file = (directory + "/" + dir->d_name);
+      cp_f( file, path + "/" + dir->d_name );
+    }
+  }
+  closedir( d );
+  return 0;
+}
+
+
+/**
+* Copy a binary file into the path
+* Copy their symlinks if necessary
+**/
 int WorkerBee::copy_binary_file(std::string path, std::string res_bin, uid_t user, gid_t group) {
   // Copy the executables and make them executable
-  std::string bin_path = path + '/' + res_bin;
+  std::string bin_path = path + FS_SLASH + res_bin;
   struct stat bin_stat;
   
   if (lstat(res_bin.c_str(), &bin_stat) < 0) {
@@ -139,7 +185,7 @@ int WorkerBee::copy_binary_file(std::string path, std::string res_bin, uid_t use
     std::string link_dir (dirname(strdup(res_bin.c_str())));
     std::string link_path, link_origin;
     // If the linked library has no / at the beginning of the string, then it clearly is in the same directory
-    if (link_buf[0] != '/') {
+    if (link_buf[0] != FS_SLASH) {
       link_origin = link_dir + "/" + link_buf;
     } else {
       link_origin = link_buf;
@@ -147,7 +193,7 @@ int WorkerBee::copy_binary_file(std::string path, std::string res_bin, uid_t use
     // std::string link_path (link_buf);
     link_path = (path+"/"+link_dir+"/"+link_buf);
     
-    cp_r(link_origin.c_str(), link_path.c_str());
+    cp_f(link_origin.c_str(), link_path.c_str());
     if (chown(link_path.c_str(), user, group) != 0) {
   	  fprintf(stderr, "Could not change owner of '%s' to %i\n", link_path.c_str(), user);
   	}
@@ -159,7 +205,7 @@ int WorkerBee::copy_binary_file(std::string path, std::string res_bin, uid_t use
   }
   
   // Copy the original into the path
-  cp_r(res_bin.c_str(), bin_path.c_str());
+  cp_f(res_bin.c_str(), bin_path.c_str());
   if (chown(bin_path.c_str(), user, group) != 0) {
 	  fprintf(stderr, "Could not change owner of '%s' to %i\n", bin_path.c_str(), user);
 	}
@@ -224,7 +270,7 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
     // Go through each of the paths
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
       std::string path (*pth);
-      std::string full_path = *pth+'/'+*ld;
+      std::string full_path = *pth+FS_SLASH+*ld;
       if (fopen(full_path.c_str(), "rb") != NULL) {
         
         // Create a bee_file object
@@ -429,7 +475,7 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::st
   }
 }
 
-int WorkerBee::cp_r(const std::string &source, const std::string &dest) {
+int WorkerBee::cp_f(const std::string &source, const std::string &dest) {
   make_path(dirname(strdup(dest.c_str()))); 
   return cp(source, dest);
 }
@@ -460,19 +506,56 @@ int WorkerBee::cp(const std::string & source, const std::string & destination) {
   }
   return 0;
 }
+
+/**
+* This will ensure that the directory you specify will exist
+**/
 int WorkerBee::make_path(const std::string & path) {
   struct stat stt;
   if (0 == stat(path.c_str(), &stt) && S_ISDIR(stt.st_mode)) return -1;
-
+  
   std::string::size_type lngth = path.length();
   for (std::string::size_type i = 1; i < lngth; ++i) {
-    if (lngth - 1 == i || path[i] == '/') {
+    if (lngth - 1 == i || path[i] == FS_SLASH) {
       std::string p = path.substr(0, i + 1);
       if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
-        fprintf(stderr, "Could not create the directory %s", p.c_str());
+#ifdef DEBUG
+        fprintf(stderr, "Could not create the directory %s\n", dir_path);
+#endif
         return(-1);
       }
     }
+  }
+  return 0;
+}
+
+/**
+* This will ensure that the directory you specify will exist
+**/
+int WorkerBee::mkdir_r(const std::string & path) {
+  struct stat stt;
+  if (0 == stat(path.c_str(), &stt) && S_ISDIR(stt.st_mode)) return -1;
+  
+  int pos = 0;
+  const char *dir_buf = path.c_str();
+  int len = strlen(dir_buf);
+  char dir_path[BUFFER];
+  memset(dir_path, 0, BUFFER);
+  
+  while (pos < len) {
+    if ((dir_buf[pos] == FS_SLASH) && strlen(dir_buf) > 1) {
+      // Make the dir
+      printf("mkdir(%s)\n", dir_path);
+      if (mkdir(dir_path, 0750) && EEXIST != errno && EISDIR != errno) {
+#ifdef DEBUG
+        fprintf(stderr, "Could not create the directory %s\n", dir_path);
+#endif
+      }
+      dir_path[pos] = FS_SLASH;
+    } else {
+      dir_path[pos] = dir_buf[pos];
+    }
+    pos++;
   }
   return 0;
 }
@@ -509,5 +592,5 @@ std::string WorkerBee::find_binary(const std::string& file) {
 }
 
 bool WorkerBee::abs_path(const std::string & path) {
-  return '/' == path[0] || ('.' == path[0] && '/' == path[1]);
+  return FS_SLASH == path[0] || ('.' == path[0] && FS_SLASH == path[1]);
 }

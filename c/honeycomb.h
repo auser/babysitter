@@ -35,13 +35,16 @@ using std::string;
 /*---------------------------- Defines ------------------------------------*/
 #define BUF_SIZE 2048
 
-/* #define DEBUG */
-#define DEBUG 1
+// #define DEBUG 0
 
 #ifdef DEBUG
 #define DEBUG_MSG printf
 #else
 #define DEBUG_MSG(args...)
+#endif
+
+#ifndef FS_SLASH
+#define FS_SLASH '/'
 #endif
 
 /*---------------------------- TYPES ---------------------------------------*/

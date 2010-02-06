@@ -175,7 +175,8 @@ int Honeycomb::bundle(const std::string & root_path, const std::string & file_pa
   s_executables.insert(file_path);
 
   string_set s_dirs;
-  s_dirs.insert("/opt");
+  s_dirs.insert("/var/lib/gems/1.8");
+  s_dirs.insert("/usr/lib/ruby");
   
   string_set s_extra_files;
   s_extra_files.insert("/etc/hostname");
