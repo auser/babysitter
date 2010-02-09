@@ -23,6 +23,7 @@
 
 #include "honeycomb.h"
 #include "worker_bee.h"
+#include "parser/honeycomb.y"
 
 /*---------------------------- Implementation ------------------------------*/
 
@@ -323,26 +324,66 @@ int Honeycomb::set_rlimit(const int res, const rlim_t limit) {
   return 0;
 }
 
-/*---------------------------- UTILS ------------------------------------*/
-int Honeycomb::copy_deps(const std::string & root_path, const std::string & file_path) {
-  WorkerBee b;
-
-  string_set s_executables;
-  s_executables.insert("/bin/ls");
-  s_executables.insert("/bin/bash");
-  s_executables.insert("/usr/bin/whoami");
-  s_executables.insert("ruby");
-
-  string_set s_dirs;
-  s_dirs.insert("/opt");
+/*--------------------------- CONFIG ------------------------------------*/
+int Honeycomb::parse_honeycomb_config_file(std::string filename) {
   
-  string_set s_extra_files;
+  FILE *fp; // File pointer to the filename
+  char line[BUFFER];
+  int linenum = 0;
+  int len;
   
-  printf("-- building chroot: %s\n", root_path.c_str());
-  b.build_chroot(root_path, m_user, m_group, s_executables, s_extra_files, s_dirs);
-
-  return 0; 
+  if (filename == "") {
+    fprintf(stderr, "[Honeycomb config] Could not open an empty file\n");
+    return -1;
+  }
+  // Open the file
+  if ((fp = fopen(filename.c_str(), "r")) == NULL) {
+    fprintf(stderr, "[Honeycomb config] Could not open '%s' %s\n", filename.c_str(), ::strerror(errno));
+    return -1;
+  }
+  
+  // Setup the lines
+  memset(line, 0, BUFFER);
+  
+  while ( fgets(line, BUFFER, fp) != NULL ) {
+    linenum++;
+    len = (int)strlen(line)-1;
+    
+    // Chomp the beginning of the line
+    for(int i = 0; i < len; ++i) {
+      if ( isspace(line[i]) ) {        
+        for (int j = 0; j < len; ++j) {
+          line[j] = line[j+1];
+        }
+        line[len--] = 0;
+      } else {
+        break;
+      }
+    }
+    // Chomp the end of the line
+    while ((len>=0) && (isspace(line[len])) ) {
+      line[len] = 0;
+      len--;
+    }
+    
+    // Skip new lines
+    if (line[0] == '\n') continue;
+    
+    // parse the line here
+    if (len < 0) {
+      return -1;
+    } else if (line[0] == '#') {
+      // Comment
+    } else {
+      // Line of some sort
+      printf("Line: %s\n", line);
+    }
+  }
+  
+  return 0;
 }
+
+/*---------------------------- UTILS ------------------------------------*/
 
 const char *DEV_RANDOM = "/dev/urandom";
 uid_t Honeycomb::random_uid() {
@@ -407,3 +448,22 @@ int Honeycomb::restore_perms() {
   return 0;
 }
 
+/*------------------------ INTERNAL -------------------------*/
+void Honeycomb::init() {
+  printf("New Honeycomb (%s)\n", m_app_type.c_str());
+}
+
+/*------------------------- HoneycombConfig -----------------*/
+void HoneycombConfig::init() {
+  // HoneycombConfig c(honeycomb_config);
+  // c.files = s_extra_files;
+  // c.executables = s_executables;
+  // c.dirs = s_dirs;
+  printf("New HoneycombConfig: %s\n", config_file.c_str());
+  parse();
+}
+
+void HoneycombConfig::parse() {
+  printf("Parsing...\n");
+  yyparse();
+}

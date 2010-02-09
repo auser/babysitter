@@ -41,7 +41,7 @@ DEFS = -DHAVE_CONFIG_H
 ERLDIR = /usr/lib/erlang
  
 all: honeycomb $(OUTPUTFILES)
- 
+
 debug:
 	$(MAKE) DEBUG=-DDEBUG
  

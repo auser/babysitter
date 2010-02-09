@@ -2,3 +2,4 @@ TODO LIST
 =========
 
 * Add *back in* limitations for child processes
+* Use LEX/YACC to generate "better" config files

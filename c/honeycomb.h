@@ -1,3 +1,5 @@
+#ifndef HONEYCOMB_H
+#define HONEYCOMB_H
 /**
  * Honeycomb
  * This class keeps all the fun little variables that are 
@@ -14,6 +16,7 @@
 #include <list>
 #include <sstream>
 #include <string>
+#include <string.h>
 #include <map>
 #include <set>
 #include <utility>
@@ -30,6 +33,7 @@ using std::string;
 #include <ei.h>
 #include "ei++.h"
 
+#include "honeycomb_config.h"
 #include "config_parser.h"
 
 /*---------------------------- Defines ------------------------------------*/
@@ -53,6 +57,7 @@ typedef std::set<std::string> string_set;
 typedef enum {UNKNOWN, FAILURE} failure_type_t;
 
 class Honeycomb;
+// class HoneycombConfig;
 class Bee;
 
 // TODO: Implement multiple mounts for bees
@@ -93,6 +98,39 @@ typedef std::map <kill_cmd_pid_t, pid_t>    MapKillPidT;
 /*---------------------------- Class definitions ---------------------------*/
 
 /**
+* Honeycomb config
+* 
+* Format: 
+* # This is a comment
+* bundle.before : executable_script
+* bundle : executable_script
+* bundle.after : executable_script
+* files : 
+* executables : /usr/bin/ruby irb cat
+* directories : /var/lib/gems/1.8
+*
+**/
+// class HoneycombConfig {
+// public:
+//   size_t num_headers;
+//   std::string config_file;
+//   string_set  executables;
+//   string_set  dirs;
+//   string_set  files;
+//   
+//   HoneycombConfig(std::string file) : config_file(file) {
+//     init();
+//   }
+//   HoneycombConfig() : config_file("") {}
+//   ~HoneycombConfig() {}
+// 
+// private:
+//   void init();
+//   void parse();
+//   int parse_honeycomb_config_file();
+// };
+
+/**
  * Honeycomb
  **/
 class Honeycomb {
@@ -120,11 +158,14 @@ private:
   int                     m_cenv_c;    // The current count of the environment variables
   string_set              m_already_copied;
   ConfigParser            m_config; // Set by us, on instantiation. Access to the config file
+  honeycomb_config        m_honeycomb_config; // We'll compute this on the app type
+  std::string             m_honeycomb_config_file; // Computed internally
 
 public:
   Honeycomb(ConfigParser cp) : m_tmp(0,256),m_cd(""),m_app_type("rack"),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL),m_config(cp) {
     ei::Serializer m_eis(2);
     m_nofiles = NULL;
+    init(); // Do our initialization fun here
   }
   ~Honeycomb() { delete [] m_cenv; m_cenv = NULL; }
   
@@ -143,8 +184,14 @@ public:
   int ei_decode(ei::Serializer& ei);
   int bundle_environment(std::string confinement_root, mode_t confinement_mode, string_set s_executables, string_set s_dirs, string_set s_extra_files);
   int bundle(const std::string & root_path, const std::string &file_path, string_set s_executables, string_set s_dirs, string_set s_extra_files);
+  int parse_honeycomb_config_file(std::string filename);
+  // DELETE ME
+  void set_honeycomb_config_file(std::string filename) { 
+    m_honeycomb_config_file = filename; 
+  }
   
 private:
+  void init();
   pid_t execute();
   uid_t random_uid();
   int setup_defaults();
@@ -152,7 +199,6 @@ private:
   int temp_drop();
   int perm_drop();
   int restore_perms();
-  int copy_deps(const std::string & root_path, const std::string & binary_path);
   std::pair<string_set*, string_set*> * dynamic_loads(Elf *elf);
   // Limits
   void set_rlimits();
@@ -192,3 +238,4 @@ public:
 };
 
 /*--------------------------------------------------------------------------*/
+#endif

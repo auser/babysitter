@@ -1,3 +1,6 @@
+#ifndef WORKER_BEE_H
+#define WORKER_BEE_H 
+
 /**
  * Worker bee
  * This class is responsible for finding the dependencies
@@ -90,3 +93,5 @@ private:
   std::string find_binary(const std::string& file);
   bool abs_path(const std::string & path);
 };
+
+#endif

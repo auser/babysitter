@@ -1,3 +1,6 @@
+#ifndef BABYSITTER_H
+#define BABYSITTER_H
+
 #include "honeycomb.h"
 
 //-------------------------------------------------------------------------
@@ -17,3 +20,5 @@ const std::string HELP_MESSAGE =
 
 void  setup_defaults();
 ConfigParser config_parser();
+
+#endif
