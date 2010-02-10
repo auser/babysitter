@@ -18,8 +18,14 @@
 * directories : /var/lib/gems/1.8
 *
 **/
+typedef enum _phase_type_ {
+  T_BUNDLE,
+  T_START,
+  T_STOP
+} phase_type;
+
 typedef struct _phase_ {
-  char *name;
+  phase_type type;
   char *before;
   char *command;
   char *after;

@@ -13,7 +13,7 @@ void usage(const char *progname) {
 extern FILE *yyin;
 
 int main (int argc, char const *argv[])
-{  
+{
   if (!argv[1]) usage(argv[0]);
   
   char *filename = strdup(argv[1]);

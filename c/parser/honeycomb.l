@@ -11,12 +11,12 @@ char *s;
 
 /* Others */
 COMMENT     #
+ENDL        \n
 WHITESPACE  [ \t\r]
-ALPHANUM	[A-Za-z0-9]
-FILENAME  [a-zA-Z0-9\/._-]+
+STRING  [a-zA-Z0-9\/._-]+
 
 ANYTHING  (.*)
-EMPTYLINE [ \t]+\n
+EMPTYLINE [ \t\r]*\n
 
 %x QUOTEDSTR
 
@@ -24,27 +24,24 @@ EMPTYLINE [ \t]+\n
 
 {WHITESPACE}			    ;		/* ignore white space */
   /* Keywords */
-^bundle              yylval.stype = strdup("bundle"); return BUNDLE;
-^start               yylval.stype = strdup("start"); return START;
-stop                return STOP;
-mount               return MOUNT;
-unmount             return UNMOUNT;
-cleanup             return CLEANUP;
+^bundle              yylval.ptype = T_BUNDLE; return BUNDLE;
+^start               yylval.ptype = T_START; return START;
+^stop                yylval.ptype = T_STOP; return STOP;
+^mount               return MOUNT;
+^unmount             return UNMOUNT;
+^cleanup             return CLEANUP;
 before              return BEFORE;
 after               return AFTER;
 
-[\(\)\{\}\:;=,\.\\n]  { debug(4, "Found char: %c\n", yytext[0]);return yytext[0]; }
-[a-zA-Z0-9]+            {
-                          debug(4, "Found string: %s\n", yytext);
-                        	yylval.stype = strdup(yytext);
-                        	return STRING;
-                        }
-
-{FILENAME}          {debug(4, "Found filename: %s\n", yytext); yylval.stype = strdup(yytext); return FILENAME;}
-
+[\(\)\{\}\:;=,\.]   { debug(4, "Found char: %c\n", yytext[0]);return yytext[0]; }
   /* Strings */
+{STRING}({WHITESPACE}?({STRING}))*  {
+                    	yylval.stype = strdup(yytext);
+                    	debug(4, "returning STRING: '%s'\n", yytext);
+                    	return STRING;
+                    }
+
 \"                  {
-  debug(4, "Saw quote, so moving into string state\n");
   memset(buf, 0, 1024);
   s = buf;
   BEGIN QUOTEDSTR;
@@ -54,16 +51,16 @@ after               return AFTER;
 <QUOTEDSTR>\\\"        {*s++ = '\"';}
 <QUOTEDSTR>\"          {
   *s = 0;
-  BEGIN 0;
-  printf("String: %s\n", buf);
+  BEGIN 0; // get outta here
   yylval.stype = strdup(buf);
   return STRING;
 }
-<QUOTEDSTR>\n          {debug(3, "Not sure... \n");}
-<QUOTEDSTR>.           {*s++ = *yytext;}
+<QUOTEDSTR>\n           {fprintf(stderr, "Error: %4d\tInvalid string\n", yylineno); BEGIN 0;}
+<QUOTEDSTR>.            {*s++ = *yytext;}
 
-{COMMENT}{ANYTHING} {debug(4, "%4d\tIgnoring comment: %s", yylineno, yytext);} /* ignore comments */
-{EMPTYLINE}         debug(4, "%4d\tEmpty line\n", yylineno);++yylineno;  /* ignore */ 
-.                   debug(4, "%4d\tIgnoring: %s", yytext);
+{COMMENT}{ANYTHING}\n   {debug(4, "%4d\tIgnoring comment: %s", ++yylineno, yytext);} /* ignore comments */
+{EMPTYLINE}             debug(4, "%4d\tEmpty line\n", ++yylineno);  /* ignore */ 
+{ENDL}$                 debug(4, "%4d\tNewline\n", yylineno);return ENDL;
+.                       debug(4, "%4d\tIgnoring: %s", yytext);
 
 %%

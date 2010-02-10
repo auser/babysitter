@@ -49,8 +49,7 @@
      BEFORE = 265,
      AFTER = 266,
      STRING = 267,
-     FILENAME = 268,
-     WHITESPACE = 269
+     ENDL = 268
    };
 #endif
 /* Tokens.  */
@@ -64,8 +63,7 @@
 #define BEFORE 265
 #define AFTER 266
 #define STRING 267
-#define FILENAME 268
-#define WHITESPACE 269
+#define ENDL 268
 
 
 
@@ -77,9 +75,10 @@ typedef union YYSTYPE
   int i; 
   char* stype;
   char ctype;
+  phase_type ptype;
 }
 /* Line 1529 of yacc.c.  */
-#line 83 "y.tab.h"
+#line 82 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

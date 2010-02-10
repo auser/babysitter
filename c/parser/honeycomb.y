@@ -11,31 +11,36 @@ extern int yylineno;
   int i; 
   char* stype;
   char ctype;
+  phase_type ptype;
 }
 
 %token <stype> BUNDLE START STOP MOUNT UNMOUNT CLEANUP PERIOD 
 %token <stype> BEFORE AFTER
-%token <stype> STRING FILENAME
-%token <ctype> WHITESPACE
+%token <stype> STRING
+%token <ctype> ENDL
+
+%left ':'
+
+%type<stype> line;
+%type <ptype> phase_decl;
 
 %%
 
 // grammar
 
 phase:
-  phase_decl line             {debug(3, "Found a phase: %s\n", "2");}
-  | phase_decl FILENAME       {debug(4, "Found phase filename: %s\n", $2);}
-  | phase_decl                {debug(4, "Found empty phase\n");}
+  | phase_decl line           {debug(3, "Found a phase: [%s %s]\n", ptype_to_string($1), $2);}
+  | phase_decl ENDL           {debug(4, "Found empty phase\n");}
   ;
 
 phase_decl:
-  BUNDLE ':'               {debug(3, "Found a phase_decl: %s\n", $1);}
-  | START ':'              {debug(3, "Found start decl: %s\n", $1);}
-  ;
-  
+  BUNDLE ':'               {debug(3, "Found a phase_decl: %d\n", $1); $$ = T_BUNDLE;}
+  | START ':'              {debug(3, "Found start decl: %d\n", $1);}
+  ;  
+
 line:
-line STRING                 {debug(4, "found a line: %s\n", $2); setType($1, $0);}
-  | STRING                    {debug(4, "Found a string (in grammar): %s\n", $1);}
+  line STRING                 {strcpy($$,strcat($$,$2));}
+  | STRING                    {strcpy($$,$1);}
   ;
 
 %%

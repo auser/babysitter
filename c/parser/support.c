@@ -16,6 +16,22 @@ int debug(int level, char *fmt, ...) {
 	return r;
 }
 
+char *ptype_to_string(phase_type t) {
+  switch (t) {
+    case T_BUNDLE:
+      return strdup("bundle");
+      break;
+    case T_START:
+      return strdup("start");
+      break;
+    case T_STOP:
+      return strdup("stop");
+      break;
+    default:
+      return "unknown";
+  }
+}
+
 honeycomb_config* new_config() {
   honeycomb_config *c;
 	c = malloc(sizeof(honeycomb_config *));
@@ -28,17 +44,16 @@ honeycomb_config* new_config() {
 	// Should never get here
 }
 
-phase* new_phase(char *name) {
+phase* new_phase(phase_type t) {
   phase *p;
   p = malloc(sizeof(phase *));
   if (p) {
-    debug(3, "Created a new phase: %s\n", name);
-    p->name = name;
+    debug(3, "Created a new phase: %d\n", t);
+    p->type = t;
     p->before = 0;
     p->command = 0;
     p->after = 0;
   } else {
-    free(name);
   }
   return p;
 }
@@ -49,9 +64,7 @@ int add_phase(honeycomb_config *c, phase *p) {
   phase **nphases = malloc(sizeof(phase *) * n);
   
   if (!nphases) {
-    char *s = 0;
-    if (p && p->name) strncpy(s, p->name, strlen(p->name));
-    fprintf(stderr, "Couldn't add phase: '%s', no memory available\n", s ? s : "<null>");
+    fprintf(stderr, "Couldn't add phase: '%d', no memory available\n", p->type);
     return -1;
   }
   int i;
