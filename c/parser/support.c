@@ -4,14 +4,7 @@
 #include "honeycomb_config.h"
 #include "c_ext.h"
 
-int debug(int level, char *fmt, ...);
-honeycomb_config* new_config();
-int add_phase(honeycomb_config *c, phase *p);
-phase* new_phase(char *name);
-void free_config(honeycomb_config *c);
-void free_phase(phase *p);
-
-int debug_level = 1;
+int debug_level = 3;
 
 int debug(int level, char *fmt, ...) {
   int r;
@@ -39,6 +32,7 @@ phase* new_phase(char *name) {
   phase *p;
   p = malloc(sizeof(phase *));
   if (p) {
+    debug(3, "Created a new phase: %s\n", name);
     p->name = name;
     p->before = 0;
     p->command = 0;

@@ -12,14 +12,17 @@ extern int yylineno;
   char* str;
 }
 
-%token PHASE_CMD HOOK_CMD
+%token <str> BUNDLE START STOP MOUNT UNMOUNT CLEANUP PERIOD 
+%token <str> BEFORE AFTER
+%token <str> LINE
+%token <char> DECL_SEP COLON
 
 %%
 
 // grammar
 
 phase:
-  HOOK_CMD
+  BUNDLE COLON LINE
   ;
 
 %%
