@@ -34,7 +34,7 @@ phase_decl:
   ;
   
 line:
-  line STRING                 {debug(4, "found a line: %s\n", $2);}
+line STRING                 {debug(4, "found a line: %s\n", $2); setType($1, $0);}
   | STRING                    {debug(4, "Found a string (in grammar): %s\n", $1);}
   ;
 
