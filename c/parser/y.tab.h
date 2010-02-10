@@ -49,8 +49,13 @@
      BEFORE = 265,
      AFTER = 266,
      LINE = 267,
-     DECL_SEP = 268,
-     COLON = 269
+     FILENAME = 268,
+     DECL_SEP = 269,
+     NEWLINE = 270,
+     WHITESPACE = 271,
+     QUOTE = 272,
+     OBRACE = 273,
+     EBRACE = 274
    };
 #endif
 /* Tokens.  */
@@ -64,8 +69,13 @@
 #define BEFORE 265
 #define AFTER 266
 #define LINE 267
-#define DECL_SEP 268
-#define COLON 269
+#define FILENAME 268
+#define DECL_SEP 269
+#define NEWLINE 270
+#define WHITESPACE 271
+#define QUOTE 272
+#define OBRACE 273
+#define EBRACE 274
 
 
 
@@ -76,9 +86,10 @@ typedef union YYSTYPE
 {
   int i; 
   char* str;
+  char c;
 }
 /* Line 1529 of yacc.c.  */
-#line 82 "y.tab.h"
+#line 93 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

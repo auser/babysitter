@@ -4,7 +4,7 @@
 #include "honeycomb_config.h"
 #include "c_ext.h"
 
-int debug_level = 3;
+int debug_level = 4;
 
 int debug(int level, char *fmt, ...) {
   int r;
