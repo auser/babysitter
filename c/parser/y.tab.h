@@ -39,31 +39,13 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     PHASE = 258,
-     HOOK = 259,
-     WORD = 260,
-     LINE = 261,
-     SEMICOLON = 262,
-     QUOTE = 263,
-     OBRACE = 264,
-     EBRACE = 265,
-     WHITESPACE = 266,
-     COLON = 267,
-     PERIOD = 268
+     PHASE_CMD = 258,
+     HOOK_CMD = 259
    };
 #endif
 /* Tokens.  */
-#define PHASE 258
-#define HOOK 259
-#define WORD 260
-#define LINE 261
-#define SEMICOLON 262
-#define QUOTE 263
-#define OBRACE 264
-#define EBRACE 265
-#define WHITESPACE 266
-#define COLON 267
-#define PERIOD 268
+#define PHASE_CMD 258
+#define HOOK_CMD 259
 
 
 
@@ -76,7 +58,7 @@ typedef union YYSTYPE
   char* str;
 }
 /* Line 1529 of yacc.c.  */
-#line 80 "y.tab.h"
+#line 62 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

@@ -14,7 +14,10 @@ all: test_hc_config
 clean:
 	rm -f *.o y.tab.h
 
-y.tab.h: honeycomb.y
+lex:
+	lex honeycomb.l
+
+y.tab.h: lex honeycomb.y
 	yacc $(YACCFLAGS) honeycomb.y
 
 test_hc_config: honeycomb.c y.tab.h test_hc_config.o $(LIB_OBJ)

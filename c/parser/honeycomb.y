@@ -12,18 +12,14 @@ extern int yylineno;
   char* str;
 }
 
-%token <str> PHASE HOOK
-%token <str> WORD LINE
-%token <char> SEMICOLON QUOTE OBRACE EBRACE WHITESPACE COLON PERIOD
+%token PHASE_CMD HOOK_CMD
 
 %%
 
 // grammar
 
-other:
-  PERIOD {printf(">SD>Fd\n");}
-  | LINE {printf("line: %s\n", $1);}
-  | PHASE {printf("Phase: %s\n", $1);}
+phase:
+  HOOK_CMD
   ;
 
 %%

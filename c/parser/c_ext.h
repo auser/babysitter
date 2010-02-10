@@ -10,6 +10,7 @@ extern "C" {
 
 extern int yylex(void);
 extern int yyparse(void);
+extern int yywrap(void);
 int yyerror(const char *str);
 
 #endif

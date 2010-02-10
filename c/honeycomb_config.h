@@ -18,21 +18,23 @@
 * directories : /var/lib/gems/1.8
 *
 **/
-
-typedef enum phases {
-  PHASE_BUNDLE,
-  PHASE_MOUNT
-} phase_type;
-
 typedef struct _phase_ {
-  phase_type phase;
+  char *name;
+  char *before;
   char *command;
+  char *after;
 } phase;
 
 typedef struct _honeycomb_config_ {
-  char *name;
-  
+  char *filename;           // Filename of the config file
+  char *app_type;           // Application type (i.e. rack, java, etc.)
+  char *root_directory;     // Root directory to operate inside of (can be generated)
+  char *environment_vars;   // a list of environment variables to start
+  char *stdout;             // STDOUT
+  char *stdin;              // STDIN
+  // Phases
+  size_t num_phases;
+  phase **phases;
 } honeycomb_config;
-
 
 #endif
