@@ -48,14 +48,9 @@
      PERIOD = 264,
      BEFORE = 265,
      AFTER = 266,
-     LINE = 267,
+     STRING = 267,
      FILENAME = 268,
-     DECL_SEP = 269,
-     NEWLINE = 270,
-     WHITESPACE = 271,
-     QUOTE = 272,
-     OBRACE = 273,
-     EBRACE = 274
+     WHITESPACE = 269
    };
 #endif
 /* Tokens.  */
@@ -68,14 +63,9 @@
 #define PERIOD 264
 #define BEFORE 265
 #define AFTER 266
-#define LINE 267
+#define STRING 267
 #define FILENAME 268
-#define DECL_SEP 269
-#define NEWLINE 270
-#define WHITESPACE 271
-#define QUOTE 272
-#define OBRACE 273
-#define EBRACE 274
+#define WHITESPACE 269
 
 
 
@@ -85,11 +75,11 @@ typedef union YYSTYPE
 #line 10 "honeycomb.y"
 {
   int i; 
-  char* str;
-  char c;
+  char* stype;
+  char ctype;
 }
 /* Line 1529 of yacc.c.  */
-#line 93 "y.tab.h"
+#line 83 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

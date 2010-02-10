@@ -10,29 +10,22 @@ char *s;
 %}
 
 /* Others */
-PERIOD      \.
-COLON       :
 COMMENT     #
 WHITESPACE  [ \t\r]
-
-ALPHA			[A-Za-z]
-DIGIT			[0-9]
 ALPHANUM	[A-Za-z0-9]
-
-LINE      {ALPHA}({WHITESPACE}*{ALPHANUM})
-FILENAME  [a-zA-Z0-9\/.-]+
+FILENAME  [a-zA-Z0-9\/._-]+
 
 ANYTHING  (.*)
-NEWLINE   '\n'
-EMPTYLINE [ '\t''\n']+
+EMPTYLINE [ \t]+\n
 
-%x PHASE
+%x QUOTEDSTR
 
 %%
+
 {WHITESPACE}			    ;		/* ignore white space */
   /* Keywords */
-bundle              yylval.str = strdup("bundle"); return BUNDLE;
-start               yylval.str = strdup("start"); return START;
+^bundle              yylval.stype = strdup("bundle"); return BUNDLE;
+^start               yylval.stype = strdup("start"); return START;
 stop                return STOP;
 mount               return MOUNT;
 unmount             return UNMOUNT;
@@ -40,20 +33,37 @@ cleanup             return CLEANUP;
 before              return BEFORE;
 after               return AFTER;
 
-:                   return DECL_SEP;
-{LINE}             {
-                      debug(3, "%4d\tFound Line: %s\n", yylineno, yytext);
-                      yylval.str = strdup(yytext);
-                      return LINE;
-                    }
+[\(\)\{\}\:;=,\.\\n]  { debug(4, "Found char: %c\n", yytext[0]);return yytext[0]; }
+[a-zA-Z0-9]+            {
+                          debug(4, "Found string: %s\n", yytext);
+                        	yylval.stype = strdup(yytext);
+                        	return STRING;
+                        }
 
-{FILENAME}          yylval.str = strdup(yytext); return FILENAME;
-'.'                 return PERIOD;
-\"                  return QUOTE;
-\{                  return OBRACE;
-\}                  return EBRACE;
+{FILENAME}          {debug(4, "Found filename: %s\n", yytext); yylval.stype = strdup(yytext); return FILENAME;}
 
-{COMMENT}{ANYTHING}   {debug(4, "%4d\tIgnoring comment: %s\n", yylineno, yytext);} /* ignore comments */
-{EMPTYLINE}           /* ignore */ ++yylineno;
+  /* Strings */
+\"                  {
+  debug(4, "Saw quote, so moving into string state\n");
+  memset(buf, 0, 1024);
+  s = buf;
+  BEGIN QUOTEDSTR;
+}
+<QUOTEDSTR>\\n         {*s++ = '\n';}
+<QUOTEDSTR>\\t         {*s++ = '\t';}
+<QUOTEDSTR>\\\"        {*s++ = '\"';}
+<QUOTEDSTR>\"          {
+  *s = 0;
+  BEGIN 0;
+  printf("String: %s\n", buf);
+  yylval.stype = strdup(buf);
+  return STRING;
+}
+<QUOTEDSTR>\n          {debug(3, "Not sure... \n");}
+<QUOTEDSTR>.           {*s++ = *yytext;}
+
+{COMMENT}{ANYTHING} {debug(4, "%4d\tIgnoring comment: %s", yylineno, yytext);} /* ignore comments */
+{EMPTYLINE}         debug(4, "%4d\tEmpty line\n", yylineno);++yylineno;  /* ignore */ 
+.                   debug(4, "%4d\tIgnoring: %s", yytext);
 
 %%

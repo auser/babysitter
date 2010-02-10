@@ -75,14 +75,9 @@
      PERIOD = 264,
      BEFORE = 265,
      AFTER = 266,
-     LINE = 267,
+     STRING = 267,
      FILENAME = 268,
-     DECL_SEP = 269,
-     NEWLINE = 270,
-     WHITESPACE = 271,
-     QUOTE = 272,
-     OBRACE = 273,
-     EBRACE = 274
+     WHITESPACE = 269
    };
 #endif
 /* Tokens.  */
@@ -95,14 +90,9 @@
 #define PERIOD 264
 #define BEFORE 265
 #define AFTER 266
-#define LINE 267
+#define STRING 267
 #define FILENAME 268
-#define DECL_SEP 269
-#define NEWLINE 270
-#define WHITESPACE 271
-#define QUOTE 272
-#define OBRACE 273
-#define EBRACE 274
+#define WHITESPACE 269
 
 
 
@@ -141,11 +131,11 @@ typedef union YYSTYPE
 #line 10 "honeycomb.y"
 {
   int i; 
-  char* str;
-  char c;
+  char* stype;
+  char ctype;
 }
 /* Line 193 of yacc.c.  */
-#line 149 "y.tab.c"
+#line 139 "y.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -158,7 +148,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 162 "y.tab.c"
+#line 152 "y.tab.c"
 
 #ifdef short
 # undef short
@@ -376,17 +366,17 @@ union yyalloc
 #define YYLAST   7
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  20
+#define YYNTOKENS  16
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  3
+#define YYNNTS  4
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  5
+#define YYNRULES  8
 /* YYNRULES -- Number of states.  */
-#define YYNSTATES  11
+#define YYNSTATES  12
 
 /* YYTRANSLATE(YYLEX) -- Bison symbol number corresponding to YYLEX.  */
 #define YYUNDEFTOK  2
-#define YYMAXUTOK   274
+#define YYMAXUTOK   269
 
 #define YYTRANSLATE(YYX)						\
   ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
@@ -399,7 +389,7 @@ static const yytype_uint8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,    15,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -420,8 +410,7 @@ static const yytype_uint8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
-       5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18,    19
+       5,     6,     7,     8,     9,    10,    11,    12,    13,    14
 };
 
 #if YYDEBUG
@@ -429,20 +418,21 @@ static const yytype_uint8 yytranslate[] =
    YYRHS.  */
 static const yytype_uint8 yyprhs[] =
 {
-       0,     0,     3,     7,    10,    13
+       0,     0,     3,     6,     9,    11,    14,    17,    20
 };
 
 /* YYRHS -- A `-1'-separated list of the rules' RHS.  */
 static const yytype_int8 yyrhs[] =
 {
-      21,     0,    -1,    22,    12,    15,    -1,    22,    15,    -1,
-       3,    14,    -1,     4,    14,    -1
+      17,     0,    -1,    18,    19,    -1,    18,    13,    -1,    18,
+      -1,     3,    15,    -1,     4,    15,    -1,    19,    12,    -1,
+      12,    -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    26,    26,    27,    31,    32
+       0,    26,    26,    27,    28,    32,    33,    37,    38
 };
 #endif
 
@@ -452,9 +442,8 @@ static const yytype_uint8 yyrline[] =
 static const char *const yytname[] =
 {
   "$end", "error", "$undefined", "BUNDLE", "START", "STOP", "MOUNT",
-  "UNMOUNT", "CLEANUP", "PERIOD", "BEFORE", "AFTER", "LINE", "FILENAME",
-  "DECL_SEP", "NEWLINE", "WHITESPACE", "QUOTE", "OBRACE", "EBRACE",
-  "$accept", "phase", "phase_decl", 0
+  "UNMOUNT", "CLEANUP", "PERIOD", "BEFORE", "AFTER", "STRING", "FILENAME",
+  "WHITESPACE", "':'", "$accept", "phase", "phase_decl", "line", 0
 };
 #endif
 
@@ -464,20 +453,20 @@ static const char *const yytname[] =
 static const yytype_uint16 yytoknum[] =
 {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
-     265,   266,   267,   268,   269,   270,   271,   272,   273,   274
+     265,   266,   267,   268,   269,    58
 };
 # endif
 
 /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    20,    21,    21,    22,    22
+       0,    16,    17,    17,    17,    18,    18,    19,    19
 };
 
 /* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
-       0,     2,     3,     2,     2,     2
+       0,     2,     2,     2,     1,     2,     2,     2,     1
 };
 
 /* YYDEFACT[STATE-NAME] -- Default rule to reduce with in state
@@ -485,29 +474,29 @@ static const yytype_uint8 yyr2[] =
    means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       0,     0,     0,     0,     0,     4,     5,     1,     0,     3,
-       2
+       0,     0,     0,     0,     4,     5,     6,     1,     8,     3,
+       2,     7
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     3,     4
+      -1,     3,     4,    10
 };
 
 /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
    STATE-NUM.  */
-#define YYPACT_NINF -13
+#define YYPACT_NINF -12
 static const yytype_int8 yypact[] =
 {
-      -2,   -10,    -9,     6,   -12,   -13,   -13,   -13,    -8,   -13,
-     -13
+      -3,   -11,    -9,     5,   -10,   -12,   -12,   -12,   -12,   -12,
+      -5,   -12
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -13,   -13,   -13
+     -12,   -12,   -12,   -12
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]].  What to do in state STATE-NUM.  If
@@ -517,20 +506,20 @@ static const yytype_int8 yypgoto[] =
 #define YYTABLE_NINF -1
 static const yytype_uint8 yytable[] =
 {
-       8,     1,     2,     9,     5,     6,     7,    10
+       1,     2,     8,     9,     5,     7,     6,    11
 };
 
 static const yytype_uint8 yycheck[] =
 {
-      12,     3,     4,    15,    14,    14,     0,    15
+       3,     4,    12,    13,    15,     0,    15,    12
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
    symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] =
 {
-       0,     3,     4,    21,    22,    14,    14,     0,    12,    15,
-      15
+       0,     3,     4,    17,    18,    15,    15,     0,    12,    13,
+      19,    12
 };
 
 #define yyerrok		(yyerrstatus = 0)
@@ -1346,27 +1335,42 @@ yyreduce:
     {
         case 2:
 #line 26 "honeycomb.y"
-    {debug(3, "Found a phase: %s\n", (yyvsp[(2) - (3)].str));}
+    {debug(3, "Found a phase: %s\n", "2");}
     break;
 
   case 3:
 #line 27 "honeycomb.y"
-    {debug(4, "Found empty phase\n");}
+    {debug(4, "Found phase filename: %s\n", (yyvsp[(2) - (2)].stype));}
     break;
 
   case 4:
-#line 31 "honeycomb.y"
-    {debug(3, "Found a phase_decl: %s\n", (yyvsp[(1) - (2)].str));}
+#line 28 "honeycomb.y"
+    {debug(4, "Found empty phase\n");}
     break;
 
   case 5:
 #line 32 "honeycomb.y"
-    {debug(3, "Found start decl: %s\n", (yyvsp[(1) - (2)].str));}
+    {debug(3, "Found a phase_decl: %s\n", (yyvsp[(1) - (2)].stype));}
+    break;
+
+  case 6:
+#line 33 "honeycomb.y"
+    {debug(3, "Found start decl: %s\n", (yyvsp[(1) - (2)].stype));}
+    break;
+
+  case 7:
+#line 37 "honeycomb.y"
+    {debug(4, "found a line: %s\n", (yyvsp[(2) - (2)].stype));}
+    break;
+
+  case 8:
+#line 38 "honeycomb.y"
+    {debug(4, "Found a string (in grammar): %s\n", (yyvsp[(1) - (1)].stype));}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1370 "y.tab.c"
+#line 1374 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1580,7 +1584,7 @@ yyreturn:
 }
 
 
-#line 35 "honeycomb.y"
+#line 41 "honeycomb.y"
 
 
 int yyerror(const char *str)
