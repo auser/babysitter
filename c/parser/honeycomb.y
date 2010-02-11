@@ -35,6 +35,7 @@ extern int yylineno;
 program:
   phase
   | attr
+  |
   ;
 
 phase:

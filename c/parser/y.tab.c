@@ -363,7 +363,7 @@ union yyalloc
 /* YYNNTS -- Number of nonterminals.  */
 #define YYNNTS  7
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  12
+#define YYNRULES  13
 /* YYNRULES -- Number of states.  */
 #define YYNSTATES  18
 
@@ -411,24 +411,24 @@ static const yytype_uint8 yytranslate[] =
    YYRHS.  */
 static const yytype_uint8 yyprhs[] =
 {
-       0,     0,     3,     5,     7,    10,    13,    16,    19,    22,
-      25,    28,    31
+       0,     0,     3,     5,     7,     8,    11,    14,    17,    20,
+      23,    26,    29,    32
 };
 
 /* YYRHS -- A `-1'-separated list of the rules' RHS.  */
 static const yytype_int8 yyrhs[] =
 {
-      12,     0,    -1,    13,    -1,    14,    -1,    15,    17,    -1,
-      15,     8,    -1,    16,    17,    -1,    16,     8,    -1,     3,
-      10,    -1,     4,    10,    -1,    17,     7,    -1,    17,     8,
-      -1,     7,    -1
+      12,     0,    -1,    13,    -1,    14,    -1,    -1,    15,    17,
+      -1,    15,     8,    -1,    16,    17,    -1,    16,     8,    -1,
+       3,    10,    -1,     4,    10,    -1,    17,     7,    -1,    17,
+       8,    -1,     7,    -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    36,    36,    37,    41,    42,    46,    47,    51,    64,
-      77,    78,    79
+       0,    36,    36,    37,    38,    42,    43,    47,    48,    52,
+      65,    78,    79,    80
 };
 #endif
 
@@ -456,15 +456,15 @@ static const yytype_uint16 yytoknum[] =
 /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    11,    12,    12,    13,    13,    14,    14,    15,    16,
-      17,    17,    17
+       0,    11,    12,    12,    12,    13,    13,    14,    14,    15,
+      16,    17,    17,    17
 };
 
 /* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
-       0,     2,     1,     1,     2,     2,     2,     2,     2,     2,
-       2,     2,     1
+       0,     2,     1,     1,     0,     2,     2,     2,     2,     2,
+       2,     2,     2,     1
 };
 
 /* YYDEFACT[STATE-NAME] -- Default rule to reduce with in state
@@ -472,8 +472,8 @@ static const yytype_uint8 yyr2[] =
    means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       0,     0,     0,     0,     2,     3,     0,     0,     8,     9,
-       1,    12,     5,     4,     7,     6,    10,    11
+       4,     0,     0,     0,     2,     3,     0,     0,     9,    10,
+       1,    13,     6,     5,     8,     7,    11,    12
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
@@ -1333,28 +1333,28 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-        case 4:
-#line 41 "honeycomb.y"
+        case 5:
+#line 42 "honeycomb.y"
     {debug(3, "Found a phase: [%s %s]\n", ptype_to_string((yyvsp[(1) - (2)].ptype)), (yyvsp[(2) - (2)].stype));}
     break;
 
-  case 5:
-#line 42 "honeycomb.y"
-    {debug(4, "Found empty phase\n");}
-    break;
-
   case 6:
-#line 46 "honeycomb.y"
-    {debug(3, "Found an attribute: [%d %s]\n", (yyvsp[(1) - (2)].atype), (yyvsp[(2) - (2)].stype));}
+#line 43 "honeycomb.y"
+    {debug(4, "Found empty phase\n");}
     break;
 
   case 7:
 #line 47 "honeycomb.y"
-    {debug(4, "Found empty attribute\n");}
+    {debug(3, "Found an attribute: [%d %s]\n", (yyvsp[(1) - (2)].atype), (yyvsp[(2) - (2)].stype));}
     break;
 
   case 8:
-#line 51 "honeycomb.y"
+#line 48 "honeycomb.y"
+    {debug(4, "Found empty attribute\n");}
+    break;
+
+  case 9:
+#line 52 "honeycomb.y"
     {
                                 if (strcmp((yyvsp[(1) - (2)].stype),"bundle") == 0) (yyval.ptype) = T_BUNDLE;
                                 else if (strcmp((yyvsp[(1) - (2)].stype),"start") == 0) (yyval.ptype) = T_START;
@@ -1366,8 +1366,8 @@ yyreduce:
                               }
     break;
 
-  case 9:
-#line 64 "honeycomb.y"
+  case 10:
+#line 65 "honeycomb.y"
     {
                                 if (strcmp((yyvsp[(1) - (2)].stype),"executables") == 0) (yyval.atype) = T_EXECUTABLES;
                                 else if (strcmp((yyvsp[(1) - (2)].stype),"directories") == 0) (yyval.atype) = T_DIRECTORIES;
@@ -1379,18 +1379,18 @@ yyreduce:
                               }
     break;
 
-  case 10:
-#line 77 "honeycomb.y"
-    {strcpy((yyval.stype),strcat((yyval.stype),(yyvsp[(2) - (2)].stype)));}
-    break;
-
   case 11:
 #line 78 "honeycomb.y"
-    {debug(4, "Found the end of the line\n");}
+    {strcpy((yyval.stype),strcat((yyval.stype),(yyvsp[(2) - (2)].stype)));}
     break;
 
   case 12:
 #line 79 "honeycomb.y"
+    {debug(4, "Found the end of the line\n");}
+    break;
+
+  case 13:
+#line 80 "honeycomb.y"
     {strcpy((yyval.stype),(yyvsp[(1) - (1)].stype));}
     break;
 
@@ -1610,7 +1610,7 @@ yyreturn:
 }
 
 
-#line 82 "honeycomb.y"
+#line 83 "honeycomb.y"
 
 
 int yyerror(const char *str)

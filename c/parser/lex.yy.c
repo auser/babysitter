@@ -897,7 +897,7 @@ YY_RULE_SETUP
   *s = 0;
   BEGIN INITIAL; // get outta here
   yylval.stype = strdup(buf);
-  debug(3, "returning STRING '%s'\n", buf);
+  debug(3, "returning QUOTED STRING '%s'\n", buf);
   return STRING;
 }
 	YY_BREAK

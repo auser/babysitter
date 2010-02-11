@@ -64,7 +64,7 @@ EMPTYLINE [ \t\r]*\n
   *s = 0;
   BEGIN INITIAL; // get outta here
   yylval.stype = strdup(buf);
-  debug(3, "returning STRING '%s'\n", buf);
+  debug(3, "returning QUOTED STRING '%s'\n", buf);
   return STRING;
 }
 <QUOTEDSTR>\n           {fprintf(stderr, "Error: %4d\tInvalid string\n", yylineno); BEGIN 0;}
