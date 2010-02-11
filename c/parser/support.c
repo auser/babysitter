@@ -37,8 +37,10 @@ char *ptype_to_string(phase_type t) {
     case T_CLEANUP:
       return strdup("cleanup");
       break;
+    case T_UNKNOWN:
     default:
-      return "unknown";
+      return strdup("unknown");
+      break;
   }
 }
 

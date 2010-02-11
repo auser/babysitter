@@ -36,7 +36,15 @@ phase:
   ;
 
 phase_decl:
-  KEYWORD ':'               {$$ = T_BUNDLE;}
+  KEYWORD ':'                 {
+    if (strcmp($1,"bundle") == 0) $$ = T_BUNDLE;
+    else if (strcmp($1,"start") == 0) $$ = T_START;
+    else if (strcmp($1,"stop") == 0) $$ = T_STOP;
+    else if (strcmp($1,"mount") == 0) $$ = T_MOUNT;
+    else if (strcmp($1,"unmount") == 0) $$ = T_UNMOUNT;
+    else if (strcmp($1,"cleanup") == 0) $$ = T_CLEANUP;
+    else $$ = T_UNKNOWN;
+  }
   ;  
 
 line:

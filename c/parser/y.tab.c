@@ -432,7 +432,7 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    33,    33,    34,    35,    39,    43,    44,    45
+       0,    33,    33,    34,    35,    39,    51,    52,    53
 };
 #endif
 
@@ -1345,27 +1345,35 @@ yyreduce:
 
   case 5:
 #line 39 "honeycomb.y"
-    {(yyval.ptype) = T_BUNDLE;}
+    {
+    if (strcmp((yyvsp[(1) - (2)].stype),"bundle") == 0) (yyval.ptype) = T_BUNDLE;
+    else if (strcmp((yyvsp[(1) - (2)].stype),"start") == 0) (yyval.ptype) = T_START;
+    else if (strcmp((yyvsp[(1) - (2)].stype),"stop") == 0) (yyval.ptype) = T_STOP;
+    else if (strcmp((yyvsp[(1) - (2)].stype),"mount") == 0) (yyval.ptype) = T_MOUNT;
+    else if (strcmp((yyvsp[(1) - (2)].stype),"unmount") == 0) (yyval.ptype) = T_UNMOUNT;
+    else if (strcmp((yyvsp[(1) - (2)].stype),"cleanup") == 0) (yyval.ptype) = T_CLEANUP;
+    else (yyval.ptype) = T_UNKNOWN;
+  }
     break;
 
   case 6:
-#line 43 "honeycomb.y"
+#line 51 "honeycomb.y"
     {strcpy((yyval.stype),strcat((yyval.stype),(yyvsp[(2) - (2)].stype)));}
     break;
 
   case 7:
-#line 44 "honeycomb.y"
+#line 52 "honeycomb.y"
     {debug(4, "Found the end of the line\n");}
     break;
 
   case 8:
-#line 45 "honeycomb.y"
+#line 53 "honeycomb.y"
     {strcpy((yyval.stype),(yyvsp[(1) - (1)].stype));}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1369 "y.tab.c"
+#line 1377 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1579,7 +1587,7 @@ yyreturn:
 }
 
 
-#line 48 "honeycomb.y"
+#line 56 "honeycomb.y"
 
 
 int yyerror(const char *str)
