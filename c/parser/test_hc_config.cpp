@@ -6,7 +6,7 @@
 #include "c_ext.h"
 
 void usage(const char *progname) {
-  fprintf(stderr, "Usage: %s <filename\n", progname);
+  fprintf(stderr, "Usage: %s <filename>\n", progname);
   exit(-1);
 }
 
