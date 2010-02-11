@@ -48,6 +48,7 @@ EMPTYLINE [ \t\r]*\n
   /* Keywords */
 {KEYWORDS}          debug(3, "next phase: %s\n", yytext); return KEYWORD;
 
+root_dir:           {debug(3, "encountered root_dir: %s\n", yytext); return ROOT_DIR;}
 directories:        {debug(3, "encountered directories: %s\n", yytext); return DIRECTORIES;}
 executables:        {debug(3, "encountered executables: %s\n", yytext); return EXECUTABLES;}
 env:                {debug(3, "encountered envs: %s\n", yytext); return ENV;}

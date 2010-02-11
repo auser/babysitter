@@ -28,6 +28,15 @@ typedef enum _phase_type_ {
   T_UNKNOWN
 } phase_type;
 
+typedef enum _attr_type_ {
+  T_DIRECTORIES,
+  T_EXECUTABLES,
+  T_ENV,
+  T_STDOUT,
+  T_STDIN,
+  T_ROOT_DIR
+} attr_type;
+
 typedef struct _phase_ {
   phase_type type;
   char *before;

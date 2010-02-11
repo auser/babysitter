@@ -17,6 +17,9 @@ int debug(int level, char *fmt, ...) {
 	return r;
 }
 
+/**
+* turn a phase_type into a string
+**/
 char *ptype_to_string(phase_type t) {
   switch (t) {
     case T_BUNDLE:
@@ -63,6 +66,7 @@ char *collect_to_period(char *str) {
   return strdup(buf);
 }
 
+// create a new config
 honeycomb_config* new_config() {
   honeycomb_config *c;
 	c = malloc(sizeof(honeycomb_config *));
@@ -75,6 +79,7 @@ honeycomb_config* new_config() {
 	// Should never get here
 }
 
+// Create a new phase
 phase* new_phase(phase_type t) {
   phase *p;
   p = malloc(sizeof(phase *));

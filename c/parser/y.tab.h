@@ -48,8 +48,9 @@
      ENV = 264,
      STDOUT = 265,
      STDIN = 266,
-     ENDL = 267,
-     BLOCK_SET = 268
+     ROOT_DIR = 267,
+     ENDL = 268,
+     BLOCK_SET = 269
    };
 #endif
 /* Tokens.  */
@@ -62,8 +63,9 @@
 #define ENV 264
 #define STDOUT 265
 #define STDIN 266
-#define ENDL 267
-#define BLOCK_SET 268
+#define ROOT_DIR 267
+#define ENDL 268
+#define BLOCK_SET 269
 
 
 
@@ -77,9 +79,10 @@ typedef union YYSTYPE
   char** btype;
   char ctype;
   phase_type ptype;
+  attr_type atype;
 }
 /* Line 1529 of yacc.c.  */
-#line 83 "y.tab.h"
+#line 86 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
