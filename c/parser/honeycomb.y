@@ -99,7 +99,6 @@ attr_decl:
 // Blocks
 block:
   BLOCK_SET                   {debug(3, "Found a block\n");$$ = $1;}
-  | BLOCK_SET '\n'            {$$ = $1;}
   ;
 
 // Line terminated by '\n'
