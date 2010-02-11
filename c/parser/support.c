@@ -4,7 +4,8 @@
 #include "honeycomb_config.h"
 #include "c_ext.h"
 
-int debug_level = 4;
+int debug_level = 3;
+#define BUF_SIZE 1024
 
 int debug(int level, char *fmt, ...) {
   int r;
@@ -27,9 +28,37 @@ char *ptype_to_string(phase_type t) {
     case T_STOP:
       return strdup("stop");
       break;
+    case T_MOUNT:
+      return strdup("mount");
+      break;
+    case T_UNMOUNT:
+      return strdup("unmount");
+      break;
+    case T_CLEANUP:
+      return strdup("cleanup");
+      break;
     default:
       return "unknown";
   }
+}
+
+/**
+* Split a string and collect the characters until the '.'
+*   bundle.before -> bundle
+**/
+char *collect_to_period(char *str) {
+  char buf[BUF_SIZE];
+  int i = 0;
+  /* strip off the .before (gross) */
+  memset(buf, 0, BUF_SIZE);
+  for (i = 0; i < strlen(str); i++) {
+    if (str[i] == '.') {
+      buf[i + 1] = 0;
+      break;
+    }
+    buf[i] = str[i];
+  }
+  return strdup(buf);
 }
 
 honeycomb_config* new_config() {

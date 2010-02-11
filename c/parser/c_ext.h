@@ -17,6 +17,7 @@ int yyerror(const char *str);
 
 int debug(int level, char *fmt, ...);
 char *ptype_to_string(phase_type t);
+char *collect_to_period(char *str);
 honeycomb_config* new_config();
 int add_phase(honeycomb_config *c, phase *p);
 phase* new_phase(phase_type t);

@@ -22,3 +22,6 @@ y.tab.h: lex honeycomb.y
 
 test_hc_config: honeycomb.c y.tab.h test_hc_config.o $(LIB_OBJ)
 	$(GCC) $(CPPFLAGS) -o $(OUT) test_hc_config.cpp $(LIB_OBJ) -ll
+
+test_match: honeycomb.c y.tab.h test_hc_config.o $(LIB_OBJ)
+	$(CC) $(CPPFLAGS) -o $(OUT)_parser honeycomb.c lex.yy.o support.o -lfl

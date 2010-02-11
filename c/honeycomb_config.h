@@ -21,7 +21,10 @@
 typedef enum _phase_type_ {
   T_BUNDLE,
   T_START,
-  T_STOP
+  T_STOP,
+  T_MOUNT,
+  T_UNMOUNT,
+  T_CLEANUP
 } phase_type;
 
 typedef struct _phase_ {

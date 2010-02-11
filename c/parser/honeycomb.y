@@ -10,14 +10,16 @@ extern int yylineno;
 %union {
   int i; 
   char* stype;
+  char** btype;
   char ctype;
   phase_type ptype;
 }
 
-%token <stype> BUNDLE START STOP MOUNT UNMOUNT CLEANUP PERIOD 
+%token <stype> KEYWORD
 %token <stype> BEFORE AFTER
 %token <stype> STRING
 %token <ctype> ENDL
+%token <btype> BLOCK_SET
 
 %left ':'
 
@@ -34,8 +36,7 @@ phase:
   ;
 
 phase_decl:
-  BUNDLE ':'               {debug(3, "Found a phase_decl: %d\n", $1); $$ = T_BUNDLE;}
-  | START ':'              {debug(3, "Found start decl: %d\n", $1);}
+  KEYWORD ':'               {$$ = T_BUNDLE;}
   ;  
 
 line:

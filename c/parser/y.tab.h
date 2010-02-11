@@ -39,31 +39,21 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     BUNDLE = 258,
-     START = 259,
-     STOP = 260,
-     MOUNT = 261,
-     UNMOUNT = 262,
-     CLEANUP = 263,
-     PERIOD = 264,
-     BEFORE = 265,
-     AFTER = 266,
-     STRING = 267,
-     ENDL = 268
+     KEYWORD = 258,
+     BEFORE = 259,
+     AFTER = 260,
+     STRING = 261,
+     ENDL = 262,
+     BLOCK_SET = 263
    };
 #endif
 /* Tokens.  */
-#define BUNDLE 258
-#define START 259
-#define STOP 260
-#define MOUNT 261
-#define UNMOUNT 262
-#define CLEANUP 263
-#define PERIOD 264
-#define BEFORE 265
-#define AFTER 266
-#define STRING 267
-#define ENDL 268
+#define KEYWORD 258
+#define BEFORE 259
+#define AFTER 260
+#define STRING 261
+#define ENDL 262
+#define BLOCK_SET 263
 
 
 
@@ -74,11 +64,12 @@ typedef union YYSTYPE
 {
   int i; 
   char* stype;
+  char** btype;
   char ctype;
   phase_type ptype;
 }
 /* Line 1529 of yacc.c.  */
-#line 82 "y.tab.h"
+#line 73 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
