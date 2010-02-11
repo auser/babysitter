@@ -40,6 +40,7 @@ phase_decl:
 
 line:
   line STRING                 {strcpy($$,strcat($$,$2));}
+  | line ENDL                 {debug(4, "Found the end of the line\n");}
   | STRING                    {strcpy($$,$1);}
   ;
 

@@ -362,16 +362,16 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  7
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   7
+#define YYLAST   8
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  15
 /* YYNNTS -- Number of nonterminals.  */
 #define YYNNTS  4
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  8
+#define YYNRULES  9
 /* YYNRULES -- Number of states.  */
-#define YYNSTATES  12
+#define YYNSTATES  13
 
 /* YYTRANSLATE(YYLEX) -- Bison symbol number corresponding to YYLEX.  */
 #define YYUNDEFTOK  2
@@ -417,21 +417,21 @@ static const yytype_uint8 yytranslate[] =
    YYRHS.  */
 static const yytype_uint8 yyprhs[] =
 {
-       0,     0,     3,     4,     7,    10,    13,    16,    19
+       0,     0,     3,     4,     7,    10,    13,    16,    19,    22
 };
 
 /* YYRHS -- A `-1'-separated list of the rules' RHS.  */
 static const yytype_int8 yyrhs[] =
 {
       16,     0,    -1,    -1,    17,    18,    -1,    17,    13,    -1,
-       3,    14,    -1,     4,    14,    -1,    18,    12,    -1,    12,
-      -1
+       3,    14,    -1,     4,    14,    -1,    18,    12,    -1,    18,
+      13,    -1,    12,    -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    31,    31,    32,    33,    37,    38,    42,    43
+       0,    31,    31,    32,    33,    37,    38,    42,    43,    44
 };
 #endif
 
@@ -459,13 +459,13 @@ static const yytype_uint16 yytoknum[] =
 /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    15,    16,    16,    16,    17,    17,    18,    18
+       0,    15,    16,    16,    16,    17,    17,    18,    18,    18
 };
 
 /* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
-       0,     2,     0,     2,     2,     2,     2,     2,     1
+       0,     2,     0,     2,     2,     2,     2,     2,     2,     1
 };
 
 /* YYDEFACT[STATE-NAME] -- Default rule to reduce with in state
@@ -473,8 +473,8 @@ static const yytype_uint8 yyr2[] =
    means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       2,     0,     0,     0,     0,     5,     6,     1,     8,     4,
-       3,     7
+       2,     0,     0,     0,     0,     5,     6,     1,     9,     4,
+       3,     7,     8
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
@@ -488,8 +488,8 @@ static const yytype_int8 yydefgoto[] =
 #define YYPACT_NINF -11
 static const yytype_int8 yypact[] =
 {
-      -3,    -9,    -8,     4,   -10,   -11,   -11,   -11,   -11,   -11,
-      -5,   -11
+      -3,    -7,    -6,     6,   -10,   -11,   -11,   -11,   -11,   -11,
+      -8,   -11,   -11
 };
 
 /* YYPGOTO[NTERM-NUM].  */
@@ -505,12 +505,12 @@ static const yytype_int8 yypgoto[] =
 #define YYTABLE_NINF -1
 static const yytype_uint8 yytable[] =
 {
-       1,     2,     8,     9,     7,     5,     6,    11
+       1,     2,     8,     9,    11,    12,     7,     5,     6
 };
 
 static const yytype_uint8 yycheck[] =
 {
-       3,     4,    12,    13,     0,    14,    14,    12
+       3,     4,    12,    13,    12,    13,     0,    14,    14
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
@@ -518,7 +518,7 @@ static const yytype_uint8 yycheck[] =
 static const yytype_uint8 yystos[] =
 {
        0,     3,     4,    16,    17,    14,    14,     0,    12,    13,
-      18,    12
+      18,    12,    13
 };
 
 #define yyerrok		(yyerrstatus = 0)
@@ -1359,12 +1359,17 @@ yyreduce:
 
   case 8:
 #line 43 "honeycomb.y"
+    {debug(4, "Found the end of the line\n");}
+    break;
+
+  case 9:
+#line 44 "honeycomb.y"
     {strcpy((yyval.stype),(yyvsp[(1) - (1)].stype));}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1368 "y.tab.c"
+#line 1373 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1578,7 +1583,7 @@ yyreturn:
 }
 
 
-#line 46 "honeycomb.y"
+#line 47 "honeycomb.y"
 
 
 int yyerror(const char *str)

@@ -5,7 +5,9 @@
 #include "c_ext.h"
 #include "y.tab.h"
 
-char buf[1024]; 
+#define BUF_SIZE 1024
+
+char buf[BUF_SIZE]; 
 char *s;
 %}
 
@@ -19,21 +21,24 @@ ANYTHING  (.*)
 EMPTYLINE [ \t\r]*\n
 
 %x QUOTEDSTR
+%x BLOCK
 
 %%
 
 {WHITESPACE}			    ;		/* ignore white space */
+
   /* Keywords */
-^bundle              yylval.ptype = T_BUNDLE; return BUNDLE;
-^start               yylval.ptype = T_START; return START;
-^stop                yylval.ptype = T_STOP; return STOP;
-^mount               return MOUNT;
-^unmount             return UNMOUNT;
-^cleanup             return CLEANUP;
-before              return BEFORE;
-after               return AFTER;
+bundle              debug(4, "next phase: bundle\n"); yylval.ptype = T_BUNDLE; return BUNDLE;
+start               debug(4, "next phase: start\n"); yylval.ptype = T_START; return START;
+stop                debug(4, "next phase: stop\n"); yylval.ptype = T_STOP; return STOP;
+mount               debug(4, "next phase: mount\n"); return MOUNT;
+unmount             debug(4, "next phase: unmount\n"); return UNMOUNT;
+cleanup             debug(4, "next phase: cleanup\n"); return CLEANUP;
+before              debug(4, "next hook: before\n"); return BEFORE;
+after               debug(4, "next hook: after\n"); return AFTER;
 
 [\(\)\{\}\:;=,\.]   { debug(4, "Found char: %c\n", yytext[0]);return yytext[0]; }
+
   /* Strings */
 {STRING}({WHITESPACE}?({STRING}))*  {
                     	yylval.stype = strdup(yytext);
@@ -42,7 +47,7 @@ after               return AFTER;
                     }
 
 \"                  {
-  memset(buf, 0, 1024);
+  memset(buf, 0, BUF_SIZE);
   s = buf;
   BEGIN QUOTEDSTR;
 }
@@ -51,16 +56,18 @@ after               return AFTER;
 <QUOTEDSTR>\\\"        {*s++ = '\"';}
 <QUOTEDSTR>\"          {
   *s = 0;
-  BEGIN 0; // get outta here
+  BEGIN INITIAL; // get outta here
   yylval.stype = strdup(buf);
+  debug(4, "returning STRING: '%s'\n", yytext);
   return STRING;
 }
 <QUOTEDSTR>\n           {fprintf(stderr, "Error: %4d\tInvalid string\n", yylineno); BEGIN 0;}
 <QUOTEDSTR>.            {*s++ = *yytext;}
 
+  /* blocks */
+
+  /* everything else */
 {COMMENT}{ANYTHING}\n   {debug(4, "%4d\tIgnoring comment: %s", ++yylineno, yytext);} /* ignore comments */
 {EMPTYLINE}             debug(4, "%4d\tEmpty line\n", ++yylineno);  /* ignore */ 
-{ENDL}$                 debug(4, "%4d\tNewline\n", yylineno);return ENDL;
-.                       debug(4, "%4d\tIgnoring: %s", yytext);
 
 %%
