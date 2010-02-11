@@ -16,9 +16,9 @@ extern int yylineno;
   attr_type atype;
 }
 
-%token <stype> KEYWORD
+%token <stype> KEYWORD RESERVED
 %token <stype> BEFORE AFTER
-%token <stype> STRING DIRECTORIES EXECUTABLES ENV STDOUT STDIN ROOT_DIR
+%token <stype> STRING
 %token <ctype> ENDL
 %token <btype> BLOCK_SET
 
@@ -27,14 +27,18 @@ extern int yylineno;
 %type<stype> line;
 %type <stype> attr;
 %type <ptype> phase_decl;
-%type <btype> attr_decl;
+%type <atype> attr_decl;
 
 %%
 
 // grammar
+program:
+  phase
+  | attr
+  ;
 
 phase:
-  | phase_decl line           {debug(3, "Found a phase: [%s %s]\n", ptype_to_string($1), $2);}
+  phase_decl line           {debug(3, "Found a phase: [%s %s]\n", ptype_to_string($1), $2);}
   | phase_decl ENDL           {debug(4, "Found empty phase\n");}
   ;
 
@@ -57,12 +61,15 @@ phase_decl:
 
 // Attributes
 attr_decl:
-  DIRECTORIES ':'             {$$ = T_DIRECTORIES;}
-  | EXECUTABLES ':'           {$$ = T_EXECUTABLES;}
-  | ENV ':'                   {$$ = T_ENV;}
-  | STDOUT ':'                {$$ = T_STDOUT;}
-  | STDIN ':'                 {$$ = T_STDIN;}
-  | ROOT_DIR ':'              {$$ = T_ROOT_DIR;}
+  RESERVED ':'                {
+                                if (strcmp($1,"executables") == 0) $$ = T_EXECUTABLES;
+                                else if (strcmp($1,"directories") == 0) $$ = T_DIRECTORIES;
+                                else if (strcmp($1,"env") == 0) $$ = T_ENV;
+                                else if (strcmp($1,"stdout") == 0) $$ = T_STDOUT;
+                                else if (strcmp($1,"stdin") == 0) $$ = T_STDIN;
+                                else if (strcmp($1,"root_dir") == 0) $$ = T_ROOT_DIR;
+                                else exit(-1);
+                              }
   ;
 
 // Line

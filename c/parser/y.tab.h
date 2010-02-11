@@ -40,32 +40,22 @@
       know about them.  */
    enum yytokentype {
      KEYWORD = 258,
-     BEFORE = 259,
-     AFTER = 260,
-     STRING = 261,
-     DIRECTORIES = 262,
-     EXECUTABLES = 263,
-     ENV = 264,
-     STDOUT = 265,
-     STDIN = 266,
-     ROOT_DIR = 267,
-     ENDL = 268,
-     BLOCK_SET = 269
+     RESERVED = 259,
+     BEFORE = 260,
+     AFTER = 261,
+     STRING = 262,
+     ENDL = 263,
+     BLOCK_SET = 264
    };
 #endif
 /* Tokens.  */
 #define KEYWORD 258
-#define BEFORE 259
-#define AFTER 260
-#define STRING 261
-#define DIRECTORIES 262
-#define EXECUTABLES 263
-#define ENV 264
-#define STDOUT 265
-#define STDIN 266
-#define ROOT_DIR 267
-#define ENDL 268
-#define BLOCK_SET 269
+#define RESERVED 259
+#define BEFORE 260
+#define AFTER 261
+#define STRING 262
+#define ENDL 263
+#define BLOCK_SET 264
 
 
 
@@ -82,7 +72,7 @@ typedef union YYSTYPE
   attr_type atype;
 }
 /* Line 1529 of yacc.c.  */
-#line 86 "y.tab.h"
+#line 76 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

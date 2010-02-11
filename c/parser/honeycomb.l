@@ -15,6 +15,7 @@ int i, len, str_arr_sz;
 %}
 /* Keywords */
 KEYWORDS    (bundle|start|stop|mount|unmount|cleanup)
+RESERVED    (root_dir|directories|executables|env|stdout|stdin)
 
 /* Others */
 COMMENT     #
@@ -47,13 +48,7 @@ EMPTYLINE [ \t\r]*\n
                     }
   /* Keywords */
 {KEYWORDS}          debug(3, "next phase: %s\n", yytext); return KEYWORD;
-
-root_dir:           {debug(3, "encountered root_dir: %s\n", yytext); return ROOT_DIR;}
-directories:        {debug(3, "encountered directories: %s\n", yytext); return DIRECTORIES;}
-executables:        {debug(3, "encountered executables: %s\n", yytext); return EXECUTABLES;}
-env:                {debug(3, "encountered envs: %s\n", yytext); return ENV;}
-stdout:             {debug(3, "encountered stdout: %s\n", yytext);return STDOUT;}
-stdin:              {debug(3, "encountered stdin: %s\n", yytext);return STDIN;}
+{RESERVED}          {debug(3, "encountered reserved word: %s\n", yytext); return RESERVED;}
 
 {ENDL}                    {debug(4, "Returning new line\n");yylineno++;return ENDL;}
   /* Strings */
