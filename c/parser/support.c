@@ -20,8 +20,9 @@ int debug(int level, char *fmt, ...) {
 
 /**
 * turn a phase_type into a string
+* FOR DEBUGGING
 **/
-char *ptype_to_string(phase_type t) {
+char *phase_type_to_string(phase_type t) {
   switch (t) {
     case T_BUNDLE:
       return strdup("bundle");
@@ -45,6 +46,17 @@ char *ptype_to_string(phase_type t) {
     default:
       return strdup("unknown");
       break;
+  }
+}
+
+char *attribute_type_to_string(attr_type t) {
+  switch (t) {
+    case T_DIRECTORIES: return strdup("directories"); break;
+    case T_EXECUTABLES: return strdup("executables"); break;
+    case T_ENV: return strdup("env"); break;
+    case T_STDOUT: return strdup("stdout"); break;
+    case T_STDIN: return strdup("stdin"); break;
+    case T_ROOT_DIR: return strdup("root_dir"); break;
   }
 }
 

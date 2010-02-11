@@ -14,26 +14,27 @@ char *s;
 int i, len, str_arr_sz;
 %}
 /* Keywords */
-KEYWORDS    (bundle|start|stop|mount|unmount|cleanup)
-RESERVED    (root_dir|directories|executables|env|stdout|stdin)
+KEYWORDS      (bundle|start|stop|mount|unmount|cleanup)
+RESERVEDS     (root_dir|directories|executables|env|stdout|stdin)
 
 /* Others */
 COMMENT     #
 NL        \n
 WHITESPACE  [ \t\r]
-STRING  [a-zA-Z0-9\/.,_-]+
+STRING  ([a-zA-Z0-9()@<>'"\/.,_-]+)
 
 ANYTHING  (.*)
-EMPTYLINE ([ \t\r])+
 
 %x QUOTEDSTR
 %x BLOCK
 
 %%
 
-{WHITESPACE}			    {debug(4, "Whitespace: %s\n", yytext);};		/* ignore white space */
-\n                  {return '\n';}
-[-():.]     {return *yytext;}
+{WHITESPACE}        ; /* Ignore whitespace */
+\n                  {return yytext[0];}
+:                   {debug(4, "Found ':'\n"); return yytext[0];} /* Special characters with meaning to the syntax */
+NULL                {debug(2, "Found a null\n"); return NULLABLE;}
+
   /* Hooks */
 {KEYWORDS}\.before  {
                       /* strip off the .before (gross) */
@@ -48,33 +49,8 @@ EMPTYLINE ([ \t\r])+
                       return AFTER;
                     }
   /* Keywords */
-{KEYWORDS}          debug(3, "next phase: %s\n", yytext); return KEYWORD;
-{RESERVED}          {debug(3, "encountered reserved word: %s\n", yytext); return RESERVED;}
-
-  /* Strings */
-\"                  {
-  memset(buf, 0, BUF_SIZE);
-  s = buf;
-  BEGIN QUOTEDSTR;
-}
-<QUOTEDSTR>\\n         {*s++ = '\n';}
-<QUOTEDSTR>\\t         {*s++ = '\t';}
-<QUOTEDSTR>\\\"        {*s++ = '\"';}
-<QUOTEDSTR>\"          {
-  *s = 0;
-  BEGIN INITIAL; // get outta here
-  yylval.stype = strdup(buf);
-  debug(3, "returning QUOTED STRING '%s'\n", buf);
-  return STRING;
-}
-<QUOTEDSTR>\n           {fprintf(stderr, "Error: %4d\tInvalid string\n", yylineno); BEGIN 0;}
-<QUOTEDSTR>.            {*s++ = *yytext;}
-
-{STRING}({WHITESPACE}?({STRING}))*  {
-                      debug(3, "returning STRING: '%s'\n", yytext);
-                    	yylval.stype = strdup(yytext);
-                    	return STRING;
-                    }
+{KEYWORDS}          {debug(3, "next phase: %s\n", yytext); yylval.stype = strdup(yytext); return KEYWORD;}
+{RESERVEDS}         {debug(3, "encountered reserved word: %s\n", yytext); yylval.stype = strdup(yytext); return RESERVED;}
 
   /* blocks */
 \{                  {
@@ -115,6 +91,33 @@ EMPTYLINE ([ \t\r])+
 }
 
   /* everything else */
-{COMMENT}               {debug(4, "Comment on line: %d\n", yylineno++, yytext); return COMMENT_CHAR;} /* ignore comments */
+{COMMENT}{ANYTHING}{NL} {debug(4, "%4d\tIgnoring comment: %s", yylineno++, yytext);} /* ignore comments */  
+
+  /* Strings */
+\"                  {
+  memset(buf, 0, BUF_SIZE);
+  s = buf;
+  BEGIN QUOTEDSTR;
+}
+<QUOTEDSTR>\\n         {*s++ = '\n';}
+<QUOTEDSTR>\\t         {*s++ = '\t';}
+<QUOTEDSTR>\\\"        {*s++ = '\"';}
+<QUOTEDSTR>\"          {
+  *s = 0;
+  BEGIN INITIAL; // get outta here
+  yylval.stype = strdup(buf);
+  debug(3, "returning QUOTED STRING '%s'\n", buf);
+  return STRING;
+}
+<QUOTEDSTR>\n           {fprintf(stderr, "Error: %4d\tInvalid string\n", yylineno); BEGIN 0;}
+<QUOTEDSTR>.            {*s++ = *yytext;}
+
+{STRING}({WHITESPACE}?({STRING}))*  {
+  debug(3, "returning STRING: '%s'\n", yytext);
+  yylval.stype = strdup(yytext);
+  return STRING;
+}
+
+.                       {debug(4, "Char: '%c'\n", yytext[0]);}
 
 %%

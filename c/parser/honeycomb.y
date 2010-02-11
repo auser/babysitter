@@ -16,18 +16,19 @@ extern int yylineno;
   attr_type atype;
 }
 
-%token <stype> KEYWORD RESERVED
+%token <stype> KEYWORD RESERVED NULLABLE
 %token <stype> BEFORE AFTER
 %token <stype> STRING
-%token <ctype> ENDL COMMENT_CHAR
+%token <ctype> ENDL
 %token <btype> BLOCK_SET
 
 %left ':'
 
-%type<stype> line;
+%type <stype> line hook_decl;
 %type <stype> attr;
 %type <ptype> phase_decl;
 %type <atype> attr_decl;
+%type <btype> block;
 
 %%
 
@@ -38,22 +39,19 @@ program:
   ;
     
 decl:
-  phase '\n'                {debug(2, "Found phase in program\n");}
-  | attr '\n'               {debug(2, "Found new attribute in program\n");}
-  | comment '\n'            {debug(2, "Found comment in program\n");}
-  |                         {debug(2, "Found NULL in program\n");}
+  phase                 {debug(2, "Found phase in program\n");}
+  | hook                {debug(2, "Found a hook in the program\n");}
+  | attr                {debug(2, "Found new attribute in program\n");}
+  | '\n'                /* NULL */
+  // |                     {debug(2, "Found NULL in program\n");}
   ;
 
 phase:
-  phase_decl line           {debug(3, "Found a phase: [%s %s]\n", ptype_to_string($1), $2);}
-  | phase_decl           {debug(4, "Found empty phase\n");}
+  phase_decl line           {debug(3, "Found a phase: [%s %s]\n", phase_type_to_string($1), $2);}
+  | phase_decl block        {debug(3, "Found a block phrase: %s\n", $2); }
+  | phase_decl NULLABLE         {debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));}
   ;
 
-attr:
-  attr_decl line            {debug(3, "Found an attribute: [%d %s]\n", $1, $2);}
-  | attr_decl          {debug(4, "Found empty attribute\n");}
-  ;
-    
 phase_decl:
   KEYWORD ':'                 {
                                 if (strcmp($1,"bundle") == 0) $$ = T_BUNDLE;
@@ -66,7 +64,22 @@ phase_decl:
                               }
   ;
 
+// Hooks
+hook:
+  hook_decl line          {debug(3, "Found a hook phrase: %s\n", $2); }
+  | hook_decl block         {debug(3, "Found a hook block: %s\n", $2); }
+  ;
+hook_decl:
+  BEFORE ':'                  {debug(2, "Found hook: %s\n", $1); $$ = $1;}
+  | AFTER ':'                 {debug(2, "Found after hook: %s\n", $1), $$ = $1;}
+  ;
+
 // Attributes
+attr:
+  attr_decl line            {debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string($1), $2);}
+  | attr_decl               {debug(4, "Found empty attribute\n");}
+  ;
+  
 attr_decl:
   RESERVED ':'                {
                                 if (strcmp($1,"executables") == 0) $$ = T_EXECUTABLES;
@@ -79,14 +92,16 @@ attr_decl:
                               }
   ;
 
-comment:
-  COMMENT_CHAR line           {};
-  | COMMENT_CHAR              {debug(4, "Single comment '#'\n");}
+// Blocks
+block:
+  BLOCK_SET                   {debug(3, "Found a block\n");$$ = $1;}
+  | BLOCK_SET '\n'            {$$ = $1;}
   ;
 
 // Line terminated by '\n'
 line:
-  STRING                    {debug(3, "Found string: '%s'\n", $1);strcpy($$,$1);}
+  line STRING                      {debug(3, "Found string: '%s'\n", $1);strcpy($$,$1);}
+  | STRING
   ;
 
 %%
