@@ -48,6 +48,12 @@ EMPTYLINE [ \t\r]*\n
   /* Keywords */
 {KEYWORDS}          debug(3, "next phase: %s\n", yytext); return KEYWORD;
 
+directories:        {debug(3, "encountered directories: %s\n", yytext); return DIRECTORIES;}
+executables:        {debug(3, "encountered executables: %s\n", yytext); return EXECUTABLES;}
+env:                {debug(3, "encountered envs: %s\n", yytext); return ENV;}
+stdout:             {debug(3, "encountered stdout: %s\n", yytext);return STDOUT;}
+stdin:              {debug(3, "encountered stdin: %s\n", yytext);return STDIN;}
+
 {ENDL}                    {debug(4, "Returning new line\n");yylineno++;return ENDL;}
   /* Strings */
 \"                  {

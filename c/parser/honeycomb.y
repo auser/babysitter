@@ -17,7 +17,7 @@ extern int yylineno;
 
 %token <stype> KEYWORD
 %token <stype> BEFORE AFTER
-%token <stype> STRING
+%token <stype> STRING DIRECTORIES EXECUTABLES ENV STDOUT STDIN
 %token <ctype> ENDL
 %token <btype> BLOCK_SET
 

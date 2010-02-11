@@ -43,8 +43,13 @@
      BEFORE = 259,
      AFTER = 260,
      STRING = 261,
-     ENDL = 262,
-     BLOCK_SET = 263
+     DIRECTORIES = 262,
+     EXECUTABLES = 263,
+     ENV = 264,
+     STDOUT = 265,
+     STDIN = 266,
+     ENDL = 267,
+     BLOCK_SET = 268
    };
 #endif
 /* Tokens.  */
@@ -52,8 +57,13 @@
 #define BEFORE 259
 #define AFTER 260
 #define STRING 261
-#define ENDL 262
-#define BLOCK_SET 263
+#define DIRECTORIES 262
+#define EXECUTABLES 263
+#define ENV 264
+#define STDOUT 265
+#define STDIN 266
+#define ENDL 267
+#define BLOCK_SET 268
 
 
 
@@ -69,7 +79,7 @@ typedef union YYSTYPE
   phase_type ptype;
 }
 /* Line 1529 of yacc.c.  */
-#line 73 "y.tab.h"
+#line 83 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

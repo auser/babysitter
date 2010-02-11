@@ -122,9 +122,7 @@ void free_config(honeycomb_config *c) {
   free(c->environment_vars);
   free(c->stdout);
   free(c->stdin);
-  for(i = 0; i < c->num_exec_lines; ++i) {
-    free(c->exec[i]);
-  }
+  for(i = 0; i < c->num_exec_lines; ++i) free(c->exec[i]);
   free(c->exec);
 }
 
