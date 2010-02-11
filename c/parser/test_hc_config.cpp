@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "honeycomb_config.h"
-#include "c_ext.h"
+#include "support.h"
 
 void usage(const char *progname) {
   fprintf(stderr, "Usage: %s <filename>\n", progname);
@@ -11,6 +11,7 @@ void usage(const char *progname) {
 }
 
 extern FILE *yyin;
+honeycomb_config *config;
 
 int main (int argc, char const *argv[])
 {
@@ -29,11 +30,15 @@ int main (int argc, char const *argv[])
 	// set lex to read from it instead of defaulting to STDIN:
 	yyin = fd;
 	
+	// Clear out the config struct for now
+  config = new_honeycomb_config();
+	
 	// parse through the input until there is no more:
 	do {
 		yyparse();
 	} while (!feof(yyin));
 
   printf("\n");
+  free(config);
   return 0;
 }

@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "honeycomb_config.h"
-#include "c_ext.h"
+#include "support.h"
 
-int debug_level = 4;
+int debug_level = 1;
 
 #define BUF_SIZE 1024
 
@@ -57,6 +56,7 @@ char *attribute_type_to_string(attr_type t) {
     case T_STDOUT: return strdup("stdout"); break;
     case T_STDIN: return strdup("stdin"); break;
     case T_ROOT_DIR: return strdup("root_dir"); break;
+    default: return strdup("unknown");
   }
 }
 
@@ -80,7 +80,7 @@ char *collect_to_period(char *str) {
 }
 
 // create a new config
-honeycomb_config* new_config() {
+honeycomb_config* new_honeycomb_config() {
   honeycomb_config *c;
 	c = malloc(sizeof(honeycomb_config *));
 	if (c) {
@@ -127,6 +127,16 @@ int add_phase(honeycomb_config *c, phase *p) {
   
   c->phases[c->num_phases++] = p;
   return 0;
+}
+
+// Add a hook to the phrase
+int add_hook(phase *p, char *cmd) {
+  if (p) {
+    return 0;
+  } else {
+    free(cmd); // cleanup
+    return -1;
+  }
 }
 
 // Free a config object

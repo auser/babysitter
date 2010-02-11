@@ -2,9 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 #include "honeycomb_config.h"
-#include "c_ext.h"
+#include "support.h"
 
 extern int yylineno;
+extern honeycomb_config *config;
+
 %}
 
 %union {
@@ -39,11 +41,13 @@ program:
   ;
     
 decl:
-  phase                 {debug(2, "Found phase in program\n");}
-  | hook                {debug(2, "Found a hook in the program\n");}
-  | attr                {debug(2, "Found new attribute in program\n");}
+  phase                 {
+    debug(1, "Config: %p\n", config);
+    debug(1, "Found phase in program\n");
+  }
+  | hook                {debug(1, "Found a hook in the program\n");}
+  | attr                {debug(1, "Found new attribute in program\n");}
   | '\n'                /* NULL */
-  // |                     {debug(2, "Found NULL in program\n");}
   ;
 
 phase:

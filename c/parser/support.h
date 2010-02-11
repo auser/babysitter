@@ -1,3 +1,5 @@
+#include "honeycomb_config.h"
+
 #ifdef __cplusplus
 
 extern "C" {
@@ -20,7 +22,7 @@ char *phase_type_to_string(phase_type t);
 char *attribute_type_to_string(attr_type t);
 
 char *collect_to_period(char *str);
-honeycomb_config* new_config();
+honeycomb_config* new_honeycomb_config();
 int add_phase(honeycomb_config *c, phase *p);
 phase* new_phase(phase_type t);
 void free_config(honeycomb_config *c);

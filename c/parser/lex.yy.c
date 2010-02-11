@@ -542,7 +542,7 @@ char *yytext;
 #include <string.h>
 
 #include "honeycomb_config.h"
-#include "c_ext.h"
+#include "support.h"
 #include "y.tab.h"
 
 #define BUF_SIZE 1024

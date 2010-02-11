@@ -12,15 +12,15 @@ default: all
 all: test_hc_config
 
 clean:
-	rm -f *.o y.tab.h
+	rm -rf *.o y.tab.h *.dSYM
 
 lex:
 	lex honeycomb.l
 
-y.tab.h: lex honeycomb.y
+y.tab.h: lex honeycomb.y support.o
 	yacc $(YACCFLAGS) honeycomb.y
 
-test_hc_config: honeycomb.c y.tab.h test_hc_config.o $(LIB_OBJ)
+test_hc_config: honeycomb.c y.tab.h support.h test_hc_config.o $(LIB_OBJ)
 	$(GCC) $(CPPFLAGS) -o $(OUT) test_hc_config.cpp $(LIB_OBJ) -ll
 
 test_match: honeycomb.c y.tab.h test_hc_config.o $(LIB_OBJ)
