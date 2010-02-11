@@ -19,7 +19,7 @@ extern int yylineno;
 %token <stype> KEYWORD RESERVED
 %token <stype> BEFORE AFTER
 %token <stype> STRING
-%token <ctype> ENDL
+%token <ctype> ENDL COMMENT_CHAR
 %token <btype> BLOCK_SET
 
 %left ':'
@@ -33,19 +33,25 @@ extern int yylineno;
 
 // grammar
 program:
-  phase
-  | attr
-  |
+  program decl              {};
+  | decl
+  ;
+    
+decl:
+  phase '\n'                {debug(2, "Found phase in program\n");}
+  | attr '\n'               {debug(2, "Found new attribute in program\n");}
+  | comment '\n'            {debug(2, "Found comment in program\n");}
+  |                         {debug(2, "Found NULL in program\n");}
   ;
 
 phase:
   phase_decl line           {debug(3, "Found a phase: [%s %s]\n", ptype_to_string($1), $2);}
-  | phase_decl ENDL           {debug(4, "Found empty phase\n");}
+  | phase_decl           {debug(4, "Found empty phase\n");}
   ;
 
 attr:
   attr_decl line            {debug(3, "Found an attribute: [%d %s]\n", $1, $2);}
-  | attr_decl ENDL          {debug(4, "Found empty attribute\n");}
+  | attr_decl          {debug(4, "Found empty attribute\n");}
   ;
     
 phase_decl:
@@ -73,11 +79,14 @@ attr_decl:
                               }
   ;
 
-// Line
+comment:
+  COMMENT_CHAR line           {};
+  | COMMENT_CHAR              {debug(4, "Single comment '#'\n");}
+  ;
+
+// Line terminated by '\n'
 line:
-  line STRING                 {strcpy($$,strcat($$,$2));}
-  | line ENDL                 {debug(4, "Found the end of the line\n");}
-  | STRING                    {strcpy($$,$1);}
+  STRING                    {debug(3, "Found string: '%s'\n", $1);strcpy($$,$1);}
   ;
 
 %%

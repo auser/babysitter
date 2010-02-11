@@ -19,12 +19,12 @@ RESERVED    (root_dir|directories|executables|env|stdout|stdin)
 
 /* Others */
 COMMENT     #
-ENDL        \n
+NL        \n
 WHITESPACE  [ \t\r]
-STRING  [a-zA-Z0-9\/._-]+
+STRING  [a-zA-Z0-9\/.,_-]+
 
 ANYTHING  (.*)
-EMPTYLINE [ \t\r]*\n
+EMPTYLINE ([ \t\r])+
 
 %x QUOTEDSTR
 %x BLOCK
@@ -32,7 +32,8 @@ EMPTYLINE [ \t\r]*\n
 %%
 
 {WHITESPACE}			    {debug(4, "Whitespace: %s\n", yytext);};		/* ignore white space */
-
+\n                  {return '\n';}
+[-():.]     {return *yytext;}
   /* Hooks */
 {KEYWORDS}\.before  {
                       /* strip off the .before (gross) */
@@ -50,7 +51,6 @@ EMPTYLINE [ \t\r]*\n
 {KEYWORDS}          debug(3, "next phase: %s\n", yytext); return KEYWORD;
 {RESERVED}          {debug(3, "encountered reserved word: %s\n", yytext); return RESERVED;}
 
-{ENDL}                    {debug(4, "Returning new line\n");yylineno++;return ENDL;}
   /* Strings */
 \"                  {
   memset(buf, 0, BUF_SIZE);
@@ -71,8 +71,8 @@ EMPTYLINE [ \t\r]*\n
 <QUOTEDSTR>.            {*s++ = *yytext;}
 
 {STRING}({WHITESPACE}?({STRING}))*  {
+                      debug(3, "returning STRING: '%s'\n", yytext);
                     	yylval.stype = strdup(yytext);
-                    	debug(3, "returning STRING: '%s'\n", yytext);
                     	return STRING;
                     }
 
@@ -84,7 +84,7 @@ EMPTYLINE [ \t\r]*\n
   memset(buf, 0, BUF_SIZE);
   debug(3, "In new block at %d\n", yylineno);
 }
-<BLOCK>{COMMENT}{ANYTHING}{ENDL}    ; /* ignore comments */
+<BLOCK>{COMMENT}{ANYTHING}{NL}    ; /* ignore comments */
 <BLOCK>\}           {
   BEGIN INITIAL;
   int j = 0;
@@ -115,7 +115,6 @@ EMPTYLINE [ \t\r]*\n
 }
 
   /* everything else */
-{COMMENT}{ANYTHING}{ENDL} {debug(4, "%4d\tIgnoring comment: %s", ++yylineno, yytext);} /* ignore comments */
-{EMPTYLINE}               ++yylineno;  /* ignore */ 
+{COMMENT}               {debug(4, "Comment on line: %d\n", yylineno++, yytext); return COMMENT_CHAR;} /* ignore comments */
 
 %%

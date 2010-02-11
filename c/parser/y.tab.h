@@ -45,7 +45,8 @@
      AFTER = 261,
      STRING = 262,
      ENDL = 263,
-     BLOCK_SET = 264
+     COMMENT_CHAR = 264,
+     BLOCK_SET = 265
    };
 #endif
 /* Tokens.  */
@@ -55,7 +56,8 @@
 #define AFTER 261
 #define STRING 262
 #define ENDL 263
-#define BLOCK_SET 264
+#define COMMENT_CHAR 264
+#define BLOCK_SET 265
 
 
 
@@ -72,7 +74,7 @@ typedef union YYSTYPE
   attr_type atype;
 }
 /* Line 1529 of yacc.c.  */
-#line 76 "y.tab.h"
+#line 78 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
