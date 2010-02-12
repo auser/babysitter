@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "honeycomb_config.h"
-#include "support.h"
+#include "hc_support.h"
 
 extern int yylineno;
 extern honeycomb_config *config;
@@ -15,6 +15,7 @@ extern honeycomb_config *config;
   char** btype;
   char ctype;
   phase_type ptype;
+  phase phase;
   attr_type atype;
 }
 
@@ -29,6 +30,7 @@ extern honeycomb_config *config;
 %type <stype> line hook_decl;
 %type <stype> attr;
 %type <ptype> phase_decl;
+%type <phase> phase;
 %type <atype> attr_decl;
 %type <btype> block;
 
@@ -43,7 +45,7 @@ program:
 decl:
   phase                 {
     debug(1, "Config: %p\n", config);
-    debug(1, "Found phase in program\n");
+    debug(1, "Found phase in program: %p\n", $1);
   }
   | hook                {debug(1, "Found a hook in the program\n");}
   | attr                {debug(1, "Found new attribute in program\n");}
@@ -51,7 +53,11 @@ decl:
   ;
 
 phase:
-  phase_decl line           {debug(3, "Found a phase: [%s %s]\n", phase_type_to_string($1), $2);}
+  phase_decl line           {
+    debug(3, "Found a phase: [%s %s]\n", phase_type_to_string($1), $2); 
+    phase *p = new_phase($1);
+    add_phase(config, p);
+  }
   | phase_decl block        {debug(3, "Found a block phrase: %s\n", $2); }
   | phase_decl NULLABLE         {debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));}
   ;

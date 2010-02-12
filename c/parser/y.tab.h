@@ -71,10 +71,11 @@ typedef union YYSTYPE
   char** btype;
   char ctype;
   phase_type ptype;
+  phase phase;
   attr_type atype;
 }
 /* Line 1529 of yacc.c.  */
-#line 78 "y.tab.h"
+#line 79 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

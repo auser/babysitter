@@ -1,9 +1,11 @@
+%option nounput
+
 %{
 #include <stdio.h>
 #include <string.h>
 
 #include "honeycomb_config.h"
-#include "support.h"
+#include "hc_support.h"
 #include "y.tab.h"
 
 #define BUF_SIZE 1024
@@ -33,7 +35,7 @@ ANYTHING  (.*)
 {WHITESPACE}        ; /* Ignore whitespace */
 \n                  {return yytext[0];}
 :                   {debug(4, "Found ':'\n"); return yytext[0];} /* Special characters with meaning to the syntax */
-NULL                {debug(2, "Found a null\n"); return NULLABLE;}
+(NULL|null)         {debug(2, "Found a null\n"); return NULLABLE;}
 
   /* Hooks */
 {KEYWORDS}\.before  {

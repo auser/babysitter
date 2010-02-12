@@ -1,16 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "support.h"
-
-int debug_level = 1;
+#include "hc_support.h"
 
 #define BUF_SIZE 1024
 
 int debug(int level, char *fmt, ...) {
   int r;
   va_list ap;
-  if (debug_level < level) return 0;
+  if (DEBUG_LEVEL < level) return 0;
 	va_start(ap, fmt);
 	r = vfprintf(stderr, fmt, ap);
 	va_end(ap);
@@ -80,10 +78,10 @@ char *collect_to_period(char *str) {
 }
 
 // create a new config
-honeycomb_config* new_honeycomb_config() {
-  honeycomb_config *c;
-	c = malloc(sizeof(honeycomb_config *));
+honeycomb_config* a_new_honeycomb_config_object(void) {
+  honeycomb_config *c = malloc(sizeof(honeycomb_config));
 	if (c) {
+    printf("in a_new_honeycomb_config_object: %p\n", c);
     return c;
 	} else {
     fprintf(stderr, "Error creating a new config object\n");
@@ -144,7 +142,10 @@ void free_config(honeycomb_config *c) {
   if (!c) return;
   size_t i;
   for (i = 0; i < c->num_phases; i++) {
-    free_phase(c->phases[i]);
+    if (c->phases[i]) {
+      printf("freeing phase: %p\n", c->phases[i]);
+      free_phase(c->phases[i]);
+    }
   }
   free(c->filename);
   free(c->app_type);

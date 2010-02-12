@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include <iostream>
 
 #include "honeycomb_config.h"
-#include "support.h"
+#include "hc_support.h"
 
 void usage(const char *progname) {
   fprintf(stderr, "Usage: %s <filename>\n", progname);
@@ -31,7 +30,7 @@ int main (int argc, char const *argv[])
 	yyin = fd;
 	
 	// Clear out the config struct for now
-  config = new_honeycomb_config();
+  config = a_new_honeycomb_config_object();
 	
 	// parse through the input until there is no more:
 	do {
@@ -39,6 +38,6 @@ int main (int argc, char const *argv[])
 	} while (!feof(yyin));
 
   printf("\n");
-  free(config);
+  free_config(config);
   return 0;
 }

@@ -1,7 +1,7 @@
 # Defines
 OUT=test
 LIB_SOURCE=honeycomb.l honeycomb.y
-LIB_OBJ=y.tab.o lex.yy.o support.o
+LIB_OBJ=y.tab.o lex.yy.o honeycomb_config_support.o
 CC=cc
 GCC=g++
 CPPFLAGS=-g -O2 -Wall -I ./ -I ../
@@ -12,13 +12,19 @@ default: all
 all: test_hc_config
 
 clean:
-	rm -f *.o y.tab.h
+	rm -rf *.o y.tab.h *.dSYM
 
 lex:
 	lex honeycomb.l
 
-y.tab.h: lex honeycomb.y
+honeycomb_config_support.o: hc_support.h
+	$(GCC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
+
+y.tab.h: lex honeycomb.y honeycomb_config_support.o
 	yacc $(YACCFLAGS) honeycomb.y
 
-test_hc_config: honeycomb.c y.tab.h test_hc_config.o $(LIB_OBJ)
+test_hc_config: honeycomb.c y.tab.h honeycomb_config_support.o $(LIB_OBJ)
 	$(GCC) $(CPPFLAGS) -o $(OUT) test_hc_config.cpp $(LIB_OBJ) -ll
+
+test_match: honeycomb.c y.tab.h test_hc_config.o $(LIB_OBJ)
+	$(CC) $(CPPFLAGS) -o $(OUT)_parser honeycomb.c lex.yy.o honeycomb_config_support.o -lfl
