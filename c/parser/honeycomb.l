@@ -71,7 +71,6 @@ ANYTHING  (.*)
   }
   char **arr = malloc(sizeof(char *) * str_arr_sz);
   memcpy(arr, str_arr, j+1);
-  yyleng = str_arr_sz;
   return BLOCK_SET;
 }
 <BLOCK>\n           {

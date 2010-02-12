@@ -52,12 +52,22 @@ decl:
 
 phase:
   phase_decl line           {
-    debug(3, "Found a phase: [%s %s]\n", phase_type_to_string($1), $2); 
-    phase *p = new_phase($1);
-    // strcpy(p->name)
+    // Set the phase and attach it to the config object
+    phase *p = find_or_create_phase(config, $1);
+    p->command = (char *)malloc(sizeof(char *) * strlen($2));
+    p->command = strdup($2);
+    debug(3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command); 
     add_phase(config, p);
   }
-  | phase_decl block        {debug(3, "Found a block phrase: %s\n", $2); }
+  | phase_decl block        {
+    debug(3, "Found a block phrase: %s\n", $2); 
+    // phase *p = find_or_create_phase(config, $1);
+    // int str_len = strlen( (char *) $2);
+    // p->command_array = malloc(sizeof(char **) * str_len);
+    // memcpy(p->command_array, $2, str_len);
+    // p->num_exec_lines = sizeof(char **) * str_len;
+    // add_phase(config, p);
+  }
   | phase_decl NULLABLE         {debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));}
   ;
 

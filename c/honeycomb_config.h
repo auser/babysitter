@@ -41,6 +41,8 @@ typedef struct _phase_ {
   phase_type type;
   char *before;
   char *command;
+  char **command_array;
+  int num_exec_lines;
   char *after;
 } phase;
 

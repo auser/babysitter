@@ -25,6 +25,9 @@ extern "C" {
   char *collect_to_period(char *str);
   honeycomb_config* a_new_honeycomb_config_object(void);
   int add_phase(honeycomb_config *c, phase *p);
+  phase *find_or_create_phase(honeycomb_config *c, phase_type t);
+  phase *find_phase(honeycomb_config *c, phase_type t);
+  int modify_phase(honeycomb_config *c, phase *p);
   phase* new_phase(phase_type t);
   void free_config(honeycomb_config *c);
   void free_phase(phase *p);
@@ -44,7 +47,10 @@ char *attribute_type_to_string(attr_type t);
 char *collect_to_period(char *str);
 honeycomb_config* a_new_honeycomb_config_object(void);
 int add_phase(honeycomb_config *c, phase *p);
+phase *find_or_create_phase(honeycomb_config *c, phase_type t);
+phase *find_phase(honeycomb_config *c, phase_type t);
 phase* new_phase(phase_type t);
+int modify_phase(honeycomb_config *c, phase *p);
 void free_config(honeycomb_config *c);
 void free_phase(phase *p);
 

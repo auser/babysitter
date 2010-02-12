@@ -34,8 +34,13 @@ int main (int argc, char const *argv[])
 	// parse through the input until there is no more:
   yyparse ((void *) &config);
   
+  int i = 0;
   printf("------ output ------\n");
   printf("num_phases: %d (%p)\n", (int)config.num_phases, &config);
+  printf("------ phases ------\n");
+  for (i = 0; i < (int)config.num_phases; i++) {
+    printf("Phase: %s -> %s\n", phase_type_to_string(config.phases[i]->type), (config.phases[i])->command);
+  }
   
   printf("\n");
   free_config(&config);

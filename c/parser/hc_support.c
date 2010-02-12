@@ -99,14 +99,45 @@ phase* new_phase(phase_type t) {
     p->type = t;
     p->before = 0;
     p->command = 0;
+    p->command_array = 0;
     p->after = 0;
   } else {
   }
   return p;
 }
 
+// Find a phase of type t on the config object
+phase *find_phase(honeycomb_config *c, phase_type t) {
+  int i;
+  for (i = 0; i < c->num_phases; ++i) {
+    if (c->phases[i]->type == t) return c->phases[i];
+  }
+  return NULL;
+}
+
+// Find or create a phase on a config object
+phase *find_or_create_phase(honeycomb_config *c, phase_type t) {
+  phase *p;
+  if ((p = find_phase(c, t))) return p;
+  return new_phase(t);
+}
+
+// Modify an existing phase
+int modify_phase(honeycomb_config *c, phase *p) {
+  int i;
+  for (i = 0; i < c->num_phases; ++i) {
+    if (c->phases[i]->type == p->type) {
+      c->phases[i] = p;
+      return 0;
+    }
+  }
+  return -1;
+}
+
 // Add a phase to the honeycomb_config
 int add_phase(honeycomb_config *c, phase *p) {
+  phase *existing_phase;
+  if ((existing_phase = find_phase(c, p->type))) return modify_phase(c, p);
   int n = c->num_phases + 1;
   printf("adding phase: %i\n", n);
   phase **nphases = (phase **)malloc(sizeof(phase *) * n);
@@ -120,15 +151,15 @@ int add_phase(honeycomb_config *c, phase *p) {
   
   int i;
   for (i = 0; i < c->num_phases; ++i) {
+    printf("(%i) -----> %p\n", i, c->phases[i]);
     nphases[i] = c->phases[i];
   }
 
   free(c->phases);
   c->phases = nphases;
-  c->num_phases = n;
   
-  c->phases[c->num_phases] = p;
-  printf("New num phases: %i (%p)\n", c->num_phases, c);
+  c->phases[c->num_phases++] = p;
+  printf("New num phases: %i (%p)\n", (int)c->num_phases, c);
   return 0;
 }
 
@@ -144,7 +175,6 @@ int add_hook(phase *p, char *cmd) {
 
 // Free a config object
 void free_config(honeycomb_config *c) {
-  if (!c) return;
   size_t i;
   for (i = 0; i < c->num_phases; i++) {
     if (c->phases[i]) {
@@ -162,10 +192,11 @@ void free_config(honeycomb_config *c) {
   free(c->exec);
 }
 
-// Ffree a phase struct
+// Free a phase struct
 void free_phase(phase *p) {
   if (!p) return;
-  free(p->before);
-  free(p->command);
-  free(p->after);
+  if (p->before) free(p->before);
+  if (p->command) free(p->command);
+  if (p->command_array) free(p->command_array);
+  if (p->after) free(p->after);
 }
