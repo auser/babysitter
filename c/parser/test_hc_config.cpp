@@ -10,7 +10,6 @@ void usage(const char *progname) {
 }
 
 extern FILE *yyin;
-honeycomb_config *config;
 
 int main (int argc, char const *argv[])
 {
@@ -30,13 +29,11 @@ int main (int argc, char const *argv[])
 	yyin = fd;
 	
 	// Clear out the config struct for now
-  config = a_new_honeycomb_config_object();
-	
+  honeycomb_config *config = a_new_honeycomb_config_object();
+  
 	// parse through the input until there is no more:
-	do {
-		yyparse();
-	} while (!feof(yyin));
-
+  yyparse ((void *) &config);
+  
   printf("\n");
   free_config(config);
   return 0;

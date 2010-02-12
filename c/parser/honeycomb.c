@@ -98,8 +98,6 @@
 #include "hc_support.h"
 
 extern int yylineno;
-extern honeycomb_config *config;
-
 
 
 /* Enabling traces.  */
@@ -122,7 +120,7 @@ extern honeycomb_config *config;
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 12 "honeycomb.y"
+#line 10 "honeycomb.y"
 {
   int i; 
   char* stype;
@@ -133,7 +131,7 @@ typedef union YYSTYPE
   attr_type atype;
 }
 /* Line 193 of yacc.c.  */
-#line 137 "y.tab.c"
+#line 135 "y.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -146,7 +144,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 150 "y.tab.c"
+#line 148 "y.tab.c"
 
 #ifdef short
 # undef short
@@ -435,9 +433,9 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    41,    41,    42,    46,    50,    51,    52,    56,    61,
-      62,    66,    79,    80,    83,    84,    89,    90,    94,   107,
-     112,   113
+       0,    39,    39,    40,    44,    48,    49,    50,    54,    59,
+      60,    64,    77,    78,    81,    82,    87,    88,    92,   105,
+     110,   111
 };
 #endif
 
@@ -1353,30 +1351,30 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 41 "honeycomb.y"
+#line 39 "honeycomb.y"
     {}
     break;
 
   case 4:
-#line 46 "honeycomb.y"
+#line 44 "honeycomb.y"
     {
-    debug(1, "Config: %p\n", config);
+    debug(1, "Config: %p\n", ((honeycomb_config *) config)->app_type);
     debug(1, "Found phase in program: %p\n", (yyvsp[(1) - (1)].phase));
   }
     break;
 
   case 5:
-#line 50 "honeycomb.y"
+#line 48 "honeycomb.y"
     {debug(1, "Found a hook in the program\n");}
     break;
 
   case 6:
-#line 51 "honeycomb.y"
+#line 49 "honeycomb.y"
     {debug(1, "Found new attribute in program\n");}
     break;
 
   case 8:
-#line 56 "honeycomb.y"
+#line 54 "honeycomb.y"
     {
     debug(3, "Found a phase: [%s %s]\n", phase_type_to_string((yyvsp[(1) - (2)].ptype)), (yyvsp[(2) - (2)].stype)); 
     phase *p = new_phase((yyvsp[(1) - (2)].ptype));
@@ -1385,17 +1383,17 @@ yyreduce:
     break;
 
   case 9:
-#line 61 "honeycomb.y"
+#line 59 "honeycomb.y"
     {debug(3, "Found a block phrase: %s\n", (yyvsp[(2) - (2)].btype)); }
     break;
 
   case 10:
-#line 62 "honeycomb.y"
+#line 60 "honeycomb.y"
     {debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string((yyvsp[(1) - (2)].ptype)));}
     break;
 
   case 11:
-#line 66 "honeycomb.y"
+#line 64 "honeycomb.y"
     {
                                 if (strcmp((yyvsp[(1) - (2)].stype),"bundle") == 0) (yyval.ptype) = T_BUNDLE;
                                 else if (strcmp((yyvsp[(1) - (2)].stype),"start") == 0) (yyval.ptype) = T_START;
@@ -1408,37 +1406,37 @@ yyreduce:
     break;
 
   case 12:
-#line 79 "honeycomb.y"
+#line 77 "honeycomb.y"
     {debug(3, "Found a hook phrase: %s\n", (yyvsp[(2) - (2)].stype)); }
     break;
 
   case 13:
-#line 80 "honeycomb.y"
+#line 78 "honeycomb.y"
     {debug(3, "Found a hook block: %s\n", (yyvsp[(2) - (2)].btype)); }
     break;
 
   case 14:
-#line 83 "honeycomb.y"
+#line 81 "honeycomb.y"
     {debug(2, "Found hook: %s\n", (yyvsp[(1) - (2)].stype)); (yyval.stype) = (yyvsp[(1) - (2)].stype);}
     break;
 
   case 15:
-#line 84 "honeycomb.y"
+#line 82 "honeycomb.y"
     {debug(2, "Found after hook: %s\n", (yyvsp[(1) - (2)].stype)), (yyval.stype) = (yyvsp[(1) - (2)].stype);}
     break;
 
   case 16:
-#line 89 "honeycomb.y"
+#line 87 "honeycomb.y"
     {debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string((yyvsp[(1) - (2)].atype)), (yyvsp[(2) - (2)].stype));}
     break;
 
   case 17:
-#line 90 "honeycomb.y"
+#line 88 "honeycomb.y"
     {debug(4, "Found empty attribute\n");}
     break;
 
   case 18:
-#line 94 "honeycomb.y"
+#line 92 "honeycomb.y"
     {
                                 if (strcmp((yyvsp[(1) - (2)].stype),"executables") == 0) (yyval.atype) = T_EXECUTABLES;
                                 else if (strcmp((yyvsp[(1) - (2)].stype),"directories") == 0) (yyval.atype) = T_DIRECTORIES;
@@ -1451,18 +1449,18 @@ yyreduce:
     break;
 
   case 19:
-#line 107 "honeycomb.y"
+#line 105 "honeycomb.y"
     {debug(3, "Found a block\n");(yyval.btype) = (yyvsp[(1) - (1)].btype);}
     break;
 
   case 20:
-#line 112 "honeycomb.y"
+#line 110 "honeycomb.y"
     {debug(3, "Found string: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1466 "y.tab.c"
+#line 1464 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1676,7 +1674,7 @@ yyreturn:
 }
 
 
-#line 116 "honeycomb.y"
+#line 114 "honeycomb.y"
 
 
 int yyerror(const char *str)

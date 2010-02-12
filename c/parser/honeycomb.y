@@ -5,8 +5,6 @@
 #include "hc_support.h"
 
 extern int yylineno;
-extern honeycomb_config *config;
-
 %}
 
 %union {
@@ -44,7 +42,7 @@ program:
     
 decl:
   phase                 {
-    debug(1, "Config: %p\n", config);
+    debug(1, "Config: %p\n", ((honeycomb_config *) config)->app_type);
     debug(1, "Found phase in program: %p\n", $1);
   }
   | hook                {debug(1, "Found a hook in the program\n");}

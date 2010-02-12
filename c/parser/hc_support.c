@@ -108,19 +108,22 @@ phase* new_phase(phase_type t) {
 // Add a phase to the honeycomb_config
 int add_phase(honeycomb_config *c, phase *p) {
   int n = c->num_phases + 1;
-  phase **nphases = malloc(sizeof(phase *) * n);
+  phase **nphases = (phase **)malloc(sizeof(phase *) * n);
   
   if (!nphases) {
     fprintf(stderr, "Couldn't add phase: '%d', no memory available\n", p->type);
     return -1;
   }
-  int i;
-  for (i = 0; i < c->num_phases; ++i) {
-    nphases[i] = c->phases[i];
-  }
   
-  free(c->phases);
-  c->phases = nphases;
+  if (c->num_phases > 0) {
+    int i;
+    for (i = 0; i < c->num_phases; ++i) {
+      nphases[i] = c->phases[i];
+    }
+
+    free(c->phases);
+    c->phases = nphases;
+  }
   c->num_phases = n;
   
   c->phases[c->num_phases++] = p;

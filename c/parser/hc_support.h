@@ -2,6 +2,10 @@
 #define DEBUG_LEVEL 3
 #endif
 
+#ifndef YYPARSE_PARAM
+#define YYPARSE_PARAM config
+#endif
+
 #ifndef SUPPORT_H
 #define SUPPORT_H
 
@@ -10,7 +14,7 @@
 #ifdef __cplusplus
 
 extern "C" {
-  int yyparse(void);
+  int yyparse(void *);
   int yylex(void);  
   int yywrap() { return 1; }
   
@@ -29,7 +33,7 @@ extern "C" {
 #else
 
 extern int yylex(void);
-extern int yyparse(void);
+extern int yyparse(void *);
 extern int yywrap(void);
 int yyerror(const char *str);
 
