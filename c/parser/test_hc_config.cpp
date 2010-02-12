@@ -29,12 +29,15 @@ int main (int argc, char const *argv[])
 	yyin = fd;
 	
 	// Clear out the config struct for now
-  honeycomb_config *config = a_new_honeycomb_config_object();
+  honeycomb_config config = *a_new_honeycomb_config_object();
   
 	// parse through the input until there is no more:
   yyparse ((void *) &config);
   
+  printf("------ output ------\n");
+  printf("num_phases: %d (%p)\n", (int)config.num_phases, &config);
+  
   printf("\n");
-  free_config(config);
+  free_config(&config);
   return 0;
 }

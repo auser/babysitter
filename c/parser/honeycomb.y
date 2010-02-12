@@ -42,7 +42,7 @@ program:
     
 decl:
   phase                 {
-    debug(1, "Config: %p\n", ((honeycomb_config *) config)->app_type);
+    debug(1, "Config: %p\n", ((honeycomb_config *) config));
     debug(1, "Found phase in program: %p\n", $1);
   }
   | hook                {debug(1, "Found a hook in the program\n");}
@@ -54,6 +54,7 @@ phase:
   phase_decl line           {
     debug(3, "Found a phase: [%s %s]\n", phase_type_to_string($1), $2); 
     phase *p = new_phase($1);
+    // strcpy(p->name)
     add_phase(config, p);
   }
   | phase_decl block        {debug(3, "Found a block phrase: %s\n", $2); }

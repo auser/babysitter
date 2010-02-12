@@ -1358,7 +1358,7 @@ yyreduce:
   case 4:
 #line 44 "honeycomb.y"
     {
-    debug(1, "Config: %p\n", ((honeycomb_config *) config)->app_type);
+    debug(1, "Config: %p\n", ((honeycomb_config *) config));
     debug(1, "Found phase in program: %p\n", (yyvsp[(1) - (1)].phase));
   }
     break;
