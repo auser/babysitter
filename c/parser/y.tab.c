@@ -433,8 +433,8 @@ static const yytype_int8 yyrhs[] =
 static const yytype_uint8 yyrline[] =
 {
        0,    38,    38,    39,    43,    44,    45,    46,    50,    58,
-      66,    74,    75,    81,    90,   103,   104,   108,   121,   126,
-     127
+      66,    74,    75,    81,    90,   103,   107,   111,   124,   129,
+     130
 };
 #endif
 
@@ -1438,16 +1438,19 @@ yyreduce:
 
   case 15:
 #line 103 "honeycomb.y"
-    {debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string((yyvsp[(1) - (2)].atype)), (yyvsp[(2) - (2)].stype));}
+    {
+    debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string((yyvsp[(1) - (2)].atype)), (yyvsp[(2) - (2)].stype));
+    add_attribute(config, (yyvsp[(1) - (2)].atype), (yyvsp[(2) - (2)].stype));
+  }
     break;
 
   case 16:
-#line 104 "honeycomb.y"
+#line 107 "honeycomb.y"
     {debug(4, "Found empty attribute\n");}
     break;
 
   case 17:
-#line 108 "honeycomb.y"
+#line 111 "honeycomb.y"
     {
                                 if (strcmp((yyvsp[(1) - (2)].stype),"executables") == 0) (yyval.atype) = T_EXECUTABLES;
                                 else if (strcmp((yyvsp[(1) - (2)].stype),"directories") == 0) (yyval.atype) = T_DIRECTORIES;
@@ -1460,18 +1463,18 @@ yyreduce:
     break;
 
   case 18:
-#line 121 "honeycomb.y"
+#line 124 "honeycomb.y"
     {debug(3, "Found a block\n");(yyval.stype) = (yyvsp[(1) - (1)].stype);}
     break;
 
   case 19:
-#line 126 "honeycomb.y"
+#line 129 "honeycomb.y"
     {debug(3, "Found string: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1475 "y.tab.c"
+#line 1478 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1685,7 +1688,7 @@ yyreturn:
 }
 
 
-#line 130 "honeycomb.y"
+#line 133 "honeycomb.y"
 
 
 int yyerror(const char *str)

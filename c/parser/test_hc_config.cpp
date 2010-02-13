@@ -36,6 +36,14 @@ int main (int argc, char const *argv[])
   
   int i = 0;
   printf("------ output ------\n");
+  printf("------ config ------\n");
+  if (config.directories) printf("\t directories: %s\n", config.directories);
+  if (config.executables) printf("\t executables: %s\n", config.executables);
+  if (config.env) printf("\t env: %s\n", config.env);
+  if (config.stdout) printf("\t stdout: %s\n", config.stdout);
+  if (config.stdin) printf("\t stdin: %s\n", config.stdin);
+  if (config.root_dir) printf("\t root_dir: %s\n", config.root_dir);
+  
   printf("num_phases: %d (%p)\n", (int)config.num_phases, &config);
   printf("------ phases ------\n");
   for (i = 0; i < (int)config.num_phases; i++) {

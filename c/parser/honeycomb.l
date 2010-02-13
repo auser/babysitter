@@ -22,7 +22,7 @@ RESERVEDS     (root_dir|directories|executables|env|stdout|stdin)
 COMMENT     #
 NL        \n
 WHITESPACE  [ \t\r]
-STRING  ([a-zA-Z0-9()@<>'"\/.,_-]+)
+STRING  ([a-zA-Z0-9()@\$<>'"\/.,_-]+)
 
 ANYTHING  (.*)
 

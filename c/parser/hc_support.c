@@ -166,14 +166,32 @@ int add_phase(honeycomb_config *c, phase *p) {
   return 0;
 }
 
-// Add a hook to the phrase
-int add_hook(phase *p, char *cmd) {
-  if (p) {
-    return 0;
-  } else {
-    free(cmd); // cleanup
-    return -1;
+// Add an attribute to the config
+int add_attribute(honeycomb_config *c, attr_type t, char *value) {
+  switch (t) {
+    case T_DIRECTORIES:
+      c->directories = (char *)malloc(sizeof(char *) * strlen(value));
+      c->directories = strdup(value); break;
+    case T_EXECUTABLES:
+      c->executables = (char *)malloc(sizeof(char *) * strlen(value));
+      c->executables = strdup(value); break;
+    case T_ENV:
+      c->env = (char *)malloc(sizeof(char *) * strlen(value));
+      c->env = strdup(value); break;
+    case T_STDOUT:
+      c->stdout = (char *)malloc(sizeof(char *) * strlen(value));
+      c->stdout = strdup(value); break;
+    case T_STDIN:
+      c->stdin = (char *)malloc(sizeof(char *) * strlen(value));
+      c->stdin = strdup(value); break;
+    case T_ROOT_DIR:
+      c->root_dir = (char *)malloc(sizeof(char *) * strlen(value));
+      c->root_dir = strdup(value); break;
+    default:
+      fprintf(stderr, "Unknown attribute: %s = %s on config\n", attribute_type_to_string(t), value);
+      return -1;
   }
+  return 0;
 }
 
 // Free a config object
@@ -186,8 +204,8 @@ void free_config(honeycomb_config *c) {
   }
   free(c->filename);
   free(c->app_type);
-  free(c->root_directory);
-  free(c->environment_vars);
+  free(c->root_dir);
+  free(c->env);
   free(c->stdout);
   free(c->stdin);
 }

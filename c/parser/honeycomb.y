@@ -100,7 +100,10 @@ hook:
 
 // Attributes
 attr:
-  attr_decl line            {debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string($1), $2);}
+  attr_decl line            {
+    debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string($1), $2);
+    add_attribute(config, $1, $2);
+  }
   | attr_decl               {debug(4, "Found empty attribute\n");}
   ;
   
