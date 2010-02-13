@@ -114,6 +114,4 @@ ANYTHING  (.*)
   return STRING;
 }
 
-.                       {debug(4, "Char: '%c'\n", yytext[0]);}
-
 %%

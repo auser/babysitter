@@ -359,8 +359,8 @@ static void yy_fatal_error (yyconst char msg[]  );
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
 
-#define YY_NUM_RULES 24
-#define YY_END_OF_BUFFER 25
+#define YY_NUM_RULES 23
+#define YY_END_OF_BUFFER 24
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -370,7 +370,7 @@ struct yy_trans_info
 	};
 static yyconst flex_int16_t yy_accept[114] =
     {   0,
-        0,    0,    0,    0,    0,    0,   25,   23,    1,    2,
+        0,    0,    0,    0,    0,    0,   24,   23,    1,    2,
        15,   23,   22,    3,   22,   22,   22,   22,   22,   22,
        22,   22,   22,   22,    9,   21,   20,   19,   21,   13,
        12,   13,   11,    0,   22,    0,   14,   22,   22,   22,
@@ -998,14 +998,9 @@ YY_RULE_SETUP
 case 23:
 YY_RULE_SETUP
 #line 117 "honeycomb.l"
-{debug(4, "Char: '%c'\n", yytext[0]);}
-	YY_BREAK
-case 24:
-YY_RULE_SETUP
-#line 119 "honeycomb.l"
 ECHO;
 	YY_BREAK
-#line 1009 "lex.yy.c"
+#line 1004 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(QUOTEDSTR):
 case YY_STATE_EOF(BLOCK):
@@ -1967,7 +1962,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 119 "honeycomb.l"
+#line 117 "honeycomb.l"
 
 
 
