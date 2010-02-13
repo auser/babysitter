@@ -39,7 +39,11 @@ int main (int argc, char const *argv[])
   printf("num_phases: %d (%p)\n", (int)config.num_phases, &config);
   printf("------ phases ------\n");
   for (i = 0; i < (int)config.num_phases; i++) {
-    printf("Phase: %s -> %s\n", phase_type_to_string(config.phases[i]->type), (config.phases[i])->command);
+    printf("Phase: --- %s ---\n", phase_type_to_string(config.phases[i]->type));
+    if (config.phases[i]->before) printf("Before -> %s\n", config.phases[i]->before);
+    printf("Command -> %s\n", config.phases[i]->command);
+    if (config.phases[i]->after) printf("After -> %s\n", config.phases[i]->after);
+    printf("\n");
   }
   
   printf("\n");

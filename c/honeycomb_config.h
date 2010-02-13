@@ -41,8 +41,6 @@ typedef struct _phase_ {
   phase_type type;
   char *before;
   char *command;
-  char **command_array;
-  int num_exec_lines;
   char *after;
 } phase;
 
@@ -53,8 +51,6 @@ typedef struct _honeycomb_config_ {
   char *environment_vars;   // a list of environment variables to start
   char *stdout;             // STDOUT
   char *stdin;              // STDIN
-  char **exec;              // Executable code
-  size_t num_exec_lines;    // Executable lines
   // Phases
   size_t num_phases;
   phase **phases;

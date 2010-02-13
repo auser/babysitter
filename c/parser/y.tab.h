@@ -68,14 +68,13 @@ typedef union YYSTYPE
 {
   int i; 
   char* stype;
-  char** btype;
   char ctype;
   phase_type ptype;
-  phase phase;
+  phase *phase;
   attr_type atype;
 }
 /* Line 1529 of yacc.c.  */
-#line 79 "y.tab.h"
+#line 78 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

@@ -58,6 +58,16 @@ char *attribute_type_to_string(attr_type t) {
   }
 }
 
+phase_type str_to_phase_type(char *str) {
+  if      (strcmp(str,"bundle") == 0) return T_BUNDLE;
+  else if (strcmp(str,"start") == 0) return T_START;
+  else if (strcmp(str,"stop") == 0) return T_STOP;
+  else if (strcmp(str,"mount") == 0) return T_MOUNT;
+  else if (strcmp(str,"unmount") == 0) return T_UNMOUNT;
+  else if (strcmp(str,"cleanup") == 0) return T_CLEANUP;
+  return -1;
+}
+
 /**
 * Split a string and collect the characters until the '.'
 *   bundle.before -> bundle
@@ -81,7 +91,6 @@ char *collect_to_period(char *str) {
 honeycomb_config* a_new_honeycomb_config_object(void) {
   honeycomb_config *c = malloc(sizeof(honeycomb_config));
 	if (c) {
-    printf("in a_new_honeycomb_config_object: %p\n", c);
     return c;
 	} else {
     fprintf(stderr, "Error creating a new config object\n");
@@ -99,7 +108,6 @@ phase* new_phase(phase_type t) {
     p->type = t;
     p->before = 0;
     p->command = 0;
-    p->command_array = 0;
     p->after = 0;
   } else {
   }
@@ -139,10 +147,7 @@ int add_phase(honeycomb_config *c, phase *p) {
   phase *existing_phase;
   if ((existing_phase = find_phase(c, p->type))) return modify_phase(c, p);
   int n = c->num_phases + 1;
-  printf("adding phase: %i\n", n);
   phase **nphases = (phase **)malloc(sizeof(phase *) * n);
-  
-  printf("nphases: %p\n", nphases);
   
   if (!nphases) {
     fprintf(stderr, "Couldn't add phase: '%d', no memory available\n", p->type);
@@ -151,7 +156,6 @@ int add_phase(honeycomb_config *c, phase *p) {
   
   int i;
   for (i = 0; i < c->num_phases; ++i) {
-    printf("(%i) -----> %p\n", i, c->phases[i]);
     nphases[i] = c->phases[i];
   }
 
@@ -159,7 +163,6 @@ int add_phase(honeycomb_config *c, phase *p) {
   c->phases = nphases;
   
   c->phases[c->num_phases++] = p;
-  printf("New num phases: %i (%p)\n", (int)c->num_phases, c);
   return 0;
 }
 
@@ -178,7 +181,6 @@ void free_config(honeycomb_config *c) {
   size_t i;
   for (i = 0; i < c->num_phases; i++) {
     if (c->phases[i]) {
-      printf("freeing phase: %p\n", c->phases[i]);
       free_phase(c->phases[i]);
     }
   }
@@ -188,8 +190,6 @@ void free_config(honeycomb_config *c) {
   free(c->environment_vars);
   free(c->stdout);
   free(c->stdin);
-  for(i = 0; i < c->num_exec_lines; ++i) free(c->exec[i]);
-  free(c->exec);
 }
 
 // Free a phase struct
@@ -197,6 +197,5 @@ void free_phase(phase *p) {
   if (!p) return;
   if (p->before) free(p->before);
   if (p->command) free(p->command);
-  if (p->command_array) free(p->command_array);
   if (p->after) free(p->after);
 }

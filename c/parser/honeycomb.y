@@ -10,10 +10,9 @@ extern int yylineno;
 %union {
   int i; 
   char* stype;
-  char** btype;
   char ctype;
   phase_type ptype;
-  phase phase;
+  phase *phase;
   attr_type atype;
 }
 
@@ -21,16 +20,16 @@ extern int yylineno;
 %token <stype> BEFORE AFTER
 %token <stype> STRING
 %token <ctype> ENDL
-%token <btype> BLOCK_SET
+%token <stype> BLOCK_SET
 
 %left ':'
 
-%type <stype> line hook_decl;
+%type <stype> line;
 %type <stype> attr;
 %type <ptype> phase_decl;
-%type <phase> phase;
+%type <phase> phase hook;
 %type <atype> attr_decl;
-%type <btype> block;
+%type <stype> block;
 
 %%
 
@@ -41,12 +40,9 @@ program:
   ;
     
 decl:
-  phase                 {
-    debug(1, "Config: %p\n", ((honeycomb_config *) config));
-    debug(1, "Found phase in program: %p\n", $1);
-  }
-  | hook                {debug(1, "Found a hook in the program\n");}
-  | attr                {debug(1, "Found new attribute in program\n");}
+  phase                 {debug(2, "Found phase in program: %p\n", $1);}
+  | hook                {debug(2, "Found a hook in the program\n");}
+  | attr                {debug(2, "Found new attribute in program\n");}
   | '\n'                /* NULL */
   ;
 
@@ -60,37 +56,45 @@ phase:
     add_phase(config, p);
   }
   | phase_decl block        {
-    debug(3, "Found a block phrase: %s\n", $2); 
-    // phase *p = find_or_create_phase(config, $1);
-    // int str_len = strlen( (char *) $2);
-    // p->command_array = malloc(sizeof(char **) * str_len);
-    // memcpy(p->command_array, $2, str_len);
-    // p->num_exec_lines = sizeof(char **) * str_len;
-    // add_phase(config, p);
+    // I think these two can be combined... I hate code duplication
+    phase *p = find_or_create_phase(config, $1);
+    p->command = (char *)malloc(sizeof(char *) * strlen($2));
+    p->command = strdup($2);
+    debug(3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command); 
+    add_phase(config, p);
   }
-  | phase_decl NULLABLE         {debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));}
+  | phase_decl NULLABLE         {
+    debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));
+    phase *p = find_or_create_phase(config, $1);
+    add_phase(config, p);
+  }
   ;
 
 phase_decl:
-  KEYWORD ':'                 {
-                                if (strcmp($1,"bundle") == 0) $$ = T_BUNDLE;
-                                else if (strcmp($1,"start") == 0) $$ = T_START;
-                                else if (strcmp($1,"stop") == 0) $$ = T_STOP;
-                                else if (strcmp($1,"mount") == 0) $$ = T_MOUNT;
-                                else if (strcmp($1,"unmount") == 0) $$ = T_UNMOUNT;
-                                else if (strcmp($1,"cleanup") == 0) $$ = T_CLEANUP;
-                                else exit(-1);
-                              }
+  KEYWORD ':'             {$$ = str_to_phase_type($1);}
+  | KEYWORD               {$$ = str_to_phase_type($1);}
   ;
 
 // Hooks
 hook:
-  hook_decl line          {debug(3, "Found a hook phrase: %s\n", $2); }
-  | hook_decl block         {debug(3, "Found a hook block: %s\n", $2); }
-  ;
-hook_decl:
-  BEFORE ':'                  {debug(2, "Found hook: %s\n", $1); $$ = $1;}
-  | AFTER ':'                 {debug(2, "Found after hook: %s\n", $1), $$ = $1;}
+  BEFORE ':' line          {
+    debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
+    phase_type t = str_to_phase_type($1);
+    // Do some error checking on the type. please
+    phase *p = find_or_create_phase(config, t);
+    p->before = (char *)malloc(sizeof(char *) * strlen($3));
+    p->before = strdup($3);
+    add_phase(config, p);
+  }
+  | AFTER ':' line          {
+    debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
+    phase_type t = str_to_phase_type($1);
+    // Do some error checking on the type. please
+    phase *p = find_or_create_phase(config, t);
+    p->after = (char *)malloc(sizeof(char *) * strlen($3));
+    p->after = strdup($3);
+    add_phase(config, p);
+  }
   ;
 
 // Attributes

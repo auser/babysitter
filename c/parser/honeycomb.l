@@ -11,9 +11,8 @@
 #define BUF_SIZE 1024
 
 char buf[BUF_SIZE]; 
-char **str_arr;
 char *s;
-int i, len, str_arr_sz;
+int i, len;
 %}
 /* Keywords */
 KEYWORDS      (bundle|start|stop|mount|unmount|cleanup)
@@ -40,13 +39,13 @@ ANYTHING  (.*)
   /* Hooks */
 {KEYWORDS}\.before  {
                       /* strip off the .before (gross) */
-                      yytext = collect_to_period(yytext);
+                      yylval.stype = collect_to_period(yytext);
                       debug(3, "next before hook: %s\n", yytext); 
                       return BEFORE;
                     }
 {KEYWORDS}\.after   {
                       /* strip off the .after (gross) */
-                      yytext = collect_to_period(yytext);
+                      yylval.stype = collect_to_period(yytext);
                       debug(3, "next after hook: %s\n", yytext); 
                       return AFTER;
                     }
@@ -56,36 +55,32 @@ ANYTHING  (.*)
 
   /* blocks */
 \{                  {
-  BEGIN BLOCK;
-  str_arr = malloc(1 * sizeof(char *));
-  str_arr_sz = 0;
   memset(buf, 0, BUF_SIZE);
-  debug(3, "In new block at %d\n", yylineno);
+  int hd_len = strlen(SCRIPT_HEADER);
+  strncpy(buf, SCRIPT_HEADER, hd_len);
+  s = buf+hd_len;
+  BEGIN BLOCK;
+  debug(3, "In new block at %d (%s)\n", yylineno, buf);
 }
 <BLOCK>{COMMENT}{ANYTHING}{NL}    ; /* ignore comments */
 <BLOCK>\}           {
+  *s = 0;
   BEGIN INITIAL;
-  int j = 0;
-  for (i = 0; i < str_arr_sz; i++) {
-    j += strlen(str_arr[i]);
-  }
-  char **arr = malloc(sizeof(char *) * str_arr_sz);
-  memcpy(arr, str_arr, j+1);
+  yylval.stype = strdup(buf);
+  debug(3, "returning block string '%s'\n", buf);
   return BLOCK_SET;
 }
 <BLOCK>\n           {
   ++yylineno;
-  debug(4, "%4d\tnewline in block with str: %s\n", yylineno, buf);
-  if (str_arr != NULL) {
-    str_arr[str_arr_sz] = malloc(sizeof(buf));
-    if (str_arr[0] != NULL) {
-      strcpy(str_arr[str_arr_sz], buf);
-      str_arr_sz++;
-    }
+  // We need more space for the text
+  if (strlen(s) >= BUF_SIZE) {
+    int new_len = strlen(buf) * 2;
+    char temp_buf[new_len];
+    memset(temp_buf, 0, new_len);
+    memcpy(temp_buf, buf, strlen(buf));
+    *s = *temp_buf;
   }
-  /* reset */
-  memset(buf, 0, BUF_SIZE);
-  s = buf;
+  *s++ = '\n';
 }
 <BLOCK>.            {
   *s++ = *yytext;

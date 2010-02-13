@@ -1,5 +1,9 @@
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 3
+#define DEBUG_LEVEL 1
+#endif
+
+#ifndef SCRIPT_HEADER
+#define SCRIPT_HEADER "#!/bin/sh -ex"
 #endif
 
 #ifndef YYPARSE_PARAM
@@ -22,6 +26,7 @@ extern "C" {
   char *phase_type_to_string(phase_type t);
   char *attribute_type_to_string(attr_type t);
 
+  phase_type str_to_phase_type(char *str);
   char *collect_to_period(char *str);
   honeycomb_config* a_new_honeycomb_config_object(void);
   int add_phase(honeycomb_config *c, phase *p);
@@ -44,6 +49,7 @@ int debug(int level, char *fmt, ...);
 char *phase_type_to_string(phase_type t);
 char *attribute_type_to_string(attr_type t);
 
+phase_type str_to_phase_type(char *str);
 char *collect_to_period(char *str);
 honeycomb_config* a_new_honeycomb_config_object(void);
 int add_phase(honeycomb_config *c, phase *p);
