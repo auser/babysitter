@@ -76,6 +76,7 @@ phase_decl:
   ;
 
 // Hooks
+// TODO: Make sure blocks work here
 hook:
   BEFORE ':' line          {
     debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);

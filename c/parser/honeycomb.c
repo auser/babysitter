@@ -433,8 +433,8 @@ static const yytype_int8 yyrhs[] =
 static const yytype_uint8 yyrline[] =
 {
        0,    38,    38,    39,    43,    44,    45,    46,    50,    58,
-      66,    74,    75,    80,    89,   102,   103,   107,   120,   125,
-     126
+      66,    74,    75,    81,    90,   103,   104,   108,   121,   126,
+     127
 };
 #endif
 
@@ -1411,7 +1411,7 @@ yyreduce:
     break;
 
   case 13:
-#line 80 "honeycomb.y"
+#line 81 "honeycomb.y"
     {
     debug(3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
@@ -1424,7 +1424,7 @@ yyreduce:
     break;
 
   case 14:
-#line 89 "honeycomb.y"
+#line 90 "honeycomb.y"
     {
     debug(3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
@@ -1437,17 +1437,17 @@ yyreduce:
     break;
 
   case 15:
-#line 102 "honeycomb.y"
+#line 103 "honeycomb.y"
     {debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string((yyvsp[(1) - (2)].atype)), (yyvsp[(2) - (2)].stype));}
     break;
 
   case 16:
-#line 103 "honeycomb.y"
+#line 104 "honeycomb.y"
     {debug(4, "Found empty attribute\n");}
     break;
 
   case 17:
-#line 107 "honeycomb.y"
+#line 108 "honeycomb.y"
     {
                                 if (strcmp((yyvsp[(1) - (2)].stype),"executables") == 0) (yyval.atype) = T_EXECUTABLES;
                                 else if (strcmp((yyvsp[(1) - (2)].stype),"directories") == 0) (yyval.atype) = T_DIRECTORIES;
@@ -1460,12 +1460,12 @@ yyreduce:
     break;
 
   case 18:
-#line 120 "honeycomb.y"
+#line 121 "honeycomb.y"
     {debug(3, "Found a block\n");(yyval.stype) = (yyvsp[(1) - (1)].stype);}
     break;
 
   case 19:
-#line 125 "honeycomb.y"
+#line 126 "honeycomb.y"
     {debug(3, "Found string: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
     break;
 
@@ -1685,7 +1685,7 @@ yyreturn:
 }
 
 
-#line 129 "honeycomb.y"
+#line 130 "honeycomb.y"
 
 
 int yyerror(const char *str)
