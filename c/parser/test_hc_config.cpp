@@ -46,6 +46,7 @@ int main (int argc, char const *argv[])
   if (config.group) printf("\t group: %s\n", config.group);
   if (config.root_dir) printf("\t root_dir: %s\n", config.root_dir);
   if (config.image) printf("\t image: %s\n", config.image);
+  if (config.skel_dir) printf("\t skel_dir: %s\n", config.skel_dir);
   
   printf("num_phases: %d (%p)\n", (int)config.num_phases, &config);
   printf("------ phases ------\n");

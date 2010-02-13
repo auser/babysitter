@@ -198,6 +198,9 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
     case T_IMAGE:
       c->image = (char *)malloc(sizeof(char *) * strlen(value));
       c->image = strdup(value); break;
+    case T_SKEL_DIR:
+      c->skel_dir = (char *)malloc(sizeof(char *) * strlen(value));
+      c->skel_dir = strdup(value); break;
     default:
       fprintf(stderr, "Unknown attribute: %s = %s on config\n", attribute_type_to_string(t), value);
       return -1;
