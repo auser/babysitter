@@ -29,7 +29,6 @@ extern int yylineno;
 %type <stype> attr;
 %type <ptype> phase_decl;
 %type <phase> phase hook;
-%type <atype> attr_decl;
 %type <stype> block;
 
 %%
@@ -101,17 +100,15 @@ hook:
 
 // Attributes
 attr:
-  attr_decl line            {
-    debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string($1), $2);
-    add_attribute(config, $1, $2);
+  RESERVED ':' line              {
+    debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string($1), $3);
+    add_attribute(config, $1, $3);
   }
-  | attr_decl               {debug(4, "Found empty attribute\n");}
+  | RESERVED ':' NULLABLE     {
+    debug(4, "Found empty attribute\n");
+  }
   ;
   
-attr_decl:
-  RESERVED ':'                {$$ = $1;}
-  ;
-
 // Blocks
 block:
   BLOCK_SET                   {debug(3, "Found a block\n");$$ = $1;}

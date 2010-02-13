@@ -16,7 +16,6 @@ int i, len;
 %}
 /* Keywords */
 KEYWORDS      (bundle|start|stop|mount|unmount|cleanup)
-RESERVEDS     (root_dir|directories|executables|env|stdout|stdin|user|group)
 
 /* Others */
 COMMENT     #
@@ -51,6 +50,7 @@ ANYTHING  (.*)
                     }
   /* Keywords */
 {KEYWORDS}          {debug(3, "next phase: %s\n", yytext); yylval.stype = strdup(yytext); return KEYWORD;}
+
 directories         {yylval.atype = T_DIRECTORIES; return RESERVED;}
 executables         {yylval.atype = T_EXECUTABLES; return RESERVED;}
 user                {yylval.atype = T_USER; return RESERVED;}
@@ -59,8 +59,7 @@ env                 {yylval.atype = T_ENV; return RESERVED;}
 stdout              {yylval.atype = T_STDOUT; return RESERVED;}
 stdin               {yylval.atype = T_STDIN; return RESERVED;}
 root_dir            {yylval.atype = T_ROOT_DIR; return RESERVED;}
-
-{RESERVEDS}         {debug(3, "encountered reserved word: %s\n", yytext); yylval.stype = strdup(yytext); return RESERVED;}
+image               {yylval.atype = T_IMAGE; return RESERVED;}
 
   /* blocks */
 \{                  {

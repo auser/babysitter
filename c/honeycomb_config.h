@@ -36,6 +36,7 @@ typedef enum _attr_type_ {
   T_STDIN,
   T_USER,
   T_GROUP,
+  T_IMAGE,
   T_ROOT_DIR
 } attr_type;
 
@@ -57,6 +58,7 @@ typedef struct _honeycomb_config_ {
   char *stdin;          // STDIN
   char *user;           // The user to run this honeycomb
   char *group;          // The group to run this honeycomb
+  char *image;          // Image to mount as bee
   // Phases
   size_t num_phases;
   phase **phases;
