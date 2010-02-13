@@ -40,24 +40,24 @@
       know about them.  */
    enum yytokentype {
      KEYWORD = 258,
-     RESERVED = 259,
-     NULLABLE = 260,
-     BEFORE = 261,
-     AFTER = 262,
-     STRING = 263,
-     ENDL = 264,
-     BLOCK_SET = 265
+     NULLABLE = 259,
+     BEFORE = 260,
+     AFTER = 261,
+     STRING = 262,
+     ENDL = 263,
+     BLOCK_SET = 264,
+     RESERVED = 265
    };
 #endif
 /* Tokens.  */
 #define KEYWORD 258
-#define RESERVED 259
-#define NULLABLE 260
-#define BEFORE 261
-#define AFTER 262
-#define STRING 263
-#define ENDL 264
-#define BLOCK_SET 265
+#define NULLABLE 259
+#define BEFORE 260
+#define AFTER 261
+#define STRING 262
+#define ENDL 263
+#define BLOCK_SET 264
+#define RESERVED 265
 
 
 

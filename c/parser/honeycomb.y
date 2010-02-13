@@ -16,11 +16,12 @@ extern int yylineno;
   attr_type atype;
 }
 
-%token <stype> KEYWORD RESERVED NULLABLE
+%token <stype> KEYWORD NULLABLE
 %token <stype> BEFORE AFTER
 %token <stype> STRING
 %token <ctype> ENDL
 %token <stype> BLOCK_SET
+%token <atype> RESERVED
 
 %left ':'
 
@@ -108,15 +109,7 @@ attr:
   ;
   
 attr_decl:
-  RESERVED ':'                {
-                                if (strcmp($1,"executables") == 0) $$ = T_EXECUTABLES;
-                                else if (strcmp($1,"directories") == 0) $$ = T_DIRECTORIES;
-                                else if (strcmp($1,"env") == 0) $$ = T_ENV;
-                                else if (strcmp($1,"stdout") == 0) $$ = T_STDOUT;
-                                else if (strcmp($1,"stdin") == 0) $$ = T_STDIN;
-                                else if (strcmp($1,"root_dir") == 0) $$ = T_ROOT_DIR;
-                                else exit(-1);
-                              }
+  RESERVED ':'                {$$ = $1;}
   ;
 
 // Blocks

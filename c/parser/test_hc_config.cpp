@@ -42,6 +42,8 @@ int main (int argc, char const *argv[])
   if (config.env) printf("\t env: %s\n", config.env);
   if (config.stdout) printf("\t stdout: %s\n", config.stdout);
   if (config.stdin) printf("\t stdin: %s\n", config.stdin);
+  if (config.user) printf("\t user: %s\n", config.user);
+  if (config.group) printf("\t group: %s\n", config.group);
   if (config.root_dir) printf("\t root_dir: %s\n", config.root_dir);
   
   printf("num_phases: %d (%p)\n", (int)config.num_phases, &config);

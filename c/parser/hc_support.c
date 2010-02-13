@@ -167,6 +167,8 @@ int add_phase(honeycomb_config *c, phase *p) {
 }
 
 // Add an attribute to the config
+// To add another, add it here, add it to the type and specify it in the
+// honeycomb_config struct
 int add_attribute(honeycomb_config *c, attr_type t, char *value) {
   switch (t) {
     case T_DIRECTORIES:
@@ -187,6 +189,12 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
     case T_ROOT_DIR:
       c->root_dir = (char *)malloc(sizeof(char *) * strlen(value));
       c->root_dir = strdup(value); break;
+    case T_USER:
+      c->user = (char *)malloc(sizeof(char *) * strlen(value));
+      c->user = strdup(value); break;
+    case T_GROUP:
+      c->group = (char *)malloc(sizeof(char *) * strlen(value));
+      c->group = strdup(value); break;
     default:
       fprintf(stderr, "Unknown attribute: %s = %s on config\n", attribute_type_to_string(t), value);
       return -1;

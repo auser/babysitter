@@ -34,6 +34,8 @@ typedef enum _attr_type_ {
   T_ENV,
   T_STDOUT,
   T_STDIN,
+  T_USER,
+  T_GROUP,
   T_ROOT_DIR
 } attr_type;
 
@@ -45,14 +47,16 @@ typedef struct _phase_ {
 } phase;
 
 typedef struct _honeycomb_config_ {
-  char *filename;           // Filename of the config file
-  char *app_type;           // Application type (i.e. rack, java, etc.)
-  char *root_dir;     // Root directory to operate inside of (can be generated)
-  char *env;   // a list of environment variables to start
-  char *executables;        // Extra executables
-  char *directories;        // Extra directories to copy over
-  char *stdout;             // STDOUT
-  char *stdin;              // STDIN
+  char *filename;       // Filename of the config file
+  char *app_type;       // Application type (i.e. rack, java, etc.)
+  char *root_dir;       // Root directory to operate inside of (can be generated)
+  char *env;            // a list of environment variables to start
+  char *executables;    // Extra executables
+  char *directories;    // Extra directories to copy over
+  char *stdout;         // STDOUT
+  char *stdin;          // STDIN
+  char *user;           // The user to run this honeycomb
+  char *group;          // The group to run this honeycomb
   // Phases
   size_t num_phases;
   phase **phases;
