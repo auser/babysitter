@@ -10,17 +10,17 @@
 #define YYPARSE_PARAM config
 #endif
 
-#ifndef SUPPORT_H
-#define SUPPORT_H
-
 #include "honeycomb_config.h"
 
 #ifdef __cplusplus
 
+#ifndef HC_SUPPORT_H
+#define HC_SUPPORT_H
+
 extern "C" {
   int yyparse(void *);
   int yylex(void);  
-  int yywrap() { return 1; }
+  int yywrap();
   
   int debug(int level, char *fmt, ...);
   char *phase_type_to_string(phase_type t);
@@ -39,7 +39,12 @@ extern "C" {
   void free_phase(phase *p);
 }
 
+#endif 
+
 #else
+
+#ifndef HC_SUPPORT_H
+#define HC_SUPPORT_H
 
 extern int yylex(void);
 extern int yyparse(void *);
@@ -61,6 +66,7 @@ phase* new_phase(phase_type t);
 int modify_phase(honeycomb_config *c, phase *p);
 void free_config(honeycomb_config *c);
 void free_phase(phase *p);
+
 
 #endif
 

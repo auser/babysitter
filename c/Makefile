@@ -9,7 +9,7 @@ bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
-CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include
+CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include -I ./parser
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 INC_LIBS = -lerl_interface -lei -lcap -lstdc++ -lelf
 EXECUTABLE = ../priv/bin/babysitter
@@ -33,7 +33,7 @@ PACKAGE_NAME = babysitter
 PACKAGE_VERSION = 0.1
 
 INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) worker_bee babysitter
+OUTPUTFILES := $(INTERMEDIATES) config_parser worker_bee babysitter
 #OUTPUTFILES := config_parser honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
@@ -68,12 +68,12 @@ eipp:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c ei++.cpp
 
 config_parser:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c config_parser.cpp
-
+	(cd ./parser;$(MAKE)) # make the config parser
+	
 honeycomb: worker_bee honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
-worker_bee: worker_bee.cpp worker_bee.h
+worker_bee: honeycomb.h honeycomb_config.h worker_bee.cpp worker_bee.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c worker_bee.cpp
 
 babysitter:
@@ -82,6 +82,7 @@ babysitter:
 
 clean:
 	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE)
+	@(cd ./parser; $(MAKE) clean)
  
 install:
 	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv

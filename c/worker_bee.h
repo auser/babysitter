@@ -22,6 +22,8 @@
 #include <set>
 #include <regex.h>
 
+#include "honeycomb_config.h"
+
 /** defines **/
 #define ERR -1
 #define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"

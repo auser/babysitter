@@ -9,7 +9,7 @@ else
 endif
  
 all:
-	(echo @PACKAGE_VERSION@ > VERSION)
+	(echo @PACKAGE_VERSION@ > VERSION)	
 	(cd c;$(MAKE))
 	(cd erl;$(MAKE); $(MAKE) boot)
  

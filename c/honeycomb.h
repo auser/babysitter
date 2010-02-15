@@ -1,5 +1,3 @@
-#ifndef HONEYCOMB_H
-#define HONEYCOMB_H
 /**
  * Honeycomb
  * This class keeps all the fun little variables that are 
@@ -33,7 +31,7 @@ using std::string;
 #include <ei.h>
 #include "ei++.h"
 
-#include "honeycomb_config.h"
+#include "hc_support.h"
 #include "config_parser.h"
 
 /*---------------------------- Defines ------------------------------------*/
@@ -57,7 +55,6 @@ typedef std::set<std::string> string_set;
 typedef enum {UNKNOWN, FAILURE} failure_type_t;
 
 class Honeycomb;
-// class HoneycombConfig;
 class Bee;
 
 // TODO: Implement multiple mounts for bees
@@ -168,7 +165,11 @@ public:
     m_nofiles = NULL;
     init(); // Do our initialization fun here
   }
-  ~Honeycomb() { delete [] m_cenv; m_cenv = NULL; }
+  ~Honeycomb() { 
+    delete [] m_cenv; 
+    m_cenv = NULL;
+    free_config(&m_honeycomb_config);
+  }
   
   const char*  strerror() const { return m_err.str().c_str(); }
   const char*  cmd()      const { return m_cmd.c_str(); }
@@ -185,6 +186,7 @@ public:
   int ei_decode(ei::Serializer& ei);
   int bundle_environment(std::string confinement_root, mode_t confinement_mode, string_set s_executables, string_set s_dirs, string_set s_extra_files);
   int bundle(const std::string & root_path, const std::string &file_path, string_set s_executables, string_set s_dirs, string_set s_extra_files);
+  int valid();
   int parse_honeycomb_config_file(std::string filename);
   // DELETE ME
   void set_honeycomb_config_file(std::string filename) { 
@@ -209,7 +211,6 @@ private:
   int comb_exec(std::string cmd); // Run a hook on the system
   void exec_hook(std::string action, std::string stage);
   int bundle(const std::string & root_path, const std::string & file_path);  
-  
 };
 
 /**
@@ -239,4 +240,3 @@ public:
 };
 
 /*--------------------------------------------------------------------------*/
-#endif

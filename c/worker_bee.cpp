@@ -9,8 +9,8 @@
 #include <sys/resource.h>
 #include <dirent.h> 
 
-#include "honeycomb.h"
 #include "worker_bee.h"
+#include "honeycomb.h"
 
 // Build a base directory
 bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group) {

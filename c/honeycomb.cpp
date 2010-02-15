@@ -21,9 +21,10 @@
 // Erlang interface
 #include "ei++.h"
 
+#include "honeycomb_config.h"
 #include "honeycomb.h"
 #include "worker_bee.h"
-#include "parser/honeycomb.y"
+#include "hc_support.h"
 
 /*---------------------------- Implementation ------------------------------*/
 
@@ -453,17 +454,7 @@ void Honeycomb::init() {
   printf("New Honeycomb (%s)\n", m_app_type.c_str());
 }
 
-/*------------------------- HoneycombConfig -----------------*/
-void HoneycombConfig::init() {
-  // HoneycombConfig c(honeycomb_config);
-  // c.files = s_extra_files;
-  // c.executables = s_executables;
-  // c.dirs = s_dirs;
-  printf("New HoneycombConfig: %s\n", config_file.c_str());
-  parse();
-}
-
-void HoneycombConfig::parse() {
-  printf("Parsing...\n");
-  yyparse();
+int Honeycomb::valid() {
+  // Run validations on the honeycomb here
+  return 0;
 }

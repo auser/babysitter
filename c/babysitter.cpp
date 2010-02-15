@@ -92,7 +92,7 @@ ei::Serializer eis(/* packet header size */ 2);
 
 sigjmp_buf  jbuf;
 int alarm_max_time     = 12;
-static bool debug      = false;
+static bool dbg        = false;
 static bool oktojump   = false;
 static bool signaled   = false;     // indicates that SIGCHLD was signaled
 static int  terminated = 0;         // indicates that we got a SIGINT / SIGTERM event
@@ -165,7 +165,7 @@ int process_child_signal(pid_t pid)
 
 // int send_error_str(int transId, bool asAtom, const char* fmt, ...)
 void dmesg(const char *fmt, ...) {
-  if(debug)
+  if(dbg)
   {
     char str[BUF_SIZE];
     va_list vargs;
@@ -179,7 +179,6 @@ void dmesg(const char *fmt, ...) {
 
 // We've received a signal to process
 void gotsignal(int sig) {
-  //if (debug) dmesg("Got signal: %i\n", sig);
   if (oktojump) siglongjmp(jbuf, 1);
   switch (sig) {
     case SIGTERM:
@@ -273,7 +272,7 @@ int parse_the_command_line(int argc, char* argv[]) {
         usage();
         return 1;
       case 'D':
-        debug = true;
+        dbg = true;
         eis.debug(true);
         break;
       case 'a':
@@ -388,19 +387,23 @@ int main(int argc, char* argv[])
           case EXECUTE:
           case SHELL: {
             // {shell, Cmd::string(), Options::list()}
-            Honeycomb po (config);
-            if (arity != 3 || po.ei_decode(eis) < 0) {
-              send_error_str(transId, false, po.strerror());
+            Honeycomb comb (config);
+            if (arity != 3 || comb.ei_decode(eis) < 0) {
+              send_error_str(transId, false, comb.strerror());
               continue;
             }
-
-            pid_t pid;
-            if ((pid = start_child(po)) < 0)
-              send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
-            else {
-              Bee bee(po, pid);
-              children[pid] = bee;
-              send_ok(transId, pid);
+            
+            if (! comb.valid() ) {
+              send_error_str(transId, false, "There was an error with the honeycomb. Not a valid bee: %s", strerror(errno));
+            } else {
+              pid_t pid;
+              if ((pid = start_child(comb)) < 0)
+                send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
+              else {
+                Bee bee(comb, pid);
+                children[pid] = bee;
+                send_ok(transId, pid);
+              }
             }
             break;
           }
@@ -535,7 +538,7 @@ int stop_child(Bee& bee, int transId, const TimeVal& now, bool notify)
     
     if (bee.kill_cmd_pid > 0 || bee.sigterm) {
         double diff = bee.deadline.diff(now);
-        if (debug)
+        if (dbg)
             fprintf(stderr, "Deadline: %.3f\r\n", diff);
         // There was already an attempt to kill it.
         if (bee.sigterm && bee.deadline.diff(now) < 0) {

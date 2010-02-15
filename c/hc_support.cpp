@@ -15,6 +15,8 @@ int debug(int level, char *fmt, ...) {
 	return r;
 }
 
+int yywrap() { return 1; }
+
 /**
 * turn a phase_type into a string
 * FOR DEBUGGING
@@ -65,7 +67,7 @@ phase_type str_to_phase_type(char *str) {
   else if (strcmp(str,"mount") == 0) return T_MOUNT;
   else if (strcmp(str,"unmount") == 0) return T_UNMOUNT;
   else if (strcmp(str,"cleanup") == 0) return T_CLEANUP;
-  return -1;
+  return T_UNKNOWN;
 }
 
 /**
@@ -74,7 +76,7 @@ phase_type str_to_phase_type(char *str) {
 **/
 char *collect_to_period(char *str) {
   char buf[BUF_SIZE];
-  int i = 0;
+  unsigned int i = 0;
   /* strip off the .before (gross) */
   memset(buf, 0, BUF_SIZE);
   for (i = 0; i < strlen(str); i++) {
@@ -89,7 +91,7 @@ char *collect_to_period(char *str) {
 
 // create a new config
 honeycomb_config* a_new_honeycomb_config_object(void) {
-  honeycomb_config *c = malloc(sizeof(honeycomb_config));
+  honeycomb_config *c = (honeycomb_config*)malloc(sizeof(honeycomb_config));
 	if (c) {
     return c;
 	} else {
@@ -102,9 +104,8 @@ honeycomb_config* a_new_honeycomb_config_object(void) {
 // Create a new phase
 phase* new_phase(phase_type t) {
   phase *p;
-  p = malloc(sizeof(phase *));
+  p = (phase*)malloc(sizeof(phase *));
   if (p) {
-    debug(3, "Created a new phase: %d\n", t);
     p->type = t;
     p->before = 0;
     p->command = 0;
@@ -116,7 +117,7 @@ phase* new_phase(phase_type t) {
 
 // Find a phase of type t on the config object
 phase *find_phase(honeycomb_config *c, phase_type t) {
-  int i;
+  unsigned int i;
   for (i = 0; i < c->num_phases; ++i) {
     if (c->phases[i]->type == t) return c->phases[i];
   }
@@ -132,7 +133,7 @@ phase *find_or_create_phase(honeycomb_config *c, phase_type t) {
 
 // Modify an existing phase
 int modify_phase(honeycomb_config *c, phase *p) {
-  int i;
+  unsigned int i;
   for (i = 0; i < c->num_phases; ++i) {
     if (c->phases[i]->type == p->type) {
       c->phases[i] = p;
@@ -154,7 +155,7 @@ int add_phase(honeycomb_config *c, phase *p) {
     return -1;
   }
   
-  int i;
+  unsigned int i;
   for (i = 0; i < c->num_phases; ++i) {
     nphases[i] = c->phases[i];
   }
