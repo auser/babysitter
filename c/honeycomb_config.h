@@ -49,7 +49,6 @@ typedef struct _phase_ {
 } phase;
 
 typedef struct _honeycomb_config_ {
-  char *filename;       // Filename of the config file
   char *app_type;       // Application type (i.e. rack, java, etc.)
   char *root_dir;       // Root directory to operate inside of (can be generated)
   char *env;            // a list of environment variables to start

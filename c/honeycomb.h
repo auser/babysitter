@@ -92,6 +92,7 @@ typedef std::pair<pid_t, Bee>         PidInfoT;
 typedef std::map <pid_t, Bee>         MapChildrenT;
 typedef std::pair<kill_cmd_pid_t, pid_t>    KillPidStatusT;
 typedef std::map <kill_cmd_pid_t, pid_t>    MapKillPidT;
+typedef std::map <std::string, honeycomb_config> ReadConfigs;
 
 /*--------------------------------------------------------------------------*/
  

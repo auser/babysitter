@@ -216,12 +216,17 @@ void free_config(honeycomb_config *c) {
       free_phase(c->phases[i]);
     }
   }
-  free(c->filename);
-  free(c->app_type);
-  free(c->root_dir);
-  free(c->env);
-  free(c->stdout);
-  free(c->stdin);
+  if (c->app_type) free(c->app_type);
+  if (c->root_dir) free(c->root_dir);
+  if (c->env) free(c->env);
+  if (c->executables) free(c->executables);
+  if (c->directories) free(c->directories);
+  if (c->stdout) free(c->stdout);
+  if (c->stdin) free(c->stdin);
+  if (c->user) free(c->user);
+  if (c->group) free(c->group);
+  if (c->image) free(c->image);
+  if (c->skel_dir) free(c->skel_dir);
 }
 
 // Free a phase struct
