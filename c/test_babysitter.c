@@ -1,6 +1,7 @@
 // Compile:
 // make && g++ -o test_babysitter test_babysitter.c config_parser.o ei++.o honeycomb.o hc_support.o worker_bee.o parser/y.tab.o parser/lex.yy.o -lelf -lei -lfl
-// make && g++ -o test_babysitter test_babysitter.c config_parser.o ei++.o honeycomb.o hc_support.o worker_bee.o parser/y.tab.o parser/lex.yy.o -lelf -lei -lfl && valgrind --tool=memcheck --track-origins=yes --leak-check=yes ./test_babysitter ~auser/apps
+// make && g++ -o test_babysitter test_babysitter.c config_parser.o ei++.o honeycomb.o hc_support.o worker_bee.o parser/y.tab.o parser/lex.yy.o -lelf -lei -lfl && ./test_babysitter ~auser/apps
+ // valgrind --tool=memcheck --track-origins=yes --leak-check=yes ./test_babysitter ~auser/apps
 
 #include <stdio.h>
 #include <dirent.h>
@@ -69,6 +70,10 @@ int parse_config_dir(std::string directory) {
 void setup_defaults() {
   config_file_dir = "/etc/babysitter/apps";
 }
+
+// honeycomb_config* find_config_for_app_type(std::string str) {
+//   known_configs.find(str);
+// }
 
 int main (int argc, char const *argv[])
 {
