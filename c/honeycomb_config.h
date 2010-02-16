@@ -29,6 +29,7 @@ typedef enum _phase_type_ {
 } phase_type;
 
 typedef enum _attr_type_ {
+  T_FILEPATH,
   T_DIRECTORIES,
   T_EXECUTABLES,
   T_ENV,
@@ -49,6 +50,7 @@ typedef struct _phase_ {
 } phase;
 
 typedef struct _honeycomb_config_ {
+  char *filepath;       // The filepath of the config file (TODO: so we can use relative filepaths)
   char *app_type;       // Application type (i.e. rack, java, etc.)
   char *root_dir;       // Root directory to operate inside of (can be generated)
   char *env;            // a list of environment variables to start

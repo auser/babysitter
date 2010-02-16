@@ -569,7 +569,8 @@ int yy_flex_debug = 0;
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
 #line 1 "honeycomb.l"
-#line 4 "honeycomb.l"
+#define YY_NO_INPUT 1
+#line 5 "honeycomb.l"
 #include <stdio.h>
 #include <string.h>
 
@@ -586,7 +587,7 @@ int i, len;
 /* Others */
 
 
-#line 590 "lex.yy.c"
+#line 591 "lex.yy.c"
 
 #define INITIAL 0
 #define QUOTEDSTR 1
@@ -773,10 +774,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 31 "honeycomb.l"
+#line 32 "honeycomb.l"
 
 
-#line 780 "lex.yy.c"
+#line 781 "lex.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -861,29 +862,29 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 33 "honeycomb.l"
+#line 34 "honeycomb.l"
 ; /* Ignore whitespace */
 	YY_BREAK
 case 2:
 /* rule 2 can match eol */
 YY_RULE_SETUP
-#line 34 "honeycomb.l"
+#line 35 "honeycomb.l"
 {return yytext[0];}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 35 "honeycomb.l"
+#line 36 "honeycomb.l"
 {debug(4, "Found ':'\n"); return yytext[0];} /* Special characters with meaning to the syntax */
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 36 "honeycomb.l"
+#line 37 "honeycomb.l"
 {debug(2, "Found a null\n"); return NULLABLE;}
 	YY_BREAK
 /* Hooks */
 case 5:
 YY_RULE_SETUP
-#line 39 "honeycomb.l"
+#line 40 "honeycomb.l"
 {
                       /* strip off the .before (gross) */
                       yylval.stype = collect_to_period(yytext);
@@ -893,7 +894,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 45 "honeycomb.l"
+#line 46 "honeycomb.l"
 {
                       /* strip off the .after (gross) */
                       yylval.stype = collect_to_period(yytext);
@@ -904,7 +905,7 @@ YY_RULE_SETUP
 /* Keywords */
 case 7:
 YY_RULE_SETUP
-#line 52 "honeycomb.l"
+#line 53 "honeycomb.l"
 {
   debug(3, "next phase: %s\n", yytext);
   
@@ -917,58 +918,58 @@ YY_RULE_SETUP
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 62 "honeycomb.l"
+#line 63 "honeycomb.l"
 {yylval.atype = T_DIRECTORIES; return RESERVED;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 63 "honeycomb.l"
+#line 64 "honeycomb.l"
 {yylval.atype = T_EXECUTABLES; return RESERVED;}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 64 "honeycomb.l"
+#line 65 "honeycomb.l"
 {yylval.atype = T_USER; return RESERVED;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 65 "honeycomb.l"
+#line 66 "honeycomb.l"
 {yylval.atype = T_GROUP; return RESERVED;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 66 "honeycomb.l"
+#line 67 "honeycomb.l"
 {yylval.atype = T_ENV; return RESERVED;}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 67 "honeycomb.l"
+#line 68 "honeycomb.l"
 {yylval.atype = T_STDOUT; return RESERVED;}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 68 "honeycomb.l"
+#line 69 "honeycomb.l"
 {yylval.atype = T_STDIN; return RESERVED;}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 69 "honeycomb.l"
+#line 70 "honeycomb.l"
 {yylval.atype = T_ROOT_DIR; return RESERVED;}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 70 "honeycomb.l"
+#line 71 "honeycomb.l"
 {yylval.atype = T_IMAGE; return RESERVED;}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 71 "honeycomb.l"
+#line 72 "honeycomb.l"
 {yylval.atype = T_SKEL_DIR; return RESERVED;}
 	YY_BREAK
 /* blocks */
 case 18:
 YY_RULE_SETUP
-#line 74 "honeycomb.l"
+#line 75 "honeycomb.l"
 {
   memset(buf, 0, BUF_SIZE);
   int hd_len = strlen(SCRIPT_HEADER);
@@ -981,12 +982,12 @@ YY_RULE_SETUP
 case 19:
 /* rule 19 can match eol */
 YY_RULE_SETUP
-#line 82 "honeycomb.l"
+#line 83 "honeycomb.l"
 ; /* ignore comments */
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 83 "honeycomb.l"
+#line 84 "honeycomb.l"
 {
   *s = 0;
   BEGIN INITIAL;
@@ -998,7 +999,7 @@ YY_RULE_SETUP
 case 21:
 /* rule 21 can match eol */
 YY_RULE_SETUP
-#line 90 "honeycomb.l"
+#line 91 "honeycomb.l"
 {
   ++yylineno;
   // We need more space for the text
@@ -1014,7 +1015,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 102 "honeycomb.l"
+#line 103 "honeycomb.l"
 {
   *s++ = *yytext;
 }
@@ -1023,13 +1024,13 @@ YY_RULE_SETUP
 case 23:
 /* rule 23 can match eol */
 YY_RULE_SETUP
-#line 107 "honeycomb.l"
+#line 108 "honeycomb.l"
 {debug(4, "%4d\tIgnoring comment: %s", yylineno++, yytext);} /* ignore comments */  
 	YY_BREAK
 /* Strings */
 case 24:
 YY_RULE_SETUP
-#line 110 "honeycomb.l"
+#line 111 "honeycomb.l"
 {
   memset(buf, 0, BUF_SIZE);
   s = buf;
@@ -1038,22 +1039,22 @@ YY_RULE_SETUP
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 115 "honeycomb.l"
+#line 116 "honeycomb.l"
 {*s++ = '\n';}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 116 "honeycomb.l"
+#line 117 "honeycomb.l"
 {*s++ = '\t';}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 117 "honeycomb.l"
+#line 118 "honeycomb.l"
 {*s++ = '\"';}
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 118 "honeycomb.l"
+#line 119 "honeycomb.l"
 {
   *s = 0;
   BEGIN INITIAL; // get outta here
@@ -1065,17 +1066,17 @@ YY_RULE_SETUP
 case 29:
 /* rule 29 can match eol */
 YY_RULE_SETUP
-#line 125 "honeycomb.l"
+#line 126 "honeycomb.l"
 {fprintf(stderr, "Error: %4d\tInvalid string\n", yylineno); BEGIN 0;}
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 126 "honeycomb.l"
+#line 127 "honeycomb.l"
 {*s++ = *yytext;}
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 128 "honeycomb.l"
+#line 129 "honeycomb.l"
 {
   debug(3, "returning STRING: '%s'\n", yytext);
   yylval.stype = strdup(yytext);
@@ -1084,10 +1085,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 134 "honeycomb.l"
+#line 135 "honeycomb.l"
 ECHO;
 	YY_BREAK
-#line 1091 "lex.yy.c"
+#line 1092 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(QUOTEDSTR):
 case YY_STATE_EOF(BLOCK):
@@ -2050,7 +2051,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 134 "honeycomb.l"
+#line 135 "honeycomb.l"
 
 
 

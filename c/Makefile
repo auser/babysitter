@@ -11,7 +11,8 @@ libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include -I ./parser
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
-INC_LIBS = -lerl_interface -lei -lcap -lstdc++ -lelf
+PARSER_LIBS = ./parser/y.tab.o ./parser/lex.yy.o
+INC_LIBS = -lerl_interface -lei -lcap -lstdc++ -lelf -lfl
 EXECUTABLE = ../priv/bin/babysitter
 
 ifeq ($(shell uname),Linux)
@@ -68,7 +69,7 @@ eipp:
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c ei++.cpp
 
 config_parser:
-	(cd ./parser;$(MAKE)) # make the config parser
+	@(cd ./parser;$(MAKE)) # make the config parser
 	
 honeycomb: worker_bee honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
@@ -76,13 +77,16 @@ honeycomb: worker_bee honeycomb.cpp honeycomb.h
 worker_bee: honeycomb.h honeycomb_config.h worker_bee.cpp worker_bee.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c worker_bee.cpp
 
+babysitter.o: worker_bee config_parser
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c babysitter.cpp
+
 babysitter:
 	mkdir -p `dirname $(EXECUTABLE)`
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(INC_LIBS)
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(PARSER_LIBS) $(INC_LIBS)
 
 clean:
 	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE)
-	@(cd ./parser; $(MAKE) clean)
+	cd ./parser; $(MAKE) clean
  
 install:
 	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv

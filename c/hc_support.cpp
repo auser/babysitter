@@ -130,14 +130,12 @@ phase* new_phase(phase_type t) {
     p->after = NULL;
   } else {
   }
-  assert(p);
-  printf("new phase: %p\n", p);
+  assert(p != NULL);
   return p;
 }
 
 // Find a phase of type t on the config object
 phase *find_phase(honeycomb_config *c, phase_type t) {
-  printf("find_phase of type: %d\n", t);
   unsigned int i = 0;
   for (i = 0; i < c->num_phases; i++) {
     if (c->phases[i]->type == t) return c->phases[i];
@@ -193,6 +191,9 @@ int add_phase(honeycomb_config *c, phase *p) {
 // honeycomb_config struct
 int add_attribute(honeycomb_config *c, attr_type t, char *value) {
   switch (t) {
+    case T_FILEPATH:
+      c->filepath = (char *) malloc(sizeof(char*) * strlen(value));
+      memset(c->filepath, 0, strlen(value)); memcpy(c->filepath, value, strlen(value)); break;
     case T_DIRECTORIES:
       c->directories = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->directories, 0, strlen(value)); memcpy(c->directories, value, strlen(value)); break;

@@ -9,8 +9,7 @@ else
 endif
  
 all:
-	(echo 0.1 > VERSION)
-	(cd c/parser;$(MAKE))
+	(echo 0.1 > VERSION)	
 	(cd c;$(MAKE))
 	(cd erl;$(MAKE); $(MAKE) boot)
  

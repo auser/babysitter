@@ -45,6 +45,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <string.h>
 
 // Object includes
 #include <cstring>
@@ -72,9 +73,12 @@
 #include <sys/time.h>
 
 // Our own includes
-#include "babysitter.h"
 #include <ei.h>
 #include "ei++.h"
+
+#include "honeycomb_config.h"
+#include "hc_support.h"
+#include "babysitter.h"
 
 using namespace ei;
 using namespace std;
@@ -101,7 +105,6 @@ static bool pipe_valid = true;
 
 MapChildrenT children;              // Map containing all managed processes started by this port program.
 MapKillPidT  transient_pids;        // Map of pids of custom kill commands.
-ConfigMapT   known_configs;         // Map containing all the known application configurations (in /etc/beehive/apps, unless otherwise specified)
 
 #define SIGCHLD_MAX_SIZE 4096
 std::deque< PidStatusT > exited_children;  // deque of processed SIGCHLD events
@@ -112,6 +115,8 @@ int userid = 0;
 
 // Configs
 std::string config_file_dir;
+extern FILE *yyin;
+ConfigMapT   known_configs;         // Map containing all the known application configurations (in /etc/beehive/apps, unless otherwise specified)
 
 /*---------------------------- Functions ------------------------------------*/
 
@@ -256,6 +261,11 @@ void setup_signal_handlers() {
   exited_children.resize(SIGCHLD_MAX_SIZE);
 }
 
+/**
+* Setup defaults for the program. These can be overriden after the
+* command-line is parsed. This way we don't have variables we expect to be non-NULL 
+* being NULL at runtime.
+**/
 void setup_defaults() {
   config_file_dir = "/etc/beehive/configs";
 }
@@ -265,7 +275,7 @@ int parse_the_command_line(int argc, char* argv[]) {
   * Command line processing (TODO: Move this into a function)
   **/
   char c;
-  while (-1 != (c = getopt(argc, argv, "a:Dhn"))) {
+  while (-1 != (c = getopt(argc, argv, "a:DChn"))) {
     switch (c) {
       case 'h':
       case 'H':
@@ -274,6 +284,9 @@ int parse_the_command_line(int argc, char* argv[]) {
       case 'D':
         dbg = true;
         eis.debug(true);
+        break;
+      case 'C':
+        config_file_dir = optarg;
         break;
       case 'a':
         alarm_max_time = atoi(optarg);
@@ -295,13 +308,45 @@ int parse_the_command_line(int argc, char* argv[]) {
   return 0;
 }
 
-// Parse the config directory for config files
-int parse_config_dir() {
-  std::string directory (config_file_dir);
-  printf("Parsing the config directory: %s\n", config_file_dir.c_str());
+/**
+* Parse the config file with lex/yacc
+**/
+honeycomb_config *parse_config_file(std::string conf_file) {  
+  const char *filename = conf_file.c_str();
+  // open a file handle to a particular file:
+	FILE *fd = fopen(filename, "r");
+	// make sure it's valid:
+	if (!fd) {
+    fprintf(stderr, "Could not open the file: '%s'\nCheck the permissions and try again\n", filename);
+		return NULL;
+	}
+	// set lex to read from it instead of defaulting to STDIN:
+	yyin = fd;
+	
+	// Clear out the config struct for now
+  honeycomb_config *config = a_new_honeycomb_config_object();
+  // Set the filepath on the config
+  char *fp = strdup(conf_file.c_str());
+  add_attribute(config, T_FILEPATH, fp);
+  free(fp);
+	// parse through the input until there is no more:
+  yyparse ((void *) config);
   
+  return config;
+}
+
+// Parse the config directory for config files
+/**
+* Parse the config directory for config files (ending in the extension: .conf)
+* This will recursively look through the config_file_dir and parse config files
+* and place them into the known_configs map with the filename without the extension
+* for access later.
+**/
+int parse_config_dir(std::string directory) {  
   DIR           *d;
   struct dirent *dir;
+  const char *conf_ext = ".conf";
+  unsigned int conf_len = strlen(conf_ext);
   
   d = opendir( directory.c_str() );
   if( d == NULL ) {
@@ -313,10 +358,20 @@ int parse_config_dir() {
     // If this is a directory
     if( dir->d_type == DT_DIR ) {
       std::string next_dir (directory + "/" + dir->d_name);
-      printf("next_dir: %s\n", next_dir.c_str());
+      parse_config_dir(next_dir);
     } else {
-      std::string file = (directory + "/" + dir->d_name);
-      printf("file: %s\n", file.c_str());
+      unsigned int len = strlen(dir->d_name);
+      if (len >= strlen(conf_ext)) {
+        if (strcmp(conf_ext, dir->d_name + len - conf_len) == 0) {
+          // Copy the name parsed config file into the known_configs
+          // We don't want to leak memory, do we?
+          char *name = (char *) malloc (sizeof(char) * (len - conf_len));
+          memcpy(name, dir->d_name, (len - conf_len));
+          std::string file = (directory + "/" + dir->d_name);
+          printf("storing in known_configs[%s] = %s\n", name, file.c_str());
+          known_configs[name] = parse_config_file(file);
+        }
+      }
     }
   }
   closedir( d );
@@ -330,12 +385,13 @@ int parse_config_dir() {
 int main(int argc, char* argv[])
 {
     setup_defaults();
-    parse_config_dir(); // Parse the config
     setup_signal_handlers();
     
     if (parse_the_command_line(argc, argv)) {
       return -1;
     }
+    
+    parse_config_dir(config_file_dir); // Parse the config
     
     const int maxfd = eis.read_handle()+1;
 
