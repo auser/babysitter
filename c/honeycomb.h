@@ -169,7 +169,6 @@ public:
   ~Honeycomb() { 
     delete [] m_cenv; 
     m_cenv = NULL;
-    free_config(&m_honeycomb_config);
   }
   
   const char*  strerror() const { return m_err.str().c_str(); }
