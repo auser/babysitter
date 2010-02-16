@@ -447,7 +447,7 @@ static const yytype_int8 yyrhs[] =
 static const yytype_uint8 yyrline[] =
 {
        0,    38,    38,    39,    43,    44,    45,    46,    50,    58,
-      66,    74,    75,    81,    90,   103,   107,   114,   119,   120
+      68,    76,    80,    86,    96,   110,   114,   121,   126,   127
 };
 #endif
 
@@ -1390,9 +1390,9 @@ yyreduce:
     {
     // Set the phase and attach it to the config object
     phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
-    p->command = (char *)malloc(sizeof(char *) * strlen((yyvsp[(2) - (2)].stype)));
-    p->command = strdup((yyvsp[(2) - (2)].stype));
-    debug(3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command); 
+    p->command = (char *) malloc( sizeof(char *) * strlen((yyvsp[(2) - (2)].stype)) );
+    memset(p->command, 0, strlen((yyvsp[(2) - (2)].stype)));
+    memcpy(p->command, (yyvsp[(2) - (2)].stype), strlen((yyvsp[(2) - (2)].stype)));
     add_phase(config, p);
   }
     break;
@@ -1404,9 +1404,11 @@ yyreduce:
     {
     // I think these two can be combined... I hate code duplication
     phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
-    p->command = (char *)malloc(sizeof(char *) * strlen((yyvsp[(2) - (2)].stype)));
-    p->command = strdup((yyvsp[(2) - (2)].stype));
-    debug(3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command); 
+    p->command = (char *) malloc( sizeof(char *) * strlen((yyvsp[(2) - (2)].stype)) );
+    memset(p->command, 0, strlen((yyvsp[(2) - (2)].stype)));
+    memcpy(p->command, (yyvsp[(2) - (2)].stype), strlen((yyvsp[(2) - (2)].stype)));
+    free((yyvsp[(2) - (2)].stype));
+    // debug(3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command);
     add_phase(config, p);
   }
     break;
@@ -1414,7 +1416,7 @@ yyreduce:
   case 10:
 
 /* Line 1455 of yacc.c  */
-#line 66 "honeycomb.y"
+#line 68 "honeycomb.y"
     {
     debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string((yyvsp[(1) - (2)].ptype)));
     phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
@@ -1425,28 +1427,32 @@ yyreduce:
   case 11:
 
 /* Line 1455 of yacc.c  */
-#line 74 "honeycomb.y"
-    {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (2)].stype));}
+#line 76 "honeycomb.y"
+    {
+    (yyval.ptype) = str_to_phase_type((yyvsp[(1) - (2)].stype)); 
+    free((yyvsp[(1) - (2)].stype));
+  }
     break;
 
   case 12:
 
 /* Line 1455 of yacc.c  */
-#line 75 "honeycomb.y"
-    {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (1)].stype));}
+#line 80 "honeycomb.y"
+    {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (1)].stype)); free((yyvsp[(1) - (1)].stype));}
     break;
 
   case 13:
 
 /* Line 1455 of yacc.c  */
-#line 81 "honeycomb.y"
+#line 86 "honeycomb.y"
     {
     debug(3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
     p->before = (char *)malloc(sizeof(char *) * strlen((yyvsp[(3) - (3)].stype)));
-    p->before = strdup((yyvsp[(3) - (3)].stype));
+    memset(p->before, 0, strlen((yyvsp[(3) - (3)].stype)));
+    memcpy(p->before, (yyvsp[(3) - (3)].stype), strlen((yyvsp[(3) - (3)].stype)));
     add_phase(config, p);
   }
     break;
@@ -1454,14 +1460,15 @@ yyreduce:
   case 14:
 
 /* Line 1455 of yacc.c  */
-#line 90 "honeycomb.y"
+#line 96 "honeycomb.y"
     {
     debug(3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
     p->after = (char *)malloc(sizeof(char *) * strlen((yyvsp[(3) - (3)].stype)));
-    p->after = strdup((yyvsp[(3) - (3)].stype));
+    memset(p->after, 0, strlen((yyvsp[(3) - (3)].stype)));
+    memcpy(p->after, (yyvsp[(3) - (3)].stype), strlen((yyvsp[(3) - (3)].stype)));
     add_phase(config, p);
   }
     break;
@@ -1469,17 +1476,17 @@ yyreduce:
   case 15:
 
 /* Line 1455 of yacc.c  */
-#line 103 "honeycomb.y"
+#line 110 "honeycomb.y"
     {
-    debug(3, "Found an attribute: [%s %s]\n", attribute_type_to_string((yyvsp[(1) - (3)].atype)), (yyvsp[(3) - (3)].stype));
     add_attribute(config, (yyvsp[(1) - (3)].atype), (yyvsp[(3) - (3)].stype));
+    free((yyvsp[(3) - (3)].stype));
   }
     break;
 
   case 16:
 
 /* Line 1455 of yacc.c  */
-#line 107 "honeycomb.y"
+#line 114 "honeycomb.y"
     {
     debug(4, "Found empty attribute\n");
   }
@@ -1488,21 +1495,21 @@ yyreduce:
   case 17:
 
 /* Line 1455 of yacc.c  */
-#line 114 "honeycomb.y"
+#line 121 "honeycomb.y"
     {debug(3, "Found a block\n");(yyval.stype) = (yyvsp[(1) - (1)].stype);}
     break;
 
   case 18:
 
 /* Line 1455 of yacc.c  */
-#line 119 "honeycomb.y"
+#line 126 "honeycomb.y"
     {debug(3, "Found string: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
     break;
 
 
 
 /* Line 1455 of yacc.c  */
-#line 1506 "y.tab.c"
+#line 1513 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1714,7 +1721,7 @@ yyreturn:
 
 
 /* Line 1675 of yacc.c  */
-#line 123 "honeycomb.y"
+#line 130 "honeycomb.y"
 
 
 int yyerror(const char *str)

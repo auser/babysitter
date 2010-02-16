@@ -539,8 +539,8 @@ int WorkerBee::mkdir_r(const std::string & path) {
   int pos = 0;
   const char *dir_buf = path.c_str();
   int len = strlen(dir_buf);
-  char dir_path[BUFFER];
-  memset(dir_path, 0, BUFFER);
+  char dir_path[BUF_SIZE];
+  memset(dir_path, 0, BUF_SIZE);
   
   while (pos < len) {
     if ((dir_buf[pos] == FS_SLASH) && strlen(dir_buf) > 1) {

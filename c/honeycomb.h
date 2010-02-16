@@ -32,10 +32,12 @@ using std::string;
 #include "ei++.h"
 
 #include "hc_support.h"
-#include "config_parser.h"
 
 /*---------------------------- Defines ------------------------------------*/
+#ifndef BUF_SIZE
 #define BUF_SIZE 2048
+#endif
+
 
 // #define DEBUG 0
 
@@ -89,7 +91,7 @@ typedef std::pair<pid_t, Bee>         PidInfoT;
 typedef std::map <pid_t, Bee>         MapChildrenT;
 typedef std::pair<kill_cmd_pid_t, pid_t>    KillPidStatusT;
 typedef std::map <kill_cmd_pid_t, pid_t>    MapKillPidT;
-typedef std::map <std::string, honeycomb_config> ReadConfigs;
+typedef std::map <std::string, honeycomb_config*> ConfigMapT;
 
 /*--------------------------------------------------------------------------*/
  
@@ -155,12 +157,11 @@ private:
   // Internal
   int                     m_cenv_c;    // The current count of the environment variables
   string_set              m_already_copied;
-  ConfigParser            m_config; // Set by us, on instantiation. Access to the config file
   honeycomb_config        m_honeycomb_config; // We'll compute this on the app type
   std::string             m_honeycomb_config_file; // Computed internally
 
 public:
-  Honeycomb(ConfigParser cp) : m_tmp(0,256),m_cd(""),m_app_type("rack"),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL),m_config(cp) {
+  Honeycomb() : m_tmp(0,256),m_cd(""),m_app_type("rack"),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL) {
     ei::Serializer m_eis(2);
     m_nofiles = NULL;
     init(); // Do our initialization fun here
@@ -207,7 +208,6 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  ConfigDefinition *config_for(std::string action);
   int comb_exec(std::string cmd); // Run a hook on the system
   void exec_hook(std::string action, std::string stage);
   int bundle(const std::string & root_path, const std::string & file_path);  

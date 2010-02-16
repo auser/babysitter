@@ -187,10 +187,6 @@ int Honeycomb::bundle(const std::string & root_path, const std::string &file_pat
   return 0;
 }
 
-ConfigDefinition *Honeycomb::config_for(std::string action) {
-  return m_config.find_config_for(m_app_type + "." + action);
-}
-
 // Run a hook on the system
 int Honeycomb::comb_exec(std::string cmd) {
   const std::string shell = getenv("SHELL");
@@ -210,17 +206,17 @@ int Honeycomb::comb_exec(std::string cmd) {
 
 // Execute a hook
 void Honeycomb::exec_hook(std::string action, std::string stage) {
-  ConfigDefinition *cd = config_for(action);
-  if (cd != NULL) {
-    cd->dump();
-    std::string cmd;
-    if (stage == "before")
-      cmd = cd->before();
-    else if (stage == "after")
-      cmd = cd->after();
-  
-    if (!cmd.empty()) comb_exec(cmd);
-  }
+  // ConfigDefinition *cd = config_for(action);
+  // if (cd != NULL) {
+  //   cd->dump();
+  //   std::string cmd;
+  //   if (stage == "before")
+  //     cmd = cd->before();
+  //   else if (stage == "after")
+  //     cmd = cd->after();
+  // 
+  //   if (!cmd.empty()) comb_exec(cmd);
+  // }
 }
 
 int Honeycomb::bundle_environment(std::string confinement_root, mode_t confinement_mode, string_set s_executables, string_set s_dirs, string_set s_extra_files) {
@@ -264,14 +260,14 @@ int Honeycomb::bundle_environment(std::string confinement_root, mode_t confineme
   // START BUNDLING
   temp_drop(); // Drop out of our root permissions
   exec_hook("bundle", "before");
-  ConfigDefinition *cd = config_for("bundle");
+  // ConfigDefinition *cd = config_for("bundle");
 
-  if (cd != NULL) {
-    std::string bundle_cmd (cd->command());
-    if (bundle_cmd != "")
-      comb_exec(bundle_cmd);
-  } else
-    bundle(m_cd, m_cmd, s_executables, s_dirs, s_extra_files);
+  // if (cd != NULL) {
+  //     std::string bundle_cmd (cd->command());
+  //     if (bundle_cmd != "")
+  //       comb_exec(bundle_cmd);
+  //   } else
+  //     bundle(m_cd, m_cmd, s_executables, s_dirs, s_extra_files);
   exec_hook("bundle", "after");
   
   // Set our resource limits (TODO: Move to mounting?)
@@ -329,7 +325,7 @@ int Honeycomb::set_rlimit(const int res, const rlim_t limit) {
 int Honeycomb::parse_honeycomb_config_file(std::string filename) {
   
   FILE *fp; // File pointer to the filename
-  char line[BUFFER];
+  char line[BUF_SIZE];
   int linenum = 0;
   int len;
   
@@ -344,9 +340,9 @@ int Honeycomb::parse_honeycomb_config_file(std::string filename) {
   }
   
   // Setup the lines
-  memset(line, 0, BUFFER);
+  memset(line, 0, BUF_SIZE);
   
-  while ( fgets(line, BUFFER, fp) != NULL ) {
+  while ( fgets(line, BUF_SIZE, fp) != NULL ) {
     linenum++;
     len = (int)strlen(line)-1;
     

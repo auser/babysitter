@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "hc_support.h"
 
@@ -91,34 +92,54 @@ char *collect_to_period(char *str) {
 
 // create a new config
 honeycomb_config* a_new_honeycomb_config_object(void) {
-  honeycomb_config *c = (honeycomb_config*)malloc(sizeof(honeycomb_config));
-	if (c) {
-    return c;
-	} else {
-    fprintf(stderr, "Error creating a new config object\n");
-    return NULL;
-	}
+  honeycomb_config* c;
+  
+  if ( (c = (honeycomb_config *) malloc(sizeof(honeycomb_config))) == NULL ) {
+    fprintf(stderr, "Could not allocate a new honeycomb_config object. Out of memory\n");
+    free(c);
+    exit(-1);
+  }
+  c->num_phases = 0;
+  c->phases = NULL;
+  
+  c->app_type = NULL;
+  c->root_dir = NULL;
+  c->env = NULL;
+  c->executables = NULL;
+  c->directories = NULL;
+  c->stdout = NULL;
+  c->stdin = NULL;
+  c->user = NULL;
+  c->group = NULL;
+  c->image = NULL;
+  c->skel_dir = NULL;
+  
+  
+  return c;
 	// Should never get here
 }
 
 // Create a new phase
 phase* new_phase(phase_type t) {
   phase *p;
-  p = (phase*)malloc(sizeof(phase *));
+  p = (phase*)malloc(sizeof(phase));
   if (p) {
     p->type = t;
-    p->before = 0;
-    p->command = 0;
-    p->after = 0;
+    p->before = NULL;
+    p->command = NULL;
+    p->after = NULL;
   } else {
   }
+  assert(p);
+  printf("new phase: %p\n", p);
   return p;
 }
 
 // Find a phase of type t on the config object
 phase *find_phase(honeycomb_config *c, phase_type t) {
-  unsigned int i;
-  for (i = 0; i < c->num_phases; ++i) {
+  printf("find_phase of type: %d\n", t);
+  unsigned int i = 0;
+  for (i = 0; i < c->num_phases; i++) {
     if (c->phases[i]->type == t) return c->phases[i];
   }
   return NULL;
@@ -148,7 +169,7 @@ int add_phase(honeycomb_config *c, phase *p) {
   phase *existing_phase;
   if ((existing_phase = find_phase(c, p->type))) return modify_phase(c, p);
   int n = c->num_phases + 1;
-  phase **nphases = (phase **)malloc(sizeof(phase *) * n);
+  phase **nphases = (phase **)malloc(sizeof(phase) * n);
   
   if (!nphases) {
     fprintf(stderr, "Couldn't add phase: '%d', no memory available\n", p->type);
@@ -174,34 +195,34 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
   switch (t) {
     case T_DIRECTORIES:
       c->directories = (char *)malloc(sizeof(char *) * strlen(value));
-      c->directories = strdup(value); break;
+      memset(c->directories, 0, strlen(value)); memcpy(c->directories, value, strlen(value)); break;
     case T_EXECUTABLES:
       c->executables = (char *)malloc(sizeof(char *) * strlen(value));
-      c->executables = strdup(value); break;
+      memset(c->executables, 0, strlen(value)); memcpy(c->executables, value, strlen(value)); break;
     case T_ENV:
       c->env = (char *)malloc(sizeof(char *) * strlen(value));
-      c->env = strdup(value); break;
+      memset(c->env, 0, strlen(value)); memcpy(c->env, value, strlen(value)); break;
     case T_STDOUT:
       c->stdout = (char *)malloc(sizeof(char *) * strlen(value));
-      c->stdout = strdup(value); break;
+      memset(c->stdout, 0, strlen(value)); memcpy(c->stdout, value, strlen(value)); break;
     case T_STDIN:
       c->stdin = (char *)malloc(sizeof(char *) * strlen(value));
-      c->stdin = strdup(value); break;
+      memset(c->stdin, 0, strlen(value)); memcpy(c->stdin, value, strlen(value)); break;
     case T_ROOT_DIR:
       c->root_dir = (char *)malloc(sizeof(char *) * strlen(value));
-      c->root_dir = strdup(value); break;
+      memset(c->root_dir, 0, strlen(value)); memcpy(c->root_dir, value, strlen(value)); break;
     case T_USER:
       c->user = (char *)malloc(sizeof(char *) * strlen(value));
-      c->user = strdup(value); break;
+      memset(c->user, 0, strlen(value)); memcpy(c->user, value, strlen(value)); break;
     case T_GROUP:
       c->group = (char *)malloc(sizeof(char *) * strlen(value));
-      c->group = strdup(value); break;
+      memset(c->group, 0, strlen(value)); memcpy(c->group, value, strlen(value)); break;
     case T_IMAGE:
       c->image = (char *)malloc(sizeof(char *) * strlen(value));
-      c->image = strdup(value); break;
+      memset(c->image, 0, strlen(value)); memcpy(c->image, value, strlen(value)); break;
     case T_SKEL_DIR:
       c->skel_dir = (char *)malloc(sizeof(char *) * strlen(value));
-      c->skel_dir = strdup(value); break;
+      memset(c->skel_dir, 0, strlen(value)); memcpy(c->skel_dir, value, strlen(value)); break;
     default:
       fprintf(stderr, "Unknown attribute: %s = %s on config\n", attribute_type_to_string(t), value);
       return -1;
@@ -211,6 +232,7 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
 
 // Free a config object
 void free_config(honeycomb_config *c) {
+  assert( c != NULL );
   size_t i;
   for (i = 0; i < c->num_phases; i++) {
     if (c->phases[i]) {

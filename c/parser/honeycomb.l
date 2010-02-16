@@ -49,7 +49,15 @@ ANYTHING  (.*)
                       return AFTER;
                     }
   /* Keywords */
-{KEYWORDS}          {debug(3, "next phase: %s\n", yytext); yylval.stype = strdup(yytext); return KEYWORD;}
+{KEYWORDS}          {
+  debug(3, "next phase: %s\n", yytext);
+  
+  yylval.stype = (char *) malloc(sizeof(char) * strlen(yytext));
+  memset(yylval.stype, 0, strlen(yytext)); 
+  memcpy(yylval.stype, yytext, strlen(yytext));
+
+  return KEYWORD;
+}
 
 directories         {yylval.atype = T_DIRECTORIES; return RESERVED;}
 executables         {yylval.atype = T_EXECUTABLES; return RESERVED;}

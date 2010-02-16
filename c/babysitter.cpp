@@ -101,6 +101,7 @@ static bool pipe_valid = true;
 
 MapChildrenT children;              // Map containing all managed processes started by this port program.
 MapKillPidT  transient_pids;        // Map of pids of custom kill commands.
+ConfigMapT   known_configs;         // Map containing all the known application configurations (in /etc/beehive/apps, unless otherwise specified)
 
 #define SIGCHLD_MAX_SIZE 4096
 std::deque< PidStatusT > exited_children;  // deque of processed SIGCHLD events
@@ -110,8 +111,7 @@ struct sigaction sact, sterm;
 int userid = 0;
 
 // Configs
-std::string config_file_path;
-ConfigParser config;
+std::string config_file_dir;
 
 /*---------------------------- Functions ------------------------------------*/
 
@@ -257,7 +257,7 @@ void setup_signal_handlers() {
 }
 
 void setup_defaults() {
-  config_file_path = "/etc/beehive/hooks.conf";
+  config_file_dir = "/etc/beehive/configs";
 }
 
 int parse_the_command_line(int argc, char* argv[]) {
@@ -295,8 +295,32 @@ int parse_the_command_line(int argc, char* argv[]) {
   return 0;
 }
 
-ConfigParser config_parser() {
-  return config;
+// Parse the config directory for config files
+int parse_config_dir() {
+  std::string directory (config_file_dir);
+  printf("Parsing the config directory: %s\n", config_file_dir.c_str());
+  
+  DIR           *d;
+  struct dirent *dir;
+  
+  d = opendir( directory.c_str() );
+  if( d == NULL ) {
+    return 1;
+  }
+  while( ( dir = readdir( d ) ) ) {
+    if( strcmp( dir->d_name, "." ) == 0 || strcmp( dir->d_name, ".." ) == 0 ) continue;
+
+    // If this is a directory
+    if( dir->d_type == DT_DIR ) {
+      std::string next_dir (directory + "/" + dir->d_name);
+      printf("next_dir: %s\n", next_dir.c_str());
+    } else {
+      std::string file = (directory + "/" + dir->d_name);
+      printf("file: %s\n", file.c_str());
+    }
+  }
+  closedir( d );
+  return 0;
 }
 
 //-------------------------------------------------------------------------
@@ -306,14 +330,12 @@ ConfigParser config_parser() {
 int main(int argc, char* argv[])
 {
     setup_defaults();
+    parse_config_dir(); // Parse the config
     setup_signal_handlers();
     
     if (parse_the_command_line(argc, argv)) {
       return -1;
     }
-    
-    // Parse the config
-    config.parse_file(config_file_path);
     
     const int maxfd = eis.read_handle()+1;
 
@@ -387,7 +409,7 @@ int main(int argc, char* argv[])
           case EXECUTE:
           case SHELL: {
             // {shell, Cmd::string(), Options::list()}
-            Honeycomb comb (config);
+            Honeycomb comb;
             if (arity != 3 || comb.ei_decode(eis) < 0) {
               send_error_str(transId, false, comb.strerror());
               continue;
