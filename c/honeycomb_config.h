@@ -32,6 +32,7 @@ typedef enum _attr_type_ {
   T_FILEPATH,
   T_DIRECTORIES,
   T_EXECUTABLES,
+  T_FILES,
   T_ENV,
   T_STDOUT,
   T_STDIN,
@@ -58,6 +59,7 @@ typedef struct _honeycomb_config_ {
   char *env;            // a list of environment variables to start
   char *executables;    // Extra executables
   char *directories;    // Extra directories to copy over
+  char *files;          // Extra files to copy
   char *stdout;         // STDOUT
   char *stdin;          // STDIN
   char *user;           // The user to run this honeycomb

@@ -201,6 +201,9 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
     case T_EXECUTABLES:
       c->executables = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->executables, 0, strlen(value)); memcpy(c->executables, value, strlen(value)); break;
+    case T_FILES:
+      c->files = (char *)malloc(sizeof(char *) * strlen(value));
+      memset(c->files, 0, strlen(value)); memcpy(c->files, value, strlen(value)); break;
     case T_ENV:
       c->env = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->env, 0, strlen(value)); memcpy(c->env, value, strlen(value)); break;

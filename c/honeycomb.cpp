@@ -174,9 +174,7 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
 // Run a hook on the system
 int Honeycomb::comb_exec(std::string cmd) {
   setup_defaults(); // Setup default environments
-  const std::string shell = getenv("SHELL");
-  printf("shell: %s\n", shell.c_str());
-  
+  const std::string shell = getenv("SHELL");  
   const std::string shell_args = "-c";
   const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str(), NULL };
   pid_t pid; // Pid of the child process
@@ -327,6 +325,9 @@ int Honeycomb::bundle() {
   } else {
     //Default action
     printf("Running default action for bundle\n");
+    WorkerBee b;
+
+    b.build_chroot(m_cd, m_user, m_group, m_executables, m_files, m_dirs);
   }
   
   exec_hook("bundle", AFTER, p);
@@ -501,13 +502,20 @@ void Honeycomb::init() {
       while ( getline(stream, token, ' ') ) m_dirs.insert(token);
     }
     
+    //--- other files
+    if (m_honeycomb_config->files != NULL) {
+      stream.clear(); token = "";
+      stream << m_honeycomb_config->files;
+      while ( getline(stream, token, ' ') ) m_files.insert(token);
+    }
+    
     //--- run directory
     if (m_honeycomb_config->run_dir != NULL) m_run_dir = m_honeycomb_config->run_dir;
     
     //--- image
     if (m_honeycomb_config->image != NULL) m_image = m_honeycomb_config->image;
     //--- skel directory
-    if (m_honeycomb_config->skel_dir != NULL) m_image = m_honeycomb_config->skel_dir;
+    if (m_honeycomb_config->skel_dir != NULL) m_image = m_honeycomb_config->skel_dir;    
     
     //--- confinement_mode
     m_mode = 04755; // Not sure if this should be dynamic-able, yet.

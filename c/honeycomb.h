@@ -159,7 +159,7 @@ private:
   std::string             m_image;     // The image to mount
   string_set              m_executables; // Executables to be bundled in the honeycomb
   string_set              m_dirs;      // Directories to be included in the app
-  string_set              m_extra_dirs;// Extra directories to be included in the honeycomb
+  string_set              m_files;     // Extra directories to be included in the honeycomb
   std::list<std::string>  m_env;       // A list of environment variables to use when starting
     // Resource sets
     rlim_t                m_nofiles;     // Number of files
