@@ -93,7 +93,27 @@ hook:
     memcpy(p->before, $3, strlen($3));
     add_phase(config, p);
   }
+  | BEFORE ':' block        {
+    debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
+    phase_type t = str_to_phase_type($1);
+    // Do some error checking on the type. please
+    phase *p = find_or_create_phase(config, t);
+    p->before = (char *)malloc(sizeof(char *) * strlen($3));
+    memset(p->before, 0, strlen($3));
+    memcpy(p->before, $3, strlen($3));
+    add_phase(config, p);
+  }
   | AFTER ':' line          {
+    debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
+    phase_type t = str_to_phase_type($1);
+    // Do some error checking on the type. please
+    phase *p = find_or_create_phase(config, t);
+    p->after = (char *)malloc(sizeof(char *) * strlen($3));
+    memset(p->after, 0, strlen($3));
+    memcpy(p->after, $3, strlen($3));
+    add_phase(config, p);
+  }
+  | AFTER ':' block         {
     debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please

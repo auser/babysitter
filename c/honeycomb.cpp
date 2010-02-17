@@ -173,7 +173,16 @@ int Honeycomb::comb_exec(std::string cmd) {
   
   const std::string shell_args = "-c";
   const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str() };
-
+  
+  // If we are looking at shell script text
+  if ( strncmp(cmd.c_str(), "#!", 2) == 0 ) {
+    FILE *tFile;
+    tFile = tmpfile();
+    if (tFile != NULL) {
+      fputs(cmd.c_str(), tFile);
+      //fclose(tFile);
+    }
+  }
   printf("cmd: %s\n", cmd.c_str());
   
   if (execve(cmd.c_str(), (char* const*)argv, (char* const*)m_cenv) < 0) {
@@ -186,9 +195,9 @@ int Honeycomb::comb_exec(std::string cmd) {
 // Execute a hook
 void Honeycomb::exec_hook(std::string action, int stage, phase *p) {
   if (stage == BEFORE) {
-    if (p->before) printf("Run before hook for %s: %s\n", action.c_str(), p->before);
+    if (p->before) comb_exec(p->before); //printf("Run before hook for %s: %s\n", action.c_str(), p->before);
   } else if (stage == AFTER) {
-    if (p->after) printf("Run after hook for %s %s\n", action.c_str(), p->after);
+    if (p->after) comb_exec(p->after); //printf("Run after hook for %s %s\n", action.c_str(), p->after);
   } else {
     printf("Unknown hook for: %s %d\n", action.c_str(), stage);
   }
