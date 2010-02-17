@@ -108,24 +108,6 @@ skel_dir            {yylval.atype = T_SKEL_DIR; return RESERVED;}
   /* everything else */
 {COMMENT}{ANYTHING}{NL} {debug(4, "%4d\tIgnoring comment: %s", yylineno++, yytext);} /* ignore comments */  
 
-  /* Strings */
-\"                  {
-  memset(buf, 0, BUF_SIZE);
-  s = buf;
-  BEGIN QUOTEDSTR;
-}
-<QUOTEDSTR>\\n         {*s++ = '\n';}
-<QUOTEDSTR>\\t         {*s++ = '\t';}
-<QUOTEDSTR>\\\"        {*s++ = '\"';}
-<QUOTEDSTR>\"          {
-  *s = 0;
-  BEGIN INITIAL; // get outta here
-  yylval.stype = strdup(buf);
-  debug(3, "returning QUOTED STRING '%s'\n", buf);
-  return STRING;
-}
-<QUOTEDSTR>\n           {fprintf(stderr, "Error: %4d\tInvalid string\n", yylineno); BEGIN 0;}
-<QUOTEDSTR>.            {*s++ = *yytext;}
 
 {STRING}({WHITESPACE}?({STRING}))*  {
   debug(3, "returning STRING: '%s'\n", yytext);

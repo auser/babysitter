@@ -1,6 +1,7 @@
 /*---------------------------- Includes ------------------------------------*/
 #include <string>
 #include <unistd.h>
+#include <stdio.h>
 #include <fcntl.h>
 #include <iostream>
 #include <sstream>
@@ -16,6 +17,8 @@
 #include <grp.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
+
 // Include sys/capability if the system can handle it. 
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
@@ -165,6 +168,9 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   return 0;
 }
 
+#ifndef MAX_ARGS
+#define MAX_ARGS 64
+#endif
 // Run a hook on the system
 int Honeycomb::comb_exec(std::string cmd) {
   setup_defaults(); // Setup default environments
@@ -172,23 +178,100 @@ int Honeycomb::comb_exec(std::string cmd) {
   printf("shell: %s\n", shell.c_str());
   
   const std::string shell_args = "-c";
-  const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str() };
+  const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str(), NULL };
+  pid_t pid; // Pid of the child process
+  int status;
   
   // If we are looking at shell script text
   if ( strncmp(cmd.c_str(), "#!", 2) == 0 ) {
-    FILE *tFile;
-    tFile = tmpfile();
-    if (tFile != NULL) {
-      fputs(cmd.c_str(), tFile);
-      //fclose(tFile);
+    char filename[40];
+    int size, fd;
+    
+    snprintf(filename, 40, "/tmp/babysitter.XXXXXXXXX");
+    
+    // Make a tempfile in the filename format
+    if ((fd = mkstemp(filename)) == -1) {
+      fprintf(stderr, "Could not open tempfile: %s\n", filename);
+      return -1;
     }
+    
+    size = strlen(cmd.c_str());
+    // Print the command into the file
+    if (write(fd, cmd.c_str(), size) == -1) {
+      fprintf(stderr, "Could not write command to tempfile: %s\n", filename);
+      return -1;
+    }
+    
+    // Confirm that the command is written
+    if (fsync(fd) == -1) {
+      fprintf(stderr, "fsync failed for tempfile: %s\n", filename);
+      return -1;
+    }
+    
+    close(fd);
+    
+    // Modify the command to match call the filename
+    std::string sFile (filename);
+    
+		if (chown(sFile.c_str(), m_user, m_group) != 0) {
+#ifdef DEBUG
+     fprintf(stderr, "Could not change owner of '%s' to %d\n", sFile.c_str(), m_user);
+#endif
+		}
+
+    // Make it executable
+    if (chmod(sFile.c_str(), 040750) != 0) {
+      fprintf(stderr, "Could not change permissions to '%s' %o\n", sFile.c_str(), 040700);
+    }
+    
+    // Run in a new process
+    if ((pid = fork()) == -1) {
+      perror("fork");
+      return -1;
+    }
+    if (pid == 0) {
+      // we are in a new process
+      argv[2] = sFile.c_str();
+      argv[3] = NULL;
+      
+      if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
+        fprintf(stderr, "Cannot execute '%s' because '%s'", cmd.c_str(), ::strerror(errno));
+        perror("execute");
+        unlink(filename);
+        return -1;
+      }
+    }
+    while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+    assert(0 == status);
+    // Cleanup :)
+    printf("Cleaning up...\n");
+    unlink(filename);
+  } else {
+    
+    // First, we have to construct the command
+    int argc = 0;
+    char *str_cmd = strdup(cmd.c_str());
+    argv[argc] = strtok(str_cmd, " \r\t\n");
+    
+    while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
+    
+    // Run in a new process
+    if ((pid = fork()) == -1) {
+      perror("fork");
+      return -1;
+    }
+    if (pid == 0) {
+      // we are in the child process
+      if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
+        fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
+        return EXIT_FAILURE;
+      }
+    }
+    
+    while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+    assert(0 == status);
   }
-  printf("cmd: %s\n", cmd.c_str());
   
-  if (execve(cmd.c_str(), (char* const*)argv, (char* const*)m_cenv) < 0) {
-    fprintf(stderr, "Cannot execute '%s' because '%s'", m_cmd.c_str(), ::strerror(errno));
-    return EXIT_FAILURE;
-  }
   return 0;
 }
 
