@@ -184,37 +184,19 @@ int Honeycomb::comb_exec(std::string cmd) {
 }
 
 // Execute a hook
-void Honeycomb::exec_hook(std::string action, int stage) {
-  if (stage == BEFORE)
-    printf("Run before hook for %s\n", action.c_str());
-  else if (stage == AFTER)
-    printf("Run after hook for %s\n", action.c_str());
-  else
+void Honeycomb::exec_hook(std::string action, int stage, phase *p) {
+  if (stage == BEFORE) {
+    if (p->before) printf("Run before hook for %s: %s\n", action.c_str(), p->before);
+  } else if (stage == AFTER) {
+    if (p->after) printf("Run after hook for %s %s\n", action.c_str(), p->after);
+  } else {
     printf("Unknown hook for: %s %d\n", action.c_str(), stage);
-  // ConfigDefinition *cd = config_for(action);
-  // if (cd != NULL) {
-  //   cd->dump();
-  //   std::string cmd;
-  //   if (stage == "before")
-  //     cmd = cd->before();
-  //   else if (stage == "after")
-  //     cmd = cd->after();
-  // 
-  //   if (!cmd.empty()) comb_exec(cmd);
-  // }
+  }
 }
 
-//---
-// ACTIONS
-//---
-
-int Honeycomb::bundle() {
-  temp_drop();
-  exec_hook("bundle", BEFORE);
-  // Run command
-  //--- Make sure the directory exists
+void Honeycomb::ensure_cd_exists() {
   struct stat stt;
-  if (0 == stat(m_cd.c_str(), &stt)) {
+  if (0 == stat(m_root_dir.c_str(), &stt)) {
     // Should we check on the ownership?
   } else if (ENOENT == errno) {
     if (mkdir(m_root_dir.c_str(), m_mode)) {
@@ -234,8 +216,28 @@ int Honeycomb::bundle() {
   if (chown(m_cd.c_str(), m_user, m_group)) {
     m_err << "Could not chown to the effective user: " << m_user;
   }
+}
+
+//---
+// ACTIONS
+//---
+
+int Honeycomb::bundle() {
+  phase *p = find_phase(m_honeycomb_config, T_BUNDLE);
+  temp_drop();
+  exec_hook("bundle", BEFORE, p);
+  // Run command
+  //--- Make sure the directory exists
+  ensure_cd_exists();
+  if ((p != NULL) && (p->command != NULL)) {
+    printf("Running client code instead\n");
+    printf("p: %s\n", p->command);
+  } else {
+    //Default action
+    printf("Running default action for bundle\n");
+  }
   
-  exec_hook("bundle", AFTER);
+  exec_hook("bundle", AFTER, p);
   
   // Set our resource limits (TODO: Move to mounting?)
   set_rlimits();

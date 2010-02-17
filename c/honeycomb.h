@@ -228,7 +228,8 @@ private:
   int set_rlimit(const int res, const rlim_t limit);
   // Building
   int comb_exec(std::string cmd); // Run a hook on the system
-  void exec_hook(std::string action, int stage);
+  void exec_hook(std::string action, int stage, phase *p);
+  void ensure_cd_exists();
 };
 
 /**

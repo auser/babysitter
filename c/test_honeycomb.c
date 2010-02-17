@@ -69,5 +69,7 @@ int main(int argc, char **argv) {
   printf("\t--directories\n");
   for (string_set::iterator dir = comb.directories().begin(); dir != comb.directories().end(); dir++) printf("\t\t%s\n", dir->c_str());
   
+  comb.bundle();
+  
   return 0;
 }
