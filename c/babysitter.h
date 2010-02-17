@@ -3,9 +3,9 @@
 
 #include "honeycomb.h"
 
-//-------------------------------------------------------------------------
+//---
 // Helpers
-//-------------------------------------------------------------------------
+//---
 const std::string HELP_MESSAGE =
 "Usage:\n"
 " babysitter [-hnD] [-a N]\n"
@@ -19,6 +19,14 @@ const std::string HELP_MESSAGE =
 " -b [path]         Path to base all the chroot environments on (not yet functional)\n"
 ;
 
+//---
+// Variables
+//---
+
+
+//---
+// Functions
+//---
 void  setup_defaults();
 int parse_config_dir();
 

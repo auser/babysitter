@@ -13,10 +13,6 @@
 
 #define ERR -1
 
-std::string config_file_dir;
-extern FILE *yyin;
-ConfigMapT   known_configs;         // Map containing all the known application configurations (in /etc/beehive/apps, unless otherwise specified)
-
 honeycomb_config *parse_config_file(std::string conf_file) {  
   const char *filename = conf_file.c_str();
   // open a file handle to a particular file:

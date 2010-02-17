@@ -321,65 +321,6 @@ int Honeycomb::set_rlimit(const int res, const rlim_t limit) {
   return 0;
 }
 
-/*--------------------------- CONFIG ------------------------------------*/
-int Honeycomb::parse_honeycomb_config_file(std::string filename) {
-  
-  FILE *fp; // File pointer to the filename
-  char line[BUF_SIZE];
-  int linenum = 0;
-  int len;
-  
-  if (filename == "") {
-    fprintf(stderr, "[Honeycomb config] Could not open an empty file\n");
-    return -1;
-  }
-  // Open the file
-  if ((fp = fopen(filename.c_str(), "r")) == NULL) {
-    fprintf(stderr, "[Honeycomb config] Could not open '%s' %s\n", filename.c_str(), ::strerror(errno));
-    return -1;
-  }
-  
-  // Setup the lines
-  memset(line, 0, BUF_SIZE);
-  
-  while ( fgets(line, BUF_SIZE, fp) != NULL ) {
-    linenum++;
-    len = (int)strlen(line)-1;
-    
-    // Chomp the beginning of the line
-    for(int i = 0; i < len; ++i) {
-      if ( isspace(line[i]) ) {        
-        for (int j = 0; j < len; ++j) {
-          line[j] = line[j+1];
-        }
-        line[len--] = 0;
-      } else {
-        break;
-      }
-    }
-    // Chomp the end of the line
-    while ((len>=0) && (isspace(line[len])) ) {
-      line[len] = 0;
-      len--;
-    }
-    
-    // Skip new lines
-    if (line[0] == '\n') continue;
-    
-    // parse the line here
-    if (len < 0) {
-      return -1;
-    } else if (line[0] == '#') {
-      // Comment
-    } else {
-      // Line of some sort
-      printf("Line: %s\n", line);
-    }
-  }
-  
-  return 0;
-}
-
 /*---------------------------- UTILS ------------------------------------*/
 
 const char *DEV_RANDOM = "/dev/urandom";
@@ -448,6 +389,8 @@ int Honeycomb::restore_perms() {
 /*------------------------ INTERNAL -------------------------*/
 void Honeycomb::init() {
   printf("New Honeycomb (%s)\n", m_app_type.c_str());
+  ei::Serializer m_eis(2);
+  m_nofiles = NULL;
 }
 
 int Honeycomb::valid() {

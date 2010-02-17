@@ -62,12 +62,12 @@ char *attribute_type_to_string(attr_type t) {
 }
 
 phase_type str_to_phase_type(char *str) {
-  if      (strcmp(str,"bundle") == 0) return T_BUNDLE;
-  else if (strcmp(str,"start") == 0) return T_START;
-  else if (strcmp(str,"stop") == 0) return T_STOP;
-  else if (strcmp(str,"mount") == 0) return T_MOUNT;
-  else if (strcmp(str,"unmount") == 0) return T_UNMOUNT;
-  else if (strcmp(str,"cleanup") == 0) return T_CLEANUP;
+  if      (strncmp(str,"bundle", 6) == 0) return T_BUNDLE;
+  else if (strncmp(str,"start", 5) == 0) return T_START;
+  else if (strncmp(str,"stop", 4) == 0) return T_STOP;
+  else if (strncmp(str,"mount", 5) == 0) return T_MOUNT;
+  else if (strncmp(str,"unmount", 7) == 0) return T_UNMOUNT;
+  else if (strncmp(str,"cleanup", 7) == 0) return T_CLEANUP;
   return T_UNKNOWN;
 }
 

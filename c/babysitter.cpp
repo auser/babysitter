@@ -335,7 +335,6 @@ honeycomb_config *parse_config_file(std::string conf_file) {
   return config;
 }
 
-// Parse the config directory for config files
 /**
 * Parse the config directory for config files (ending in the extension: .conf)
 * This will recursively look through the config_file_dir and parse config files
