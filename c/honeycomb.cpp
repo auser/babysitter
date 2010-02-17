@@ -2,6 +2,7 @@
 #include <string>
 #include <unistd.h>
 #include <fcntl.h>
+#include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <assert.h>
@@ -12,6 +13,7 @@
 // System
 #include <sys/types.h>
 #include <pwd.h>
+#include <grp.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
 // Include sys/capability if the system can handle it. 
@@ -163,32 +165,9 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   return 0;
 }
 
-int Honeycomb::bundle(const std::string & root_path, const std::string &file_path, string_set s_executables, string_set s_dirs, string_set s_extra_files) {
-  WorkerBee b;
-
-  // string_set s_executables;
-  s_executables.insert("/bin/ls");
-  s_executables.insert("/bin/bash");
-  s_executables.insert("/usr/bin/whoami");
-  s_executables.insert("/usr/bin/env");
-  s_executables.insert("ruby");
-  s_executables.insert("irb");
-  s_executables.insert("cat");
-  s_executables.insert(file_path);
-
-  // string_set s_dirs;
-  s_dirs.insert("/var/lib/gems/1.8");
-  s_dirs.insert("/usr/lib/ruby");
-  
-  // string_set s_extra_files;
-  s_extra_files.insert("/etc/hostname");
-  
-  b.build_chroot(m_cd, m_user, m_group, s_executables, s_extra_files, s_dirs);
-  return 0;
-}
-
 // Run a hook on the system
 int Honeycomb::comb_exec(std::string cmd) {
+  setup_defaults(); // Setup default environments
   const std::string shell = getenv("SHELL");
   printf("shell: %s\n", shell.c_str());
   
@@ -205,7 +184,13 @@ int Honeycomb::comb_exec(std::string cmd) {
 }
 
 // Execute a hook
-void Honeycomb::exec_hook(std::string action, std::string stage) {
+void Honeycomb::exec_hook(std::string action, int stage) {
+  if (stage == BEFORE)
+    printf("Run before hook for %s\n", action.c_str());
+  else if (stage == AFTER)
+    printf("Run after hook for %s\n", action.c_str());
+  else
+    printf("Unknown hook for: %s %d\n", action.c_str(), stage);
   // ConfigDefinition *cd = config_for(action);
   // if (cd != NULL) {
   //   cd->dump();
@@ -219,63 +204,43 @@ void Honeycomb::exec_hook(std::string action, std::string stage) {
   // }
 }
 
-int Honeycomb::bundle_environment(std::string confinement_root, mode_t confinement_mode, string_set s_executables, string_set s_dirs, string_set s_extra_files) {
-  /* Prepare as of the environment from the child process */
-  setup_defaults();
-  // First, get a random_uid to run as
-  m_user = random_uid();
-  m_group = m_user;
-  gid_t egid = getegid();
-  
-  // Create the root directory, the 'cd' if it's not specified
-  if (m_cd.empty()) {
-    struct stat stt;
-    if (0 == stat(confinement_root.c_str(), &stt)) {
-      if (0 != stt.st_uid || 0 != stt.st_gid) {
-        fprintf(stderr, "%s is not owned by root (0:0). Exiting...\n", confinement_root.c_str());
-        exit(-1);
-      }
-    } else if (ENOENT == errno) {
-      fprintf(stderr, "Error: %s\n", ::strerror(errno));
-      setegid(0);
-    } else {
-      fprintf(stderr, "Unknown error: %s Exiting...\n", ::strerror(errno));
-      exit(-1);
+//---
+// ACTIONS
+//---
+
+int Honeycomb::bundle() {
+  temp_drop();
+  exec_hook("bundle", BEFORE);
+  // Run command
+  //--- Make sure the directory exists
+  struct stat stt;
+  if (0 == stat(m_cd.c_str(), &stt)) {
+    // Should we check on the ownership?
+  } else if (ENOENT == errno) {
+    if (mkdir(m_root_dir.c_str(), m_mode)) {
+      fprintf(stderr, "Error: %s and could not create the directory: %s\n", ::strerror(errno), m_root_dir.c_str());
     }
-    // The m_cd path is the confinement_root plus the user's uid
-    m_cd = confinement_root + "/" + to_string(m_user, 10);
-  
-    // Not sure if this and the next step is appropriate here anymore... *thinking about it*
-    if (mkdir(m_cd.c_str(), confinement_mode)) {
-      m_err << "Could not create the new confinement root " << m_cd;
-    }
-    
-    // Make the directory owned by the user
-    if (chown(m_cd.c_str(), m_user, m_user)) {
-      m_err << "Could not chown to the effective user: " << m_user; return -1;
-    } 
-    setegid(egid); // Return to be the effective user
+  } else {
+    fprintf(stderr, "Unknown error: %s Exiting...\n", ::strerror(errno));
+    exit(-1);
   }
   
-  // START BUNDLING
-  temp_drop(); // Drop out of our root permissions
-  exec_hook("bundle", "before");
-  // ConfigDefinition *cd = config_for("bundle");
-
-  // if (cd != NULL) {
-  //     std::string bundle_cmd (cd->command());
-  //     if (bundle_cmd != "")
-  //       comb_exec(bundle_cmd);
-  //   } else
-  //     bundle(m_cd, m_cmd, s_executables, s_dirs, s_extra_files);
-  exec_hook("bundle", "after");
+  // Not sure if this and the next step is appropriate here anymore... *thinking about it*
+  if (mkdir(m_cd.c_str(), m_mode)) {
+    m_err << "Could not create the new confinement root " << m_cd;
+  }
+  
+  // Make the directory owned by the user
+  if (chown(m_cd.c_str(), m_user, m_group)) {
+    m_err << "Could not chown to the effective user: " << m_user;
+  }
+  
+  exec_hook("bundle", AFTER);
   
   // Set our resource limits (TODO: Move to mounting?)
   set_rlimits();
   // come back to our permissions
   restore_perms();
-        
-  // Success!
   return 0;
 }
 
@@ -352,7 +317,7 @@ const char * const Honeycomb::to_string(long long int n, unsigned char base) {
 /*---------------------------- Permissions ------------------------------------*/
 
 int Honeycomb::temp_drop() {
-  DEBUG_MSG("Dropping into '%d' user\n", m_user);
+  DEBUG_MSG("Dropping into '%d' user\n", config->user);
   if (setresgid(-1, m_user, getegid()) || setresuid(-1, m_user, geteuid()) || getegid() != m_user || geteuid() != m_user ) {
     fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, ::strerror(errno));
     return -1; // we are in the fork
@@ -388,9 +353,75 @@ int Honeycomb::restore_perms() {
 
 /*------------------------ INTERNAL -------------------------*/
 void Honeycomb::init() {
-  printf("New Honeycomb (%s)\n", m_app_type.c_str());
   ei::Serializer m_eis(2);
   m_nofiles = NULL;
+  std::stringstream stream;
+  std::string token;
+  
+  // Setup defaults here
+  m_user = INT_MAX;
+  m_group = INT_MAX;
+  
+  // Run through the config
+  if (m_honeycomb_config != NULL) {
+    //--- User
+    if (m_honeycomb_config->user != NULL) {
+      struct passwd *pw = getpwnam(m_honeycomb_config->user);
+      if (pw == NULL) {
+        fprintf(stderr, "Error: invalid user %s : %s\n", m_honeycomb_config->user, ::strerror(errno));
+        m_user = geteuid();
+      } else m_user = pw->pw_uid;
+    } else m_user = random_uid();
+    
+    //--- group
+    if (m_honeycomb_config->group != NULL) {
+      struct group *grp = getgrnam(m_honeycomb_config->group);
+      if (grp == NULL) {
+        fprintf(stderr, "Error: invalid group %s : %s\n", m_honeycomb_config->group, ::strerror(errno));
+        m_group = getgid();
+      }
+      else m_group = grp->gr_gid;
+    } else m_group = getgid();
+    
+    //--- root_directory
+    m_root_dir = "/var/beehive/honeycombs"; // Default
+    if (m_honeycomb_config->root_dir != NULL) {
+      m_root_dir = m_honeycomb_config->root_dir;
+    }
+    
+    //--- executables
+    m_executables.insert("/bin/ls");
+    m_executables.insert("/bin/bash");
+    m_executables.insert("/usr/bin/whoami");
+    m_executables.insert("/usr/bin/env");
+    
+    if (m_honeycomb_config->executables != NULL) {
+      stream << m_honeycomb_config->executables; // Insert into a string
+      while ( getline(stream, token, ' ') ) m_executables.insert(token);
+    }
+    
+    //--- directories
+    if (m_honeycomb_config->directories != NULL) {
+      stream.clear(); token = "";
+      stream << m_honeycomb_config->directories;
+      while ( getline(stream, token, ' ') ) m_dirs.insert(token);
+    }
+    
+    //--- run directory
+    if (m_honeycomb_config->run_dir != NULL) m_run_dir = m_honeycomb_config->run_dir;
+    
+    //--- image
+    if (m_honeycomb_config->image != NULL) m_image = m_honeycomb_config->image;
+    //--- skel directory
+    if (m_honeycomb_config->skel_dir != NULL) m_image = m_honeycomb_config->skel_dir;
+    
+    //--- confinement_mode
+    m_mode = 04755; // Not sure if this should be dynamic-able, yet.
+    
+    // The m_cd path is the confinement_root plus the user's uid
+    // because it's randomly generated
+    m_cd = m_root_dir + "/" + to_string(m_user, 10);    
+  }
 }
 
 int Honeycomb::valid() {

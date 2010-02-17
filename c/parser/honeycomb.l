@@ -68,6 +68,7 @@ env                 {yylval.atype = T_ENV; return RESERVED;}
 stdout              {yylval.atype = T_STDOUT; return RESERVED;}
 stdin               {yylval.atype = T_STDIN; return RESERVED;}
 root_dir            {yylval.atype = T_ROOT_DIR; return RESERVED;}
+run_dir             {yylval.atype = T_RUN_DIR; return RESERVED;}
 image               {yylval.atype = T_IMAGE; return RESERVED;}
 skel_dir            {yylval.atype = T_SKEL_DIR; return RESERVED;}
 

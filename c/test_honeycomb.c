@@ -1,5 +1,5 @@
 // Compile:
-// make && g++ -o test_honeycomb test_honeycomb.c ei++.o honeycomb.o worker_bee.o hc_support.o ./parser/y.tab.o ./parser/lex.yy.o -lelf -lei && ./test_honeycomb ../docs/apps/rack.conf /tmp/confine rack
+// make && g++ -g -o test_honeycomb test_honeycomb.c ei++.o honeycomb.o worker_bee.o hc_support.o ./parser/y.tab.o ./parser/lex.yy.o -lelf -lei && ./test_honeycomb ../docs/apps/rack.conf /tmp/confine rack
 
 #include <stdio.h>
 
@@ -54,15 +54,20 @@ int main(int argc, char **argv) {
     app_type = argv[3];
   
   printf("-----\n");
-  Honeycomb comb (app_type);
-  printf("comb: %p\n", &comb);
-  
   honeycomb_config *c = parse_config_file(config_file);
-  printf("conf: %p\n", c);
-  if (c->directories != NULL) printf("directories: %s\n", c->directories);
+    
+  Honeycomb comb (app_type, c);
+  printf("comb: %p\n", &comb);
+  printf("\tuser: %d\n", comb.user());
+  printf("\tgroup: %d\n", comb.group());
+  printf("\tcd: %s\n", comb.cd());
+  printf("\trun_dir: %s\n", comb.run_dir());
   
-  comb.set_config(c);
-  printf("comb.config: %p\n", comb.config());
+  printf("\t--executables\n");
+  for (string_set::iterator exec = comb.executables().begin(); exec != comb.executables().end(); exec++) printf("\t\t%s\n", exec->c_str());
+  
+  printf("\t--directories\n");
+  for (string_set::iterator dir = comb.directories().begin(); dir != comb.directories().end(); dir++) printf("\t\t%s\n", dir->c_str());
   
   return 0;
 }

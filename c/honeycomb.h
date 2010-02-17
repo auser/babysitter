@@ -51,6 +51,13 @@ using std::string;
 #define FS_SLASH '/'
 #endif
 
+#ifndef BEFORE
+#define BEFORE 1001
+#endif
+#ifndef AFTER
+#define AFTER 1002
+#endif
+
 /*---------------------------- TYPES ---------------------------------------*/
 typedef std::set<std::string> string_set;
 
@@ -140,12 +147,19 @@ private:
   std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
   std::string             m_cmd;       // The command to execute to start
   std::string             m_kill_cmd;  // A special command to kill the process (if needed)
+  std::string             m_root_dir;  // The root directory to start from
+  std::string             m_run_dir;   // The directory to run bees and honeycombs from
+  mode_t                  m_mode;      // The mode of the m_cd
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
   std::string             m_app_type;  // The type of the application
     std::string             m_skel;      // A skeleton choot directory to work from
   std::string             m_stdout;    // The stdout to use for the execution of the command
   std::string             m_stderr;    // The stderr to use for the execution of the command
   mount_type*             m_mount;     // A mount associated with the honeycomb
+  std::string             m_image;     // The image to mount
+  string_set              m_executables; // Executables to be bundled in the honeycomb
+  string_set              m_dirs;      // Directories to be included in the app
+  string_set              m_extra_dirs;// Extra directories to be included in the honeycomb
   std::list<std::string>  m_env;       // A list of environment variables to use when starting
     // Resource sets
     rlim_t                m_nofiles;     // Number of files
@@ -160,9 +174,13 @@ private:
   honeycomb_config*       m_honeycomb_config; // We'll compute this on the app type
 
 public:
-  Honeycomb(std::string app_type) : m_tmp(0,256),m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(INT_MAX),m_group(INT_MAX),m_cenv(NULL) {
+  Honeycomb(std::string app_type, honeycomb_config *c) {
+    new (this) Honeycomb(app_type);
+    m_honeycomb_config = c;
+    init();
+  }
+  Honeycomb(std::string app_type) : m_tmp(0,256),m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_cenv(NULL) {
     m_app_type = app_type;
-    init(); // Do our initialization fun here
   }
   Honeycomb() {
     new (this) Honeycomb("rack");
@@ -175,9 +193,12 @@ public:
   const char*  strerror() const { return m_err.str().c_str(); }
   const char*  cmd()      const { return m_cmd.c_str(); }
   const char*  cd()       const { return m_cd.c_str(); }
+  const char*  run_dir()  const { return m_run_dir.c_str(); }
   const char*  skel()     const { return m_skel.c_str(); }
   char* const* env()      const { return (char* const*)m_cenv; }
   const char*  kill_cmd() const { return m_kill_cmd.c_str(); }
+  string_set   executables() const { return m_executables; }
+  string_set   directories() const { return m_dirs; }
   uid_t        user()     const { return m_user; }
   gid_t        group()    const { return m_group; }
   int          nice()     const { return m_nice; }
@@ -186,9 +207,9 @@ public:
   const honeycomb_config *config() const {return m_honeycomb_config; }
   
   int ei_decode(ei::Serializer& ei);
-  int bundle_environment(std::string confinement_root, mode_t confinement_mode, string_set s_executables, string_set s_dirs, string_set s_extra_files);
-  int bundle(const std::string & root_path, const std::string &file_path, string_set s_executables, string_set s_dirs, string_set s_extra_files);
   int valid();
+  // Actions
+  int bundle();
   
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
   
@@ -207,8 +228,7 @@ private:
   int set_rlimit(const int res, const rlim_t limit);
   // Building
   int comb_exec(std::string cmd); // Run a hook on the system
-  void exec_hook(std::string action, std::string stage);
-  int bundle(const std::string & root_path, const std::string & file_path);  
+  void exec_hook(std::string action, int stage);
 };
 
 /**

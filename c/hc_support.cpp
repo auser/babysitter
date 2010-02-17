@@ -104,6 +104,7 @@ honeycomb_config* a_new_honeycomb_config_object(void) {
   
   c->app_type = NULL;
   c->root_dir = NULL;
+  c->run_dir = NULL;
   c->env = NULL;
   c->executables = NULL;
   c->directories = NULL;
@@ -212,6 +213,9 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
     case T_ROOT_DIR:
       c->root_dir = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->root_dir, 0, strlen(value)); memcpy(c->root_dir, value, strlen(value)); break;
+    case T_RUN_DIR:
+      c->run_dir = (char *)malloc(sizeof(char *) * strlen(value));
+      memset(c->run_dir, 0, strlen(value)); memcpy(c->run_dir, value, strlen(value)); break;
     case T_USER:
       c->user = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->user, 0, strlen(value)); memcpy(c->user, value, strlen(value)); break;

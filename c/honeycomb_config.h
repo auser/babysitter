@@ -39,6 +39,7 @@ typedef enum _attr_type_ {
   T_GROUP,
   T_IMAGE,
   T_SKEL_DIR,
+  T_RUN_DIR,
   T_ROOT_DIR
 } attr_type;
 
@@ -53,6 +54,7 @@ typedef struct _honeycomb_config_ {
   char *filepath;       // The filepath of the config file (TODO: so we can use relative filepaths)
   char *app_type;       // Application type (i.e. rack, java, etc.)
   char *root_dir;       // Root directory to operate inside of (can be generated)
+  char *run_dir;        // Run directory to mount and run bees in
   char *env;            // a list of environment variables to start
   char *executables;    // Extra executables
   char *directories;    // Extra directories to copy over
