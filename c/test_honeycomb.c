@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   if (c->directories != NULL) printf("directories: %s\n", c->directories);
   
   comb.set_config(c);
-  printf("comb.config: %p\n", comb.config);
+  printf("comb.config: %p\n", comb.config());
   
   return 0;
 }
