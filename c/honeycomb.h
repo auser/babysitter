@@ -183,6 +183,7 @@ public:
   int          nice()     const { return m_nice; }
   mount_type*  mount()    const { return m_mount; }
   const char*  app_type() const { return m_app_type.c_str(); }
+  const honeycomb_config *config const {return m_honeycomb_config; }
   
   int ei_decode(ei::Serializer& ei);
   int bundle_environment(std::string confinement_root, mode_t confinement_mode, string_set s_executables, string_set s_dirs, string_set s_extra_files);

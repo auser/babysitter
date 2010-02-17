@@ -58,7 +58,11 @@ int main(int argc, char **argv) {
   printf("comb: %p\n", &comb);
   
   honeycomb_config *c = parse_config_file(config_file);
+  printf("conf: %p\n", c);
   if (c->directories != NULL) printf("directories: %s\n", c->directories);
+  
+  comb.set_config(c);
+  printf("comb.config: %p\n", comb.config);
   
   return 0;
 }
