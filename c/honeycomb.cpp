@@ -219,7 +219,7 @@ int Honeycomb::comb_exec(std::string cmd) {
 
     // Make it executable
     if (chmod(sFile.c_str(), 040750) != 0) {
-      fprintf(stderr, "Could not change permissions to '%s' %o\n", sFile.c_str(), 040700);
+      fprintf(stderr, "Could not change permissions to '%s' %o\n", sFile.c_str(), 040750);
     }
     
     // Run in a new process
@@ -314,11 +314,13 @@ void Honeycomb::ensure_cd_exists() {
 
 int Honeycomb::bundle() {
   phase *p = find_phase(m_honeycomb_config, T_BUNDLE);
-  temp_drop();
+
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
   ensure_cd_exists();
+  
+  temp_drop();
   if ((p != NULL) && (p->command != NULL)) {
     printf("Running client code instead\n");
     printf("p: %s\n", p->command);
@@ -329,13 +331,10 @@ int Honeycomb::bundle() {
 
     b.build_chroot(m_cd, m_user, m_group, m_executables, m_files, m_dirs);
   }
+  restore_perms();
   
   exec_hook("bundle", AFTER, p);
   
-  // Set our resource limits (TODO: Move to mounting?)
-  set_rlimits();
-  // come back to our permissions
-  restore_perms();
   return 0;
 }
 
@@ -412,7 +411,7 @@ const char * const Honeycomb::to_string(long long int n, unsigned char base) {
 /*---------------------------- Permissions ------------------------------------*/
 
 int Honeycomb::temp_drop() {
-  DEBUG_MSG("Dropping into '%d' user\n", config->user);
+  DEBUG_MSG("Dropping into '%d' user\n", (int)m_user);
   if (setresgid(-1, m_user, getegid()) || setresuid(-1, m_user, geteuid()) || getegid() != m_user || geteuid() != m_user ) {
     fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, ::strerror(errno));
     return -1; // we are in the fork
@@ -437,10 +436,11 @@ int Honeycomb::perm_drop() {
 int Honeycomb::restore_perms() {
   uid_t ruid, euid, suid;
   gid_t rgid, egid, sgid;
+  DEBUG_MSG("Recovering into '%d' user\n", (int)geteuid());
 
   if (getresgid(&rgid, &egid, &sgid) || getresuid(&ruid, &euid, &suid) || setresuid(-1, suid, -1) || setresgid(-1, sgid, -1)
       || geteuid() != suid || getegid() != sgid ) {
-        fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, ::strerror(errno));
+        fprintf(stderr, "Could not restore privileges to %d: %s\n", m_user, ::strerror(errno));
         return -1; // we are in the fork
       }
   return 0;
@@ -489,6 +489,7 @@ void Honeycomb::init() {
     m_executables.insert("/bin/bash");
     m_executables.insert("/usr/bin/whoami");
     m_executables.insert("/usr/bin/env");
+    m_executables.insert(getenv("SHELL"));
     
     if (m_honeycomb_config->executables != NULL) {
       stream << m_honeycomb_config->executables; // Insert into a string

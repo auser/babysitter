@@ -17,7 +17,7 @@ bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group)
   make_path(strdup(path.c_str()));
   
   if (chown(path.c_str(), user, group) != 0) {
-	  fprintf(stderr, "Could not change owner of '%s' to %i\n", path.c_str(), user);
+	  fprintf(stderr, "[build_base_dir] Could not change owner of '%s' to %i\n", path.c_str(), user);
     return false;
 	}
   
@@ -44,6 +44,9 @@ int WorkerBee::build_chroot(const std::string &path,
   base_dirs.insert("lib");
   base_dirs.insert("home");
   base_dirs.insert("etc");
+  
+  // Base executables
+  executables.insert("which");
   
   // Add the extra directories requested
   for (string_set::iterator dir = extra_dirs.begin(); dir != extra_dirs.end(); ++dir) base_dirs.insert(dir->c_str());
@@ -113,13 +116,13 @@ int WorkerBee::build_chroot(const std::string &path,
   			
     			if (chown(full_path.c_str(), user, group) != 0) {
 #ifdef DEBUG
-           printf("Could not change owner of '%s' to %d\n", full_path.c_str(), user);
+           printf("[build_chroot] Could not change owner of '%s' to %d: %s\n", full_path.c_str(), (int)user, ::strerror(errno));
 #endif
     			}
           
           if (chmod(full_path.c_str(), mode) != 0) {
 #ifdef DEBUG
-            printf("Could not change permissions to '%s' %o\n", full_path.c_str(), mode);
+            printf("Could not change permissions to '%s' %o\n", full_path.c_str(), (int)mode);
 #endif
           }
           // Add it to the already_copied set and move on
@@ -195,7 +198,7 @@ int WorkerBee::copy_binary_file(std::string path, std::string res_bin, uid_t use
     
     cp_f(link_origin.c_str(), link_path.c_str());
     if (chown(link_path.c_str(), user, group) != 0) {
-  	  fprintf(stderr, "Could not change owner of '%s' to %i\n", link_path.c_str(), user);
+  	  fprintf(stderr, "[copy_binary_file] Could not change owner of '%s' to %i\n", link_path.c_str(), user);
   	}
 
     if (chmod(link_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
@@ -207,7 +210,7 @@ int WorkerBee::copy_binary_file(std::string path, std::string res_bin, uid_t use
   // Copy the original into the path
   cp_f(res_bin.c_str(), bin_path.c_str());
   if (chown(bin_path.c_str(), user, group) != 0) {
-	  fprintf(stderr, "Could not change owner of '%s' to %i\n", bin_path.c_str(), user);
+	  fprintf(stderr, "[copy_binary_file original] Could not change owner of '%s' to %i\n", bin_path.c_str(), user);
 	}
 
   if (chmod(bin_path.c_str(), S_IREAD|S_IEXEC|S_IXGRP|S_IRGRP|S_IWRITE)) {
@@ -391,6 +394,24 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::st
 #ifdef DEBUG
       printf("found an interpreter: %s\n", line);
 #endif
+
+      // Chomp the beginning of the line
+      for(int i = 0; i < len; ++i) {
+        if ( isspace(line[i]) ) {        
+          for (int j = 0; j < len; ++j) {
+            line[j] = line[j+1];
+          }
+          line[len--] = 0;
+        } else {
+          break;
+        }
+      }
+      // Chomp the end of the line
+      while ((len>=0) && (isspace(line[len])) ) {
+        line[len] = 0;
+        len--;
+      }
+    
       std::pair<string_set *, string_set*> *linked_libs = linked_libraries(line);
       // We need to include the interpreter!
       (linked_libs->second)->insert(line);
@@ -520,7 +541,7 @@ int WorkerBee::make_path(const std::string & path) {
       std::string p = path.substr(0, i + 1);
       if (mkdir(p.c_str(), 0750) && EEXIST != errno && EISDIR != errno) {
 #ifdef DEBUG
-        fprintf(stderr, "Could not create the directory %s\n", dir_path);
+        fprintf(stderr, "Could not create the directory %s\n", p.c_str());
 #endif
         return(-1);
       }
