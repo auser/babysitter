@@ -41,6 +41,7 @@ typedef enum _attr_type_ {
   T_IMAGE,
   T_SKEL_DIR,
   T_RUN_DIR,
+  T_CLONE_CMD,
   T_ROOT_DIR
 } attr_type;
 
@@ -56,6 +57,7 @@ typedef struct _honeycomb_config_ {
   char *app_type;       // Application type (i.e. rack, java, etc.)
   char *root_dir;       // Root directory to operate inside of (can be generated)
   char *run_dir;        // Run directory to mount and run bees in
+  char *clone_command;  // Clone command for scm
   char *env;            // a list of environment variables to start
   char *executables;    // Extra executables
   char *directories;    // Extra directories to copy over

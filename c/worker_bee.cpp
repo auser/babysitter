@@ -13,13 +13,33 @@
 #include "honeycomb.h"
 
 // Build a base directory
-bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group) {
+bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group, string_set &extra_dirs) {
+  std::string full_path;
   make_path(strdup(path.c_str()));
   
+  // Make sure the base path exists
   if (chown(path.c_str(), user, group) != 0) {
 	  fprintf(stderr, "[build_base_dir] Could not change owner of '%s' to %i\n", path.c_str(), user);
     return false;
 	}
+	
+	string_set base_dirs;
+  base_dirs.insert("bin");
+  base_dirs.insert("usr");
+  base_dirs.insert("var");
+  base_dirs.insert("lib");
+  base_dirs.insert("home");
+  base_dirs.insert("etc");
+  
+  // Add the extra directories requested
+  for (string_set::iterator dir = extra_dirs.begin(); dir != extra_dirs.end(); ++dir) base_dirs.insert(dir->c_str());
+  
+  for (string_set::iterator dir = base_dirs.begin(); dir != base_dirs.end(); ++dir) {
+    if ((*dir->c_str()) == FS_SLASH) full_path = path + *dir; else full_path = path + FS_SLASH + *dir;
+    
+    // Make the paths
+    make_path(full_path.c_str());
+  }
   
   return true;
 }

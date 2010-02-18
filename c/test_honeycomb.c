@@ -1,5 +1,5 @@
 // Compile:
-// make && g++ -g -o test_honeycomb test_honeycomb.c ei++.o honeycomb.o worker_bee.o hc_support.o ./parser/y.tab.o ./parser/lex.yy.o -lelf -lei && sudo rm -rf /var/beehive/honeycombs/* && ./test_honeycomb ../docs/apps/rack.conf /tmp/confine rack
+// make && g++ -g -o test_honeycomb test_honeycomb.c ei++.o honeycomb.o worker_bee.o hc_support.o ./parser/y.tab.o ./parser/lex.yy.o -lelf -lei && sudo rm -rf /var/beehive/honeycombs/* && sudo ./test_honeycomb ../docs/apps/rack.conf /tmp/confine rack
 
 #include <stdio.h>
 
@@ -43,25 +43,27 @@ int main(int argc, char **argv) {
   
   // Defaults
   std::string config_file ("/etc/beehive/hooks.conf");
-  std::string root ("/var/babysitter");
   std::string app_type ("rack");
+  std::string scm_url ("git://github.com/auser/getbeehive.com.git");
   
   if (argv[1])
     config_file = argv[1];
   if (argv[2])
-    root = argv[2];
+    app_type = argv[2];
   if (argv[3])
-    app_type = argv[3];
+    scm_url = argv[3];
   
   printf("-----\n");
   honeycomb_config *c = parse_config_file(config_file);
     
   Honeycomb comb (app_type, c);
+  comb.set_scm_url(scm_url);
   printf("comb: %p\n", &comb);
   printf("\tuser: %d\n", comb.user());
   printf("\tgroup: %d\n", comb.group());
   printf("\tcd: %s\n", comb.cd());
   printf("\trun_dir: %s\n", comb.run_dir());
+  printf("\tscm_url: %s\n", comb.scm_url());
   
   printf("\t--executables\n");
   for (string_set::iterator exec = comb.executables().begin(); exec != comb.executables().end(); exec++) printf("\t\t%s\n", exec->c_str());

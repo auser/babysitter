@@ -328,8 +328,45 @@ int Honeycomb::bundle() {
     //Default action
     printf("Running default action for bundle\n");
     WorkerBee b;
+    // Build the base path
+    b.build_base_dir(m_cd, m_user, m_group, m_dirs);
+    // Clone the app in the directory if there is an scm_url
+    // Get the clone command
+    if (m_scm_url != "") {
+      printf("Cloning from %s\n", m_scm_url.c_str());
+      std::string clone_command ("/usr/bin/git clone --depth 0 %s %s/home/app");
+      if (m_honeycomb_config->clone_command != NULL) clone_command = m_honeycomb_config->clone_command;
+      char str_clone_command[256];
+      // The str_clone_command looks like:
+      //  /usr/bin/git clone --depth 0 [git_url] [m_cd]/home/app
+      snprintf(str_clone_command, 256, clone_command.c_str(), m_scm_url.c_str(), m_cd.c_str());
+      // Do the cloning
+      // Do not like me some system(3)
+      int status, argc = 0;
+      const char* argv[64];
+      pid_t pid;
+      argv[argc] = strtok(str_clone_command, " \r\t\n");
 
-    b.build_chroot(m_cd, m_user, m_group, m_executables, m_files, m_dirs);
+      while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
+
+      // Run in a new process
+      if ((pid = fork()) == -1) {
+        perror("fork");
+        return -1;
+      }
+      if (pid == 0) {
+        // we are in the child process
+        if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
+          fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
+          return EXIT_FAILURE;
+        }
+      }
+
+      while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+      assert(0 == status);
+    }    
+    
+    // b.build_chroot(m_cd, m_user, m_group, m_executables, m_files, m_dirs);
   }
   restore_perms();
   

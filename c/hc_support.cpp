@@ -108,6 +108,8 @@ honeycomb_config* a_new_honeycomb_config_object(void) {
   c->env = NULL;
   c->executables = NULL;
   c->directories = NULL;
+  c->files = NULL;
+  c->clone_command = NULL;
   c->stdout = NULL;
   c->stdin = NULL;
   c->user = NULL;
@@ -225,6 +227,9 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
     case T_GROUP:
       c->group = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->group, 0, strlen(value)); memcpy(c->group, value, strlen(value)); break;
+    case T_CLONE_CMD:
+      c->clone_command = (char *)malloc(sizeof(char *) * strlen(value));
+      memset(c->clone_command, 0, strlen(value)); memcpy(c->clone_command, value, strlen(value)); break;
     case T_IMAGE:
       c->image = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->image, 0, strlen(value)); memcpy(c->image, value, strlen(value)); break;

@@ -169,6 +169,7 @@ private:
   gid_t                   m_group;     // run as this group
   const char**            m_cenv;      // The string list of environment variables
   // Internal
+  std::string             m_scm_url;   // The url for the scm path (to clone from)
   int                     m_cenv_c;    // The current count of the environment variables
   string_set              m_already_copied;
   honeycomb_config*       m_honeycomb_config; // We'll compute this on the app type
@@ -179,7 +180,7 @@ public:
     m_honeycomb_config = c;
     init();
   }
-  Honeycomb(std::string app_type) : m_tmp(0,256),m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_cenv(NULL) {
+  Honeycomb(std::string app_type) : m_tmp(0,256),m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_cenv(NULL),m_scm_url("") {
     m_app_type = app_type;
   }
   Honeycomb() {
@@ -193,6 +194,7 @@ public:
   const char*  strerror() const { return m_err.str().c_str(); }
   const char*  cmd()      const { return m_cmd.c_str(); }
   const char*  cd()       const { return m_cd.c_str(); }
+  const char*  scm_url()  const { return m_scm_url.c_str(); }
   const char*  run_dir()  const { return m_run_dir.c_str(); }
   const char*  skel()     const { return m_skel.c_str(); }
   char* const* env()      const { return (char* const*)m_cenv; }
@@ -212,6 +214,7 @@ public:
   int bundle();
   
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
+  void set_scm_url(std::string url) {m_scm_url = url;}
   
 private:
   void init();
