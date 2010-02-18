@@ -233,6 +233,7 @@ private:
   int comb_exec(std::string cmd); // Run a hook on the system
   void exec_hook(std::string action, int stage, phase *p);
   void ensure_cd_exists();
+  string_set *string_set_from_lines_in_file(std::string filepath);
 };
 
 /**

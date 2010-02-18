@@ -288,11 +288,12 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
 
   // iterate through
   string_set obj = *dyn_libs->first;
-  char link_buf[1024];
+  string_set paths = *dyn_libs->second;
   // Go through the libs
-  for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
-    string_set paths = *dyn_libs->second;
+  //for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
     
+  find_and_insert_libs_from_paths(libs, &obj, &paths);
+    /*
     // Go through each of the paths
     for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
       std::string path (*pth);
@@ -318,9 +319,8 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
             fprintf(stderr, "[readlink] Error: %s: %s\n", full_path.c_str(), strerror(errno));
           }
           
-          /** If we are looking at a symlink, then create a new BeeFile object and 
-           * insert it into the library path, noting that the other is a symlink
-          **/ 
+          // If we are looking at a symlink, then create a new BeeFile object and 
+          // insert it into the library path, noting that the other is a symlink 
           std::string link_dir (dirname(strdup(full_path.c_str())));
           // std::string link_path (link_buf);
           std::string link_path;
@@ -354,9 +354,76 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
         break; // We found it! Move on, yo
       }
     }
-  }
+    */
+  //}
   
   return libs;
+}
+
+void WorkerBee::find_and_insert_libs_from_paths(bee_files_set *libs, string_set *obj, string_set *paths) {
+  char link_buf[1024];
+  for (string_set::iterator ld = obj->begin(); ld != obj->end(); ++ld) {
+    for (string_set::iterator pth = paths->begin(); pth != paths->end(); ++pth) {
+      std::string path (*pth);
+      std::string full_path = *pth+FS_SLASH+*ld;
+      if (fopen(full_path.c_str(), "rb") != NULL) {
+    
+        // Create a bee_file object
+        BeeFile bf;
+        struct stat lib_stat;
+        bf.set_file_path(full_path.c_str());
+    
+        // Make sure the file can be "stat'd"
+        if (lstat(full_path.c_str(), &lib_stat) < 0) {
+          fprintf(stderr, "[lstat] Error: %s: %s\n", full_path.c_str(), strerror(errno));
+        }
+        bf.set_file_mode(lib_stat.st_mode);
+    	  // Are we looking at a symlink
+        // if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
+        if (S_ISLNK(lib_stat.st_mode)) {
+
+          memset(link_buf, 0, 1024);
+          if (!readlink(full_path.c_str(), link_buf, 1024)) {
+            fprintf(stderr, "[readlink] Error: %s: %s\n", full_path.c_str(), strerror(errno));
+          }
+      
+          /** If we are looking at a symlink, then create a new BeeFile object and 
+           * insert it into the library path, noting that the other is a symlink
+          **/ 
+          std::string link_dir (dirname(strdup(full_path.c_str())));
+          // std::string link_path (link_buf);
+          std::string link_path;
+          if (path == "") 
+            link_path = link_dir + "/" + link_buf; 
+          else 
+            link_path = (path+"/"+link_buf);
+      
+          BeeFile lbf;
+          struct stat link_stat;
+          // Set the data on the BeeFile object
+          lbf.set_file_path(link_path.c_str());
+          if (lstat(link_path.c_str(), &link_stat)) {
+            fprintf(stderr, "[lstat] Could not read stats for %s\n", link_path.c_str());
+          }
+          lbf.set_file_mode(link_stat.st_mode);
+      
+          // full_path.c_str()
+          bf.set_file_path(full_path.c_str()); // This is redundant, but just for clarity
+
+          bf.set_sym_origin(link_buf);
+          bf.set_is_link(true);
+          bf.set_file_mode(100755);
+      
+          libs->insert(lbf);
+        } else {
+          bf.set_is_link(false);
+        }
+    
+        libs->insert(bf);
+        break; // We found it! Move on, yo
+      }
+    }
+  }
 }
 
 bool WorkerBee::matches_pattern(const std::string & matchee, const char * pattern, int flags) {

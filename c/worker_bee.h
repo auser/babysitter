@@ -84,6 +84,7 @@ public:
 // Functions
 private:
   string_set* libs_for_running_process(pid_t pid);
+  void find_and_insert_libs_from_paths(bee_files_set *out, string_set *paths, string_set *libs);
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
   bool is_lib(const std::string &n);
   std::pair<string_set *, string_set *> *linked_libraries(const std::string str);
