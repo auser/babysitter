@@ -46,7 +46,10 @@ int WorkerBee::build_chroot(const std::string &path,
   base_dirs.insert("etc");
   
   // Base executables
+  // TODO: Move this into a base conf. path
   executables.insert("which");
+  executables.insert("cat");
+  executables.insert("ls");
   
   // Add the extra directories requested
   for (string_set::iterator dir = extra_dirs.begin(); dir != extra_dirs.end(); ++dir) base_dirs.insert(dir->c_str());
@@ -494,6 +497,38 @@ std::pair<string_set *, string_set *> *WorkerBee::linked_libraries(const std::st
     close(fl);
     return new std::pair<string_set *, string_set*> (libs, paths);
   }
+}
+
+/**
+* Look into the /proc/[pid]/maps for the libraries required at runtime
+**/
+string_set* WorkerBee::libs_for_running_process(pid_t pid) {
+  string_set *libs = new string_set();
+  
+  char fname[PATH_MAX];
+  FILE *f;
+
+  sprintf(fname, "/proc/%ld/maps", (long)pid);
+  f = fopen(fname, "r");
+
+  if(!f) {
+    perror("libs_for_running_process:");
+    fprintf(stderr, "%s: %s\n", fname, ::strerror(errno));
+    return libs;
+  }
+
+  while(!feof(f)) {
+	  char buf[PATH_MAX+100], perm[5], dev[6], mapname[PATH_MAX];
+	  unsigned long begin, end, inode, foo;
+
+	  if(fgets(buf, sizeof(buf), f) == 0) break;
+	  mapname[0] = '\0';
+	  sscanf(buf, "%lx-%lx %4s %lx %5s %ld %s", &begin, &end, perm, &foo, dev, &inode, mapname);	  
+    libs->insert(mapname);
+  }
+  fclose(f);
+  
+  return libs;
 }
 
 int WorkerBee::cp_f(const std::string &source, const std::string &dest) {

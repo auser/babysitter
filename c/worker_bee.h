@@ -75,6 +75,7 @@ public:
   ~WorkerBee() {}
 
   bee_files_set *libs_for(const std::string &str);
+  string_set* libs_for_running_process(pid_t pid);
   bool build_base_dir(const std::string &path, uid_t user, gid_t group);
   int  build_chroot(const std::string &path, uid_t user, gid_t group, string_set &executables, string_set &ef, string_set &extra_dirs);
   int  secure_chroot(std::string m_cd);

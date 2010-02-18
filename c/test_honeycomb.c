@@ -1,5 +1,5 @@
 // Compile:
-// make && g++ -g -o test_honeycomb test_honeycomb.c ei++.o honeycomb.o worker_bee.o hc_support.o ./parser/y.tab.o ./parser/lex.yy.o -lelf -lei && ./test_honeycomb ../docs/apps/rack.conf /tmp/confine rack
+// make && g++ -g -o test_honeycomb test_honeycomb.c ei++.o honeycomb.o worker_bee.o hc_support.o ./parser/y.tab.o ./parser/lex.yy.o -lelf -lei && sudo rm -rf /var/beehive/honeycombs/* && ./test_honeycomb ../docs/apps/rack.conf /tmp/confine rack
 
 #include <stdio.h>
 
