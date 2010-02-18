@@ -85,6 +85,8 @@ public:
 private:
   string_set* libs_for_running_process(pid_t pid);
   void find_and_insert_libs_from_paths(bee_files_set *out, string_set *paths, string_set *libs);
+  int copy_library_file(const std::string &path, BeeFile *bee, uid_t user, gid_t group, string_set *already_copied);
+  bee_files_set *copy_user_libs(string_set *obj, string_set *paths);
   bool matches_pattern(const std::string & matchee, const char * pattern, int flags);
   bool is_lib(const std::string &n);
   std::pair<string_set *, string_set *> *linked_libraries(const std::string str);
@@ -95,6 +97,7 @@ private:
   int cp(const std::string & source, const std::string & destination);
   int copy_binary_file(std::string path, std::string res_bin, uid_t user, gid_t group);
   std::string find_binary(const std::string& file);
+  int write_to_file(const char *filename, const char *text);
   bool abs_path(const std::string & path);
 };
 

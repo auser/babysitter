@@ -46,8 +46,8 @@ bool WorkerBee::build_base_dir(const std::string &path, uid_t user, gid_t group,
 
 /** Build the chroot at the path **/
 int WorkerBee::build_chroot(const std::string &path, 
-                            uid_t user, 
-                            gid_t group, 
+                            uid_t user,
+                            gid_t group,
                             string_set &executables, 
                             string_set &extra_files,
                             string_set &extra_dirs) {
@@ -70,6 +70,7 @@ int WorkerBee::build_chroot(const std::string &path,
   executables.insert("which");
   executables.insert("cat");
   executables.insert("ls");
+  executables.insert("su");
   
   // Add the extra directories requested
   for (string_set::iterator dir = extra_dirs.begin(); dir != extra_dirs.end(); ++dir) base_dirs.insert(dir->c_str());
@@ -88,11 +89,18 @@ int WorkerBee::build_chroot(const std::string &path,
     cp_rf(*dir, s_dir.c_str());
   }
   
-  for (string_set::iterator file = extra_files.begin(); file != extra_files.end(); ++file) {
-    if ((*file).c_str()[0] == FS_SLASH) full_path = path + (*file).c_str(); else full_path = path + FS_SLASH + (*file).c_str();
-    
-    make_path(dirname(strdup(full_path.c_str())));
-    cp_f(*file, full_path);
+  // for (string_set::iterator file = extra_files.begin(); file != extra_files.end(); ++file) {
+  //   if ((*file).c_str()[0] == FS_SLASH) full_path = path + (*file).c_str(); else full_path = path + FS_SLASH + (*file).c_str();
+  //   
+  //   make_path(dirname(strdup(full_path.c_str())));
+  //   cp_f(*file, full_path);
+  // }
+  
+  // User defined libs
+  bee_files_set *user_libs = copy_user_libs(&extra_files, &base_dirs);
+  for (bee_files_set::iterator bf = user_libs->begin(); bf != user_libs->end(); ++bf) {
+    BeeFile bee = *bf;
+    copy_library_file(path, &bee, user, group, &already_copied);
   }
   
   // Build the root libraries
@@ -114,49 +122,30 @@ int WorkerBee::build_chroot(const std::string &path,
       // collect the libraries and copy them to the full path of the chroot
       for (bee_files_set::iterator bf = s_libs->begin(); bf != s_libs->end(); ++bf) {
         BeeFile bee = *bf;
-        std::string s (bee.file_path());
-      
-        // Don't copy if the file is already copied
-        if (already_copied.count(s)) {
-        } else {
-          // If it is a symlink, then make a symlink, otherwise copy the file
-          // If the library starts with a FS_SLASH then don't add one, otherwise, do
-          // i.e. if libs/hi.so.1 turns into full_path/libs/hi.so.1 otherwise libs.so.1 turns into full_path/libs.so.1
-          if (s.c_str()[0] == FS_SLASH) full_path = path + s.c_str(); else full_path = path + FS_SLASH + s.c_str();
-        
-          if (bee.is_link()) {
-            // make symlink
-            make_path(dirname(strdup(full_path.c_str()))); 
-            if (symlink(bee.sym_origin().c_str(), full_path.c_str())) {
-              fprintf(stderr, "Could not make a symlink: %s to %s because %s\n", bee.sym_origin().c_str(), full_path.c_str(), strerror(errno));
-            }
-          } else {
-            // Copy the file (recursively)
-            cp_f(s, full_path);
-          }
-          // Change the permissions to match the original file
-          mode_t mode = bee.file_mode();
-  			
-    			if (chown(full_path.c_str(), user, group) != 0) {
-#ifdef DEBUG
-           printf("[build_chroot] Could not change owner of '%s' to %d: %s\n", full_path.c_str(), (int)user, ::strerror(errno));
-#endif
-    			}
-          
-          if (chmod(full_path.c_str(), mode) != 0) {
-#ifdef DEBUG
-            printf("Could not change permissions to '%s' %o\n", full_path.c_str(), (int)mode);
-#endif
-          }
-          // Add it to the already_copied set and move on
-          already_copied.insert(s);
-        }
+        copy_library_file(path, &bee, user, group, &already_copied);
       }
-    
+      
       // Copy the executables and make them executable
       copy_binary_file(path, res_bin, user, group);
     }		
   }
+  
+  // Finally add some miscellaneous files
+  full_path = path + FS_SLASH + "etc/passwd";
+  write_to_file(full_path.c_str(), "root::0:0::/root:/bin/bash\nuser:x:1002:1002:,,,:/:/bin/bash");
+  
+  full_path = path + FS_SLASH + "etc/hostname";
+  write_to_file(full_path.c_str(), "app");
+  
+  return 0;
+}
+
+int WorkerBee::write_to_file(const char *filename, const char *text) {
+  FILE *file;
+  file = fopen(filename, "w+");
+  if (file == NULL) return -1;
+  fprintf(file, "%s\n", text);
+  fclose(file);
   return 0;
 }
 
@@ -289,78 +278,67 @@ bee_files_set *WorkerBee::libs_for(const std::string &executable) {
   // iterate through
   string_set obj = *dyn_libs->first;
   string_set paths = *dyn_libs->second;
+  
   // Go through the libs
-  //for (string_set::iterator ld = obj.begin(); ld != obj.end(); ++ld) {
-    
   find_and_insert_libs_from_paths(libs, &obj, &paths);
-    /*
-    // Go through each of the paths
-    for (string_set::iterator pth = paths.begin(); pth != paths.end(); ++pth) {
-      std::string path (*pth);
-      std::string full_path = *pth+FS_SLASH+*ld;
-      if (fopen(full_path.c_str(), "rb") != NULL) {
-        
-        // Create a bee_file object
-        BeeFile bf;
-        struct stat lib_stat;
-        bf.set_file_path(full_path.c_str());
-        
-        // Make sure the file can be "stat'd"
-        if (lstat(full_path.c_str(), &lib_stat) < 0) {
-          fprintf(stderr, "[lstat] Error: %s: %s\n", full_path.c_str(), strerror(errno));
-        }
-        bf.set_file_mode(lib_stat.st_mode);
-			  // Are we looking at a symlink
-        // if ((lib_stat.st_mode & S_IFMT) == S_IFLNK) {
-        if (S_ISLNK(lib_stat.st_mode)) {
-
-          memset(link_buf, 0, 1024);
-          if (!readlink(full_path.c_str(), link_buf, 1024)) {
-            fprintf(stderr, "[readlink] Error: %s: %s\n", full_path.c_str(), strerror(errno));
-          }
-          
-          // If we are looking at a symlink, then create a new BeeFile object and 
-          // insert it into the library path, noting that the other is a symlink 
-          std::string link_dir (dirname(strdup(full_path.c_str())));
-          // std::string link_path (link_buf);
-          std::string link_path;
-          if (path == "") 
-            link_path = link_dir + "/" + link_buf; 
-          else 
-            link_path = (path+"/"+link_buf);
-          
-          BeeFile lbf;
-          struct stat link_stat;
-          // Set the data on the BeeFile object
-          lbf.set_file_path(link_path.c_str());
-          if (lstat(link_path.c_str(), &link_stat)) {
-            fprintf(stderr, "[lstat] Could not read stats for %s\n", link_path.c_str());
-          }
-          lbf.set_file_mode(link_stat.st_mode);
-          
-          // full_path.c_str()
-          bf.set_file_path(full_path.c_str()); // This is redundant, but just for clarity
-
-          bf.set_sym_origin(link_buf);
-          bf.set_is_link(true);
-          bf.set_file_mode(100755);
-          
-          libs->insert(lbf);
-        } else {
-          bf.set_is_link(false);
-        }
-        
-        libs->insert(bf);
-        break; // We found it! Move on, yo
-      }
-    }
-    */
-  //}
   
   return libs;
 }
 
+int WorkerBee::copy_library_file(const std::string &path, BeeFile *bee, uid_t user, gid_t group, string_set *already_copied) {
+  std::string full_path;
+  std::string s (bee->file_path());
+
+  // Don't copy if the file is already copied
+  if (already_copied->count(s)) {
+  } else {
+    // If it is a symlink, then make a symlink, otherwise copy the file
+    // If the library starts with a FS_SLASH then don't add one, otherwise, do
+    // i.e. if libs/hi.so.1 turns into full_path/libs/hi.so.1 otherwise libs.so.1 turns into full_path/libs.so.1
+    if (s.c_str()[0] == FS_SLASH) full_path = path + s.c_str(); else full_path = path + FS_SLASH + s.c_str();
+
+    if (bee->is_link()) {
+      // make symlink
+      make_path(dirname(strdup(full_path.c_str()))); 
+      if (symlink(bee->sym_origin().c_str(), full_path.c_str())) {
+        fprintf(stderr, "Could not make a symlink: %s to %s because %s\n", bee->sym_origin().c_str(), full_path.c_str(), strerror(errno));
+      }
+    } else {
+      // Copy the file (recursively)
+      cp_f(s, full_path);
+    }
+    // Change the permissions to match the original file
+    mode_t mode = bee->file_mode();
+
+		if (chown(full_path.c_str(), user, group) != 0) {
+#ifdef DEBUG
+     printf("[build_chroot] Could not change owner of '%s' to %d: %s\n", full_path.c_str(), (int)user, ::strerror(errno));
+#endif
+		}
+
+    if (chmod(full_path.c_str(), mode) != 0) {
+#ifdef DEBUG
+      printf("Could not change permissions to '%s' %o\n", full_path.c_str(), (int)mode);
+#endif
+    }
+    // Add it to the already_copied set and move on
+    already_copied->insert(s);
+  }
+  return 0;
+}
+
+bee_files_set *WorkerBee::copy_user_libs(string_set *obj, string_set *paths) {
+  bee_files_set *libs = new bee_files_set();
+  find_and_insert_libs_from_paths(libs, obj, paths);
+  return libs;
+}
+
 void WorkerBee::find_and_insert_libs_from_paths(bee_files_set *libs, string_set *obj, string_set *paths) {
+  // Default lookup paths
+  paths->insert("/lib");
+  paths->insert("/usr/lib");
+  paths->insert("/usr/local/lib");
+  
   char link_buf[1024];
   for (string_set::iterator ld = obj->begin(); ld != obj->end(); ++ld) {
     for (string_set::iterator pth = paths->begin(); pth != paths->end(); ++pth) {
@@ -629,8 +607,8 @@ int WorkerBee::cp(const std::string & source, const std::string & destination) {
   FILE *src = fopen(source.c_str(), "rb");
   if (NULL == src) { return -1;}
 
-  FILE *dstntn = fopen(destination.c_str(), "wb");
-  if (NULL == dstntn) {
+  FILE *dest = fopen(destination.c_str(), "wb");
+  if (NULL == dest) {
     fclose(src);
     return -1;
   }
@@ -638,13 +616,13 @@ int WorkerBee::cp(const std::string & source, const std::string & destination) {
   char bfr [4096];
   while (true) {
     size_t r = fread(bfr, 1, sizeof bfr, src);
-      if (0 == r || r != fwrite(bfr, 1, r, dstntn)) {
+      if (0 == r || r != fwrite(bfr, 1, r, dest)) {
         break;
       }
     }
 
   fclose(src);
-  if (fclose(dstntn)) {
+  if (fclose(dest)) {
     return(-1);
   }
   return 0;

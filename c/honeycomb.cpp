@@ -349,8 +349,7 @@ string_set *Honeycomb::string_set_from_lines_in_file(std::string filepath) {
     }
     // Skip newlines
     if (line[0] == '\n') continue;
-    
-    printf("line: %s\n", line);
+    // Insert 
     lines->insert(line);
   }
   
@@ -388,7 +387,7 @@ int Honeycomb::bundle() {
     // Clone the app in the directory if there is an scm_url
     // Get the clone command
     if (m_scm_url != "") {
-      printf("Cloning from %s\n", m_scm_url.c_str());
+      DEBUG_MSG("Cloning from %s\n", m_scm_url.c_str());
       std::string clone_command ("/usr/bin/git clone --depth 0 %s home/app");
       if (m_honeycomb_config->clone_command != NULL) clone_command = m_honeycomb_config->clone_command;
       char str_clone_command[256];
@@ -434,6 +433,7 @@ int Honeycomb::bundle() {
         m_files.insert(file->c_str());
       }
     }
+    // find_and_insert_libs_from_paths(libs, &obj, &paths);
     b.build_chroot(m_cd, m_user, m_group, m_executables, m_files, m_dirs);
   }
   restore_perms();
