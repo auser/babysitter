@@ -12,7 +12,7 @@ mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) @CFLAGS@ @ELF_CFLAGS@ -I ./parser
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = ./parser/y.tab.o ./parser/lex.yy.o
-INC_LIBS = -lerl_interface -lei -lcap -lstdc++ -lelf -lfl
+INC_LIBS = -lerl_interface -lei -lstdc++ -lfl
 EXECUTABLE = ../priv/bin/babysitter
 
 ifeq ($(shell uname),Linux)
@@ -34,7 +34,7 @@ PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 
 INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) config_parser worker_bee babysitter
+OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter
 #OUTPUTFILES := config_parser honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
@@ -71,13 +71,10 @@ eipp:
 config_parser:
 	@(cd ./parser;$(MAKE)) # make the config parser
 	
-honeycomb: worker_bee honeycomb.cpp honeycomb.h
+honeycomb: honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
-worker_bee: honeycomb.h honeycomb_config.h worker_bee.cpp worker_bee.h
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c worker_bee.cpp
-
-babysitter.o: worker_bee config_parser
+babysitter.o: config_parser
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c babysitter.cpp
 
 babysitter:

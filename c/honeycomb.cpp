@@ -8,7 +8,6 @@
 #include <iomanip>
 #include <assert.h>
 #include <fcntl.h>
-#include <gelf.h>
 #include <regex.h>
 #include <libgen.h>
 // System
@@ -28,7 +27,6 @@
 
 #include "honeycomb_config.h"
 #include "honeycomb.h"
-#include "worker_bee.h"
 #include "hc_support.h"
 
 /*---------------------------- Implementation ------------------------------*/
@@ -361,7 +359,6 @@ string_set *Honeycomb::string_set_from_lines_in_file(std::string filepath) {
 //---
 
 int Honeycomb::bundle() {
-  struct stat stt;
   phase *p = find_phase(m_honeycomb_config, T_BUNDLE);
 
   exec_hook("bundle", BEFORE, p);
@@ -376,9 +373,6 @@ int Honeycomb::bundle() {
   } else {
     //Default action
     printf("Running default action for bundle\n");
-    WorkerBee b;
-    // Build the base path
-    b.build_base_dir(m_cd, m_user, m_group, m_dirs);
     // Change into the working directory
     if (chdir(m_cd.c_str())) {
       perror("chdir:");
@@ -419,22 +413,6 @@ int Honeycomb::bundle() {
       while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
       assert(0 == status);
     }
-    
-    std::string dot_gems_file ("home/app/.gems");
-    if (0 == stat(dot_gems_file.c_str(), &stt)) {
-      // Do something with the .gems... Not sure YET
-      printf("There IS a .gems file!\n");
-    }
-    std::string dot_libs_file ("home/app/.libs");
-    if (0 == stat(dot_libs_file.c_str(), &stt)) {
-      printf("There IS a .libs file!\n");
-      string_set *extra_libs = string_set_from_lines_in_file(dot_libs_file);
-      for (string_set::iterator file = extra_libs->begin(); file != extra_libs->end(); ++file) {
-        m_files.insert(file->c_str());
-      }
-    }
-    // find_and_insert_libs_from_paths(libs, &obj, &paths);
-    b.build_chroot(m_cd, m_user, m_group, m_executables, m_files, m_dirs);
   }
   restore_perms();
   
@@ -516,6 +494,8 @@ const char * const Honeycomb::to_string(long long int n, unsigned char base) {
 /*---------------------------- Permissions ------------------------------------*/
 
 int Honeycomb::temp_drop() {
+
+#ifdef HAS_SETRESGID
   DEBUG_MSG("Dropping into '%d' user\n", (int)m_user);
   if (setresgid(-1, m_user, getegid()) || setresuid(-1, m_user, geteuid()) || getegid() != m_user || geteuid() != m_user ) {
     fprintf(stderr, "Could not drop privileges temporarily to %d: %s\n", m_user, ::strerror(errno));
@@ -525,11 +505,14 @@ int Honeycomb::temp_drop() {
   printf("Dropped into user %d\n", m_user);
 #endif
   return 0;
+#else
+  return 1;
+#endif
 }
 int Honeycomb::perm_drop() {
+#ifdef HAS_SETRESGID
   uid_t ruid, euid, suid;
   gid_t rgid, egid, sgid;
-
   if (setresgid(m_user, m_user, m_user) || setresuid(m_user, m_user, m_user) || getresgid(&rgid, &egid, &sgid)
       || getresuid(&ruid, &euid, &suid) || rgid != m_user || egid != m_user || sgid != m_user
       || ruid != m_user || euid != m_user || suid != m_user || getegid() != m_user || geteuid() != m_user ) {
@@ -537,8 +520,12 @@ int Honeycomb::perm_drop() {
     return -1;
   }
   return 0;
+#else
+  return 1;
+#endif
 }
 int Honeycomb::restore_perms() {
+#ifdef HAS_SETRESGID
   uid_t ruid, euid, suid;
   gid_t rgid, egid, sgid;
   DEBUG_MSG("Recovering into '%d' user\n", (int)geteuid());
@@ -549,6 +536,9 @@ int Honeycomb::restore_perms() {
         return -1; // we are in the fork
       }
   return 0;
+#else
+  return 1;
+#endif
 }
 
 /*------------------------ INTERNAL -------------------------*/

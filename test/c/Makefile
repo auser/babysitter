@@ -9,7 +9,7 @@ bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
-CFLAGS = $(CPPFLAGS) -I../../c/ -g -O2 -I/usr/local/include
+CFLAGS = $(CPPFLAGS) -I../../c/ -g -O2 -I/include
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 INC_LIBS = -lerl_interface -lei -lcap -lstdc++ -lelf
 EXECUTABLE = ../priv/bin/babysitter
@@ -24,8 +24,8 @@ endif
 
 # Defines
 CC = g++
-CPPFLAGS =  -I /usr/lib/erlang/lib/erl_interface-3.6.2/include -Wall -fPIC -I./
-LIBS = -lcap -lelf -lstdc++ 
+CPPFLAGS =  -I /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./
+LIBS = -lstdc++ 
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
 UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
@@ -38,7 +38,7 @@ OUTPUTFILES := $(INTERMEDIATES)
 
 DEFS = -DHAVE_CONFIG_H
  
-ERLDIR = /usr/lib/erlang
+ERLDIR = /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang
  
 all: $(OUTPUTFILES)
  

@@ -9,10 +9,10 @@ bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
-CFLAGS = $(CPPFLAGS) -g -O2 -I/usr/local/include -I ./parser
+CFLAGS = $(CPPFLAGS) -g -O2 -I/include -I ./parser
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = ./parser/y.tab.o ./parser/lex.yy.o
-INC_LIBS = -lerl_interface -lei -lcap -lstdc++ -lelf -lfl
+INC_LIBS = -lerl_interface -lei -lstdc++ -lfl
 EXECUTABLE = ../priv/bin/babysitter
 
 ifeq ($(shell uname),Linux)
@@ -25,8 +25,8 @@ endif
 
 # Defines
 CC = g++
-CPPFLAGS =  -I /usr/lib/erlang/lib/erl_interface-3.6.2/include -Wall -fPIC -I./
-LIBS = -lcap -lelf -lstdc++ 
+CPPFLAGS =  -I /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./
+LIBS = -lstdc++ 
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
 UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
@@ -34,12 +34,12 @@ PACKAGE_NAME = babysitter
 PACKAGE_VERSION = 0.1
 
 INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) config_parser worker_bee babysitter
+OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter
 #OUTPUTFILES := config_parser honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
  
-ERLDIR = /usr/lib/erlang
+ERLDIR = /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang
  
 all: honeycomb $(OUTPUTFILES)
 
@@ -49,7 +49,7 @@ debug:
 .SUFFIXES: .o .cpp .h
   
 test_suite: suite.o $(TEST_OBJECTS) $(UNDER_TEST)
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lcheck -o $@ $^ /usr/lib/erlang/lib/erl_interface-3.6.2/lib/libei.a	
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lcheck -o $@ $^ /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/lib/libei.a	
  
 test: test_suite
 	$(MAKE) TEST=-DTEST
@@ -71,13 +71,10 @@ eipp:
 config_parser:
 	@(cd ./parser;$(MAKE)) # make the config parser
 	
-honeycomb: worker_bee honeycomb.cpp honeycomb.h
+honeycomb: honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
-worker_bee: honeycomb.h honeycomb_config.h worker_bee.cpp worker_bee.h
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c worker_bee.cpp
-
-babysitter.o: worker_bee config_parser
+babysitter.o: config_parser
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c babysitter.cpp
 
 babysitter:

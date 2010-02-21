@@ -18,12 +18,11 @@
 #include <map>
 #include <set>
 #include <utility>
+#include <unistd.h>
 
 // System includes
 #include <sys/stat.h>
 #include <sys/resource.h>
-
-#include <gelf.h>
 
 using std::string;
 
@@ -77,18 +76,6 @@ typedef struct _mount_ {
   string src;
   string dest;
 } mount_type;
-
-typedef struct _limits_ {
-  rlim_t AS;
-  rlim_t CORE;
-  rlim_t DATA;
-  rlim_t NOFILE;
-  rlim_t FSIZE;
-  rlim_t MEMLOCK;
-  rlim_t RSS;
-  rlim_t STACK;
-  rlim_t CPU;
-} resource_limits;
 
 typedef unsigned char byte;
 typedef int   exit_status_t;
@@ -225,7 +212,6 @@ private:
   int temp_drop();
   int perm_drop();
   int restore_perms();
-  std::pair<string_set*, string_set*> * dynamic_loads(Elf *elf);
   // Limits
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
