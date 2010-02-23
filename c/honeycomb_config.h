@@ -1,5 +1,5 @@
-#ifndef HONEYCOMB_H
-#define HONEYCOMB_H
+#ifndef HONEYCOMB_CONFIG_H
+#define HONEYCOMB_CONFIG_H
 
 #include <stdarg.h>
 #include <string.h>
@@ -72,5 +72,18 @@ typedef struct _honeycomb_config_ {
   size_t num_phases;
   phase **phases;
 } honeycomb_config;
+
+//---
+// Functions
+//---
+#ifdef __cplusplus
+// This stuff can only be parsed if we are compiling with c++
+// because we compile in c and c++ while including this file
+// we have to separate out the available functions. This is done for
+// compatability purposes. 
+#include "honeycomb.h"
+
+int parse_config_dir(std::string directory, ConfigMapT &known_configs);
+#endif
 
 #endif

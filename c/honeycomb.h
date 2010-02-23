@@ -1,3 +1,6 @@
+#ifndef HONEYCOMB_H
+#define HONEYCOMB_H
+
 /**
  * Honeycomb
  * This class keeps all the fun little variables that are 
@@ -247,3 +250,5 @@ public:
 };
 
 /*--------------------------------------------------------------------------*/
+
+#endif
