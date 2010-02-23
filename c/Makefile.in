@@ -12,15 +12,15 @@ mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) @CFLAGS@ @ELF_CFLAGS@ -I ./parser
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = ./parser/y.tab.o ./parser/lex.yy.o
-INC_LIBS = -lerl_interface -lei -lstdc++ -lfl
-EXECUTABLE = ../priv/bin/babysitter
+INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -lfl
+EXECUTABLE_DIR = $(top_srcdir)/priv/bin
 
 ifeq ($(shell uname),Linux)
-	ARCH = linux
-	LDFLAGS = $(LDFLAGS_COMMON) -shared
+	ARCH=linux
+	LDFLAGS=$(LDFLAGS_COMMON) -shared
 else
-	ARCH = macosx
-	LDFLAGS = $(LDFLAGS_COMMON) -dynamic -bundle -undefined suppress -flat_namespace
+	ARCH=macosx
+	LDFLAGS=$(LDFLAGS_COMMON) -dynamic -bundle -undefined suppress -flat_namespace
 endif
 
 # Defines
@@ -33,15 +33,19 @@ UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 
-INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter
+INTERMEDIATES = honeycomb.o hc_support.o 
+#$(patsubst %.cpp, %.o, $(wildcard *.cpp))
+OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter babysitter_daemon
 #OUTPUTFILES := config_parser honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
  
 ERLDIR = @ERLDIR@
  
-all: honeycomb $(OUTPUTFILES)
+all: prepare honeycomb $(OUTPUTFILES)
+
+prepare:
+	mkdir -p $(EXECUTABLE_DIR)
 
 debug:
 	$(MAKE) DEBUG=-DDEBUG
@@ -70,19 +74,18 @@ eipp:
 
 config_parser:
 	@(cd ./parser;$(MAKE)) # make the config parser
-	
+
 honeycomb: honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
-babysitter.o: config_parser
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c babysitter.cpp
+babysitter_daemon:
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter_daemon $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS) $(INC_LIBS)
 
 babysitter:
-	mkdir -p `dirname $(EXECUTABLE)`
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(PARSER_LIBS) $(INC_LIBS)
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS)
 
 clean:
-	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE)
+	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE_DIR)
 	cd ./parser; $(MAKE) clean
  
 install:

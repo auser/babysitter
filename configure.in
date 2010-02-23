@@ -42,8 +42,10 @@ ERL_INTERFACE=`ls ${ERLDIR}/lib | grep erl_interface | tail -n 1`
 
 CPPFLAGS="$CPPFLAGS -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -Wall -fPIC -I./"
 
-LIBEI="${ERLDIR}/lib/${ERL_INTERFACE}/lib/libei.a"
+EI_LIB_DIR="${ERLDIR}/lib/${ERL_INTERFACE}/lib"
+LIBEI="${EI_LIB_DIR}/libei.a"
 AC_SUBST(LIBEI)
+AC_SUBST(EI_LIB_DIR)
 
 AC_CHECK_LIB(stdc++, main,,AC_MSG_ERROR(gdu requires libstdc++))
 
@@ -72,6 +74,9 @@ AC_SUBST(ELF_LIBS)
 AC_HEADER_STDC
 
 # Checks for header files.
+AC_CHECK_HEADER([ei.h],,[dnl
+	AC_MSG_ERROR([You need the ei.h header])])
+
 AC_CHECK_HEADERS([sys/capability.h])
 AC_CHECK_HEADERS([fcntl.h limits.h string.h sys/time.h unistd.h])
 AC_CHECK_HEADERS([sys/param.h])

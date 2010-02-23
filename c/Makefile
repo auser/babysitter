@@ -12,20 +12,20 @@ mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) -g -O2 -I/include -I ./parser
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = ./parser/y.tab.o ./parser/lex.yy.o
-INC_LIBS = -lerl_interface -lei -lstdc++ -lfl
-EXECUTABLE = ../priv/bin/babysitter
+INC_LIBS = -L/usr/local/lib/erlang/lib/erl_interface-3.6.5/lib -lerl_interface -lei -lstdc++ -lfl
+EXECUTABLE_DIR = $(top_srcdir)/priv/bin
 
 ifeq ($(shell uname),Linux)
-	ARCH = linux
-	LDFLAGS = $(LDFLAGS_COMMON) -shared
+	ARCH=linux
+	LDFLAGS=$(LDFLAGS_COMMON) -shared
 else
-	ARCH = macosx
-	LDFLAGS = $(LDFLAGS_COMMON) -dynamic -bundle -undefined suppress -flat_namespace
+	ARCH=macosx
+	LDFLAGS=$(LDFLAGS_COMMON) -dynamic -bundle -undefined suppress -flat_namespace
 endif
 
 # Defines
 CC = g++
-CPPFLAGS =  -I /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./
+CPPFLAGS =  -I /usr/local/lib/erlang/lib/erl_interface-3.6.5/include -Wall -fPIC -I./
 LIBS = -lstdc++ 
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
@@ -33,15 +33,19 @@ UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
 PACKAGE_NAME = babysitter
 PACKAGE_VERSION = 0.1
 
-INTERMEDIATES = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter
+INTERMEDIATES = honeycomb.o hc_support.o 
+#$(patsubst %.cpp, %.o, $(wildcard *.cpp))
+OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter babysitter_daemon
 #OUTPUTFILES := config_parser honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
  
-ERLDIR = /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang
+ERLDIR = /usr/local/lib/erlang
  
-all: honeycomb $(OUTPUTFILES)
+all: prepare honeycomb $(OUTPUTFILES)
+
+prepare:
+	mkdir -p $(EXECUTABLE_DIR)
 
 debug:
 	$(MAKE) DEBUG=-DDEBUG
@@ -49,7 +53,7 @@ debug:
 .SUFFIXES: .o .cpp .h
   
 test_suite: suite.o $(TEST_OBJECTS) $(UNDER_TEST)
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lcheck -o $@ $^ /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/lib/libei.a	
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lcheck -o $@ $^ /usr/local/lib/erlang/lib/erl_interface-3.6.5/lib/libei.a	
  
 test: test_suite
 	$(MAKE) TEST=-DTEST
@@ -70,19 +74,18 @@ eipp:
 
 config_parser:
 	@(cd ./parser;$(MAKE)) # make the config parser
-	
+
 honeycomb: honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
-babysitter.o: config_parser
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c babysitter.cpp
+babysitter_daemon:
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter_daemon $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS) $(INC_LIBS)
 
 babysitter:
-	mkdir -p `dirname $(EXECUTABLE)`
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE) $(INTERMEDIATES) $(PARSER_LIBS) $(INC_LIBS)
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS)
 
 clean:
-	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE)
+	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE_DIR)
 	cd ./parser; $(MAKE) clean
  
 install:
