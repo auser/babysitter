@@ -8,8 +8,6 @@
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
 #include <string.h>
 
 // Our own includes

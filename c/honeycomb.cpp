@@ -23,7 +23,7 @@
 #include <sys/capability.h>
 #endif
 // Erlang interface
-#include "ei++.h"
+// #include "ei++.h"
 
 #include "honeycomb_config.h"
 #include "honeycomb.h"
@@ -31,7 +31,7 @@
 
 /*---------------------------- Implementation ------------------------------*/
 
-using namespace ei;
+// using namespace ei;
 
 int Honeycomb::setup_defaults() {
   /* Setup environment defaults */
@@ -57,7 +57,6 @@ int Honeycomb::setup_defaults() {
  * Decode the erlang tuple
  * The erlang tuple decoding happens for all the tuples that get sent over the wire
  * to the c-node.
- **/
 int Honeycomb::ei_decode(ei::Serializer& ei) {
   // {Cmd::string(), [Option]}
   //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
@@ -165,6 +164,7 @@ int Honeycomb::ei_decode(ei::Serializer& ei) {
   
   return 0;
 }
+**/
 
 #ifndef MAX_ARGS
 #define MAX_ARGS 64
@@ -543,7 +543,7 @@ int Honeycomb::restore_perms() {
 
 /*------------------------ INTERNAL -------------------------*/
 void Honeycomb::init() {
-  ei::Serializer m_eis(2);
+  // ei::Serializer m_eis(2);
   m_nofiles = NULL;
   std::stringstream stream;
   std::string token;

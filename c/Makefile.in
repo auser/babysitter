@@ -9,9 +9,9 @@ bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
-CFLAGS = $(CPPFLAGS) @CFLAGS@ @ELF_CFLAGS@ -I ./parser
+CFLAGS = $(CPPFLAGS) @CFLAGS@ -I ./parser
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
-PARSER_LIBS = ./parser/y.tab.o ./parser/lex.yy.o
+PARSER_LIBS = $(top_srcdir)/c/parser/y.tab.o $(top_srcdir)/c/parser/lex.yy.o
 INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -lfl
 EXECUTABLE_DIR = $(top_srcdir)/priv/bin
 
@@ -79,19 +79,19 @@ honeycomb: honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
 babysitter_daemon:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter_daemon $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS) $(INC_LIBS)
+	$(CC) $(CFLAGS) @ELF_CFLAGS@ -o $(EXECUTABLE_DIR)/babysitter_daemon babysitter_daemon.cpp $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS) $(INC_LIBS)
 
 babysitter:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter babysitter.cpp $(INTERMEDIATES) $(PARSER_LIBS)
 
 clean:
-	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE_DIR)
+	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE_DIR)/*
 	cd ./parser; $(MAKE) clean
  
 install:
 	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv
-	cp -r `pwd`/../priv $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/
+	cp -r $(EXECUTABLE_DIR)/* $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/
  
 package:
-	install -d `pwd`/../.pkgtmp/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv
-	cp -r `pwd`/../priv/* `pwd`/../.pkgtmp/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv
+	install -d $(top_srcdir)/.pkgtmp/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv
+	cp -r $(EXECUTABLE_DIR)/* $(top_srcdir)/../.pkgtmp/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv

@@ -15,6 +15,7 @@
 #include <sstream>
 #include <string>
 #include <string.h>
+#include <errno.h>
 #include <map>
 #include <set>
 #include <utility>
@@ -27,9 +28,6 @@
 using std::string;
 
 // Erlang interface
-#include <ei.h>
-#include "ei++.h"
-
 #include "hc_support.h"
 
 /*---------------------------- Defines ------------------------------------*/
@@ -129,8 +127,8 @@ typedef std::map <std::string, honeycomb_config*> ConfigMapT;
  **/
 class Honeycomb {
 private:
-  ei::StringBuffer<256>   m_tmp;       // Temporary storage
-  ei::Serializer          m_eis;       // Erlang serializer
+  // ei::StringBuffer<256>   m_tmp;       // Temporary storage
+  // ei::Serializer          m_eis;       // Erlang serializer
   std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
   std::string             m_cmd;       // The command to execute to start
   std::string             m_kill_cmd;  // A special command to kill the process (if needed)
@@ -167,7 +165,7 @@ public:
     m_honeycomb_config = c;
     init();
   }
-  Honeycomb(std::string app_type) : m_tmp(0,256),m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_cenv(NULL),m_scm_url("") {
+  Honeycomb(std::string app_type) : m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_cenv(NULL),m_scm_url("") {
     m_app_type = app_type;
   }
   Honeycomb() {
@@ -195,7 +193,7 @@ public:
   const char*  app_type() const { return m_app_type.c_str(); }
   const honeycomb_config *config() const {return m_honeycomb_config; }
   
-  int ei_decode(ei::Serializer& ei);
+  // int ei_decode(ei::Serializer& ei);
   int valid();
   // Actions
   int bundle();
@@ -232,7 +230,7 @@ public:
   pid_t           cmd_pid;        // Pid of the custom kill command
   std::string     kill_cmd;       // Kill command to use (if provided - otherwise use SIGTERM)
   kill_cmd_pid_t  kill_cmd_pid;   // Pid of the command that <pid> is supposed to kill
-  ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
+  // ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
   bool            sigterm;        // <true> if sigterm was issued.
   bool            sigkill;        // <true> if sigkill was issued.
 
