@@ -40,14 +40,15 @@ program:
   ;
     
 decl:
-  phase                 {debug(2, "Found phase in program: %p\n", $1);}
-  | hook                {debug(2, "Found a hook in the program\n");}
-  | attr                {debug(2, "Found new attribute in program\n");}
+  phase                 {debug(DEBUG_LEVEL, 2, "Found phase in program: %p\n", $1);}
+  | hook                {debug(DEBUG_LEVEL, 2, "Found a hook in the program\n");}
+  | attr                {debug(DEBUG_LEVEL, 2, "Found new attribute in program\n");}
   | '\n'                /* NULL */
   ;
 
 phase:
   phase_decl line           {
+    debug(DEBUG_LEVEL, 2, "Found phase\n");
     // Set the phase and attach it to the config object
     phase *p = find_or_create_phase(config, $1);
     p->command = (char *) malloc( sizeof(char *) * strlen($2) );
@@ -62,21 +63,18 @@ phase:
     memset(p->command, 0, strlen($2));
     memcpy(p->command, $2, strlen($2));
     free($2);
-    // debug(3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command);
+    // debug(DEBUG_LEVEL, 3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command);
     add_phase(config, p);
   }
   | phase_decl NULLABLE         {
-    debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));
+    debug(DEBUG_LEVEL, 3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));
     phase *p = find_or_create_phase(config, $1);
     add_phase(config, p);
   }
   ;
 
 phase_decl:
-  KEYWORD ':'             {
-    $$ = str_to_phase_type($1); 
-    free($1);
-  }
+  KEYWORD ':'             {$$ = str_to_phase_type($1); free($1);}
   | KEYWORD               {$$ = str_to_phase_type($1); free($1);}
   ;
 
@@ -84,7 +82,7 @@ phase_decl:
 // TODO: Make sure blocks work here
 hook:
   BEFORE ':' line          {
-    debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
+    debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
@@ -94,7 +92,7 @@ hook:
     add_phase(config, p);
   }
   | BEFORE ':' block        {
-    debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
+    debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
@@ -104,7 +102,7 @@ hook:
     add_phase(config, p);
   }
   | AFTER ':' line          {
-    debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
+    debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
@@ -114,7 +112,7 @@ hook:
     add_phase(config, p);
   }
   | AFTER ':' block         {
-    debug(3, "Found a hook phrase: %s (%s)\n", $3, $1);
+    debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
@@ -132,18 +130,18 @@ attr:
     free($3);
   }
   | RESERVED ':' NULLABLE     {
-    debug(4, "Found empty attribute\n");
+    debug(DEBUG_LEVEL, 4, "Found empty attribute\n");
   }
   ;
   
 // Blocks
 block:
-  BLOCK_SET                   {debug(3, "Found a block\n");$$ = $1;}
+  BLOCK_SET                   {debug(DEBUG_LEVEL, 3, "Found a block\n");$$ = $1;}
   ;
 
 // Line terminated by '\n'
 line:
-  line STRING                      {debug(3, "Found string: '%s'\n", $1);strcpy($$,$1);}
+  line STRING                      {debug(DEBUG_LEVEL, 3, "Found string: '%s'\n", $1);strcpy($$,$1);}
   | STRING
   ;
 

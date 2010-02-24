@@ -25,6 +25,7 @@ typedef enum _phase_type_ {
   T_MOUNT,
   T_UNMOUNT,
   T_CLEANUP,
+  T_EMPTY,
   T_UNKNOWN
 } phase_type;
 
@@ -83,7 +84,8 @@ typedef struct _honeycomb_config_ {
 // compatability purposes. 
 #include "honeycomb.h"
 
-int parse_config_dir(std::string directory, ConfigMapT &known_configs);
+int parse_config_dir(std::string directory);
+
 #endif
 
 #endif

@@ -358,9 +358,13 @@ string_set *Honeycomb::string_set_from_lines_in_file(std::string filepath) {
 // ACTIONS
 //---
 
-int Honeycomb::bundle() {
+int Honeycomb::bundle(int dlvl) {
+  debug(dlvl, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
   phase *p = find_phase(m_honeycomb_config, T_BUNDLE);
-
+  
+  debug(dlvl, 3, "Found the phase for the bundling action: %p\n", p);
+  
+  debug(dlvl, 3, "Running before hook for bundling\n");
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
@@ -418,6 +422,27 @@ int Honeycomb::bundle() {
   
   exec_hook("bundle", AFTER, p);
   
+  return 0;
+}
+
+int Honeycomb::start() 
+{
+  return 0;
+}
+int Honeycomb::stop()
+{
+  return 0;
+}
+int Honeycomb::mount()
+{
+  return 0;
+}
+int Honeycomb::unmount()
+{
+  return 0;
+}
+int Honeycomb::cleanup()
+{
   return 0;
 }
 

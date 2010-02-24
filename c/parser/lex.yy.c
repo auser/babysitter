@@ -870,12 +870,12 @@ YY_RULE_SETUP
 case 3:
 YY_RULE_SETUP
 #line 36 "honeycomb.l"
-{debug(4, "Found ':'\n"); return yytext[0];} /* Special characters with meaning to the syntax */
+{debug(DEBUG_LEVEL, 4, "Found ':'\n"); return yytext[0];} /* Special characters with meaning to the syntax */
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
 #line 37 "honeycomb.l"
-{debug(2, "Found a null\n"); return NULLABLE;}
+{debug(DEBUG_LEVEL, 2, "Found a null\n"); return NULLABLE;}
 	YY_BREAK
 /* Hooks */
 case 5:
@@ -884,7 +884,7 @@ YY_RULE_SETUP
 {
                       /* strip off the .before (gross) */
                       yylval.stype = collect_to_period(yytext);
-                      debug(3, "next before hook: %s\n", yytext); 
+                      debug(DEBUG_LEVEL, 3, "next before hook: %s\n", yytext); 
                       return BEFORE;
                     }
 	YY_BREAK
@@ -894,7 +894,7 @@ YY_RULE_SETUP
 {
                       /* strip off the .after (gross) */
                       yylval.stype = collect_to_period(yytext);
-                      debug(3, "next after hook: %s\n", yytext); 
+                      debug(DEBUG_LEVEL, 3, "next after hook: %s\n", yytext); 
                       return AFTER;
                     }
 	YY_BREAK
@@ -903,7 +903,7 @@ case 7:
 YY_RULE_SETUP
 #line 53 "honeycomb.l"
 {
-  debug(3, "next phase: %s\n", yytext);
+  debug(DEBUG_LEVEL, 3, "next phase: %s\n", yytext);
   
   yylval.stype = (char *) malloc(sizeof(char) * strlen(yytext));
   memset(yylval.stype, 0, strlen(yytext)); 
@@ -987,7 +987,7 @@ YY_RULE_SETUP
   strncpy(buf, SCRIPT_HEADER, hd_len);
   s = buf+hd_len;
   BEGIN BLOCK;
-  debug(3, "In new block at %d (%s)\n", yylineno, buf);
+  debug(DEBUG_LEVEL, 3, "In new block at %d (%s)\n", yylineno, buf);
 }
 	YY_BREAK
 case 22:
@@ -1003,7 +1003,7 @@ YY_RULE_SETUP
   *s = 0;
   BEGIN INITIAL;
   yylval.stype = strdup(buf);
-  debug(3, "returning block string '%s'\n", buf);
+  debug(DEBUG_LEVEL, 3, "returning block string '%s'\n", buf);
   return BLOCK_SET;
 }
 	YY_BREAK
@@ -1036,13 +1036,13 @@ case 26:
 /* rule 26 can match eol */
 YY_RULE_SETUP
 #line 111 "honeycomb.l"
-{debug(4, "%4d\tIgnoring comment: %s", yylineno++, yytext);} /* ignore comments */  
+{debug(DEBUG_LEVEL, 4, "%4d\tIgnoring comment: %s", yylineno++, yytext);} /* ignore comments */  
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
 #line 114 "honeycomb.l"
 {
-  debug(3, "returning STRING: '%s'\n", yytext);
+  debug(DEBUG_LEVEL, 3, "returning STRING: '%s'\n", yytext);
   yylval.stype = strdup(yytext);
   return STRING;
 }

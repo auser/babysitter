@@ -6,17 +6,17 @@
 
 #define BUF_SIZE 1024
 
-int debug(int level, char *fmt, ...) {
+int debug(const long int cur_level, int level, char *fmt, ...)
+{
   int r;
   va_list ap;
-  if (DEBUG_LEVEL < level) return 0;
+  if (cur_level < level) return 0;
 	va_start(ap, fmt);
+  fprintf(stderr, "[debug %d] ", level);
 	r = vfprintf(stderr, fmt, ap);
 	va_end(ap);
 	return r;
 }
-
-int yywrap() { return 1; }
 
 /**
 * turn a phase_type into a string

@@ -433,9 +433,9 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    38,    38,    39,    43,    44,    45,    46,    50,    58,
-      68,    76,    80,    86,    96,   106,   116,   130,   134,   141,
-     146,   147
+       0,    38,    38,    39,    43,    44,    45,    46,    50,    59,
+      69,    77,    78,    84,    94,   104,   114,   128,   132,   139,
+     144,   145
 };
 #endif
 
@@ -1355,22 +1355,23 @@ yyreduce:
 
   case 4:
 #line 43 "honeycomb.y"
-    {debug(2, "Found phase in program: %p\n", (yyvsp[(1) - (1)].phase));}
+    {debug(DEBUG_LEVEL, 2, "Found phase in program: %p\n", (yyvsp[(1) - (1)].phase));}
     break;
 
   case 5:
 #line 44 "honeycomb.y"
-    {debug(2, "Found a hook in the program\n");}
+    {debug(DEBUG_LEVEL, 2, "Found a hook in the program\n");}
     break;
 
   case 6:
 #line 45 "honeycomb.y"
-    {debug(2, "Found new attribute in program\n");}
+    {debug(DEBUG_LEVEL, 2, "Found new attribute in program\n");}
     break;
 
   case 8:
 #line 50 "honeycomb.y"
     {
+    debug(DEBUG_LEVEL, 2, "Found phase\n");
     // Set the phase and attach it to the config object
     phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
     p->command = (char *) malloc( sizeof(char *) * strlen((yyvsp[(2) - (2)].stype)) );
@@ -1381,7 +1382,7 @@ yyreduce:
     break;
 
   case 9:
-#line 58 "honeycomb.y"
+#line 59 "honeycomb.y"
     {
     // I think these two can be combined... I hate code duplication
     phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
@@ -1389,37 +1390,34 @@ yyreduce:
     memset(p->command, 0, strlen((yyvsp[(2) - (2)].stype)));
     memcpy(p->command, (yyvsp[(2) - (2)].stype), strlen((yyvsp[(2) - (2)].stype)));
     free((yyvsp[(2) - (2)].stype));
-    // debug(3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command);
+    // debug(DEBUG_LEVEL, 3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command);
     add_phase(config, p);
   }
     break;
 
   case 10:
-#line 68 "honeycomb.y"
+#line 69 "honeycomb.y"
     {
-    debug(3, "Found a nullable phase_decl: %s\n", phase_type_to_string((yyvsp[(1) - (2)].ptype)));
+    debug(DEBUG_LEVEL, 3, "Found a nullable phase_decl: %s\n", phase_type_to_string((yyvsp[(1) - (2)].ptype)));
     phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
     add_phase(config, p);
   }
     break;
 
   case 11:
-#line 76 "honeycomb.y"
-    {
-    (yyval.ptype) = str_to_phase_type((yyvsp[(1) - (2)].stype)); 
-    free((yyvsp[(1) - (2)].stype));
-  }
+#line 77 "honeycomb.y"
+    {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (2)].stype)); free((yyvsp[(1) - (2)].stype));}
     break;
 
   case 12:
-#line 80 "honeycomb.y"
+#line 78 "honeycomb.y"
     {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (1)].stype)); free((yyvsp[(1) - (1)].stype));}
     break;
 
   case 13:
-#line 86 "honeycomb.y"
+#line 84 "honeycomb.y"
     {
-    debug(3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
+    debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
@@ -1431,9 +1429,9 @@ yyreduce:
     break;
 
   case 14:
-#line 96 "honeycomb.y"
+#line 94 "honeycomb.y"
     {
-    debug(3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
+    debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
@@ -1445,9 +1443,9 @@ yyreduce:
     break;
 
   case 15:
-#line 106 "honeycomb.y"
+#line 104 "honeycomb.y"
     {
-    debug(3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
+    debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
@@ -1459,9 +1457,9 @@ yyreduce:
     break;
 
   case 16:
-#line 116 "honeycomb.y"
+#line 114 "honeycomb.y"
     {
-    debug(3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
+    debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
     phase *p = find_or_create_phase(config, t);
@@ -1473,7 +1471,7 @@ yyreduce:
     break;
 
   case 17:
-#line 130 "honeycomb.y"
+#line 128 "honeycomb.y"
     {
     add_attribute(config, (yyvsp[(1) - (3)].atype), (yyvsp[(3) - (3)].stype));
     free((yyvsp[(3) - (3)].stype));
@@ -1481,25 +1479,25 @@ yyreduce:
     break;
 
   case 18:
-#line 134 "honeycomb.y"
+#line 132 "honeycomb.y"
     {
-    debug(4, "Found empty attribute\n");
+    debug(DEBUG_LEVEL, 4, "Found empty attribute\n");
   }
     break;
 
   case 19:
-#line 141 "honeycomb.y"
-    {debug(3, "Found a block\n");(yyval.stype) = (yyvsp[(1) - (1)].stype);}
+#line 139 "honeycomb.y"
+    {debug(DEBUG_LEVEL, 3, "Found a block\n");(yyval.stype) = (yyvsp[(1) - (1)].stype);}
     break;
 
   case 20:
-#line 146 "honeycomb.y"
-    {debug(3, "Found string: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
+#line 144 "honeycomb.y"
+    {debug(DEBUG_LEVEL, 3, "Found string: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1503 "y.tab.c"
+#line 1501 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1713,7 +1711,7 @@ yyreturn:
 }
 
 
-#line 150 "honeycomb.y"
+#line 148 "honeycomb.y"
 
 
 int yyerror(const char *str)

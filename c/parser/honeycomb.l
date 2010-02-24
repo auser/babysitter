@@ -33,25 +33,25 @@ ANYTHING  (.*)
 
 {WHITESPACE}        ; /* Ignore whitespace */
 \n                  {return yytext[0];}
-:                   {debug(4, "Found ':'\n"); return yytext[0];} /* Special characters with meaning to the syntax */
-(NULL|null)         {debug(2, "Found a null\n"); return NULLABLE;}
+:                   {debug(DEBUG_LEVEL, 4, "Found ':'\n"); return yytext[0];} /* Special characters with meaning to the syntax */
+(NULL|null)         {debug(DEBUG_LEVEL, 2, "Found a null\n"); return NULLABLE;}
 
   /* Hooks */
 {KEYWORDS}\.before  {
                       /* strip off the .before (gross) */
                       yylval.stype = collect_to_period(yytext);
-                      debug(3, "next before hook: %s\n", yytext); 
+                      debug(DEBUG_LEVEL, 3, "next before hook: %s\n", yytext); 
                       return BEFORE;
                     }
 {KEYWORDS}\.after   {
                       /* strip off the .after (gross) */
                       yylval.stype = collect_to_period(yytext);
-                      debug(3, "next after hook: %s\n", yytext); 
+                      debug(DEBUG_LEVEL, 3, "next after hook: %s\n", yytext); 
                       return AFTER;
                     }
   /* Keywords */
 {KEYWORDS}          {
-  debug(3, "next phase: %s\n", yytext);
+  debug(DEBUG_LEVEL, 3, "next phase: %s\n", yytext);
   
   yylval.stype = (char *) malloc(sizeof(char) * strlen(yytext));
   memset(yylval.stype, 0, strlen(yytext)); 
@@ -81,14 +81,14 @@ skel_dir            {yylval.atype = T_SKEL_DIR; return RESERVED;}
   strncpy(buf, SCRIPT_HEADER, hd_len);
   s = buf+hd_len;
   BEGIN BLOCK;
-  debug(3, "In new block at %d (%s)\n", yylineno, buf);
+  debug(DEBUG_LEVEL, 3, "In new block at %d (%s)\n", yylineno, buf);
 }
 <BLOCK>{COMMENT}{ANYTHING}{NL}    ; /* ignore comments */
 <BLOCK>\}           {
   *s = 0;
   BEGIN INITIAL;
   yylval.stype = strdup(buf);
-  debug(3, "returning block string '%s'\n", buf);
+  debug(DEBUG_LEVEL, 3, "returning block string '%s'\n", buf);
   return BLOCK_SET;
 }
 <BLOCK>\n           {
@@ -108,11 +108,11 @@ skel_dir            {yylval.atype = T_SKEL_DIR; return RESERVED;}
 }
 
   /* everything else */
-{COMMENT}{ANYTHING}{NL} {debug(4, "%4d\tIgnoring comment: %s", yylineno++, yytext);} /* ignore comments */  
+{COMMENT}{ANYTHING}{NL} {debug(DEBUG_LEVEL, 4, "%4d\tIgnoring comment: %s", yylineno++, yytext);} /* ignore comments */  
 
 
 {STRING}({WHITESPACE}?({STRING}))*  {
-  debug(3, "returning STRING: '%s'\n", yytext);
+  debug(DEBUG_LEVEL, 3, "returning STRING: '%s'\n", yytext);
   yylval.stype = strdup(yytext);
   return STRING;
 }

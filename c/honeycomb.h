@@ -192,14 +192,19 @@ public:
   uid_t        user()     const { return m_user; }
   gid_t        group()    const { return m_group; }
   int          nice()     const { return m_nice; }
-  mount_type*  mount()    const { return m_mount; }
+  mount_type*  type_of_mount() const { return m_mount; }
   const char*  app_type() const { return m_app_type.c_str(); }
   const honeycomb_config *config() const {return m_honeycomb_config; }
   
   // int ei_decode(ei::Serializer& ei);
   int valid();
   // Actions
-  int bundle();
+  int bundle(int debug_level);
+  int start();
+  int stop();
+  int mount();
+  int unmount();
+  int cleanup();
   
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
   void set_scm_url(std::string url) {m_scm_url = url;}
@@ -242,7 +247,7 @@ public:
   
   Bee(const Honeycomb& hc, pid_t _cmd_pid) {
     cmd = hc.cmd();
-    mount_point = hc.mount();
+    mount_point = hc.type_of_mount();
     cmd_pid = _cmd_pid;
     kill_cmd = hc.kill_cmd();
   }
