@@ -52,6 +52,19 @@ void usage(int c)
   fprintf(fp, "This program may be distributed under the terms of the MIT License.\n\n");
   fprintf(fp, "Usage: babysitter <command> [options]\n"
   "babysitter bundle | mount | start | stop | unmount | cleanup\n"
+  "* Options\n"
+  "*  --help | -h                 Show this message\n"
+  "*  --debug|-D <level>          Turn on debugging flag'\n"
+  "*  --user <user> | -u <user>   User to run as\n"
+  "*  --type <type> | -t <type>   The type of application (defaults to rack)\n"
+  "*  --root <dir> | -r <dir>     The directory where the bees will be created\n"
+  "*  --sha <sha> | -s <sha>      The sha of the bee\n"
+  "*  --image <file> | -i <file>  The image to mount that contains the bee\n"
+  "*  --exec <exec> | -e <exec>   Add an executable to the paths\n"
+  "*  --file <file> | -f <file>   Add this file to the path\n"
+  "*  --dir <dir> | -d <dir>      The directory\n"
+  "*  --scm_url <url> | -u <url>  The scm_url\n"
+  "*  --config <dir> | -c <dir>   The directory or file containing the config files\n\n"
   );
   
   exit(c);
@@ -71,6 +84,7 @@ void setup_defaults() {
  * this isn't speed-critical, so it doesn't matter
  *
  * Options
+ *  --help | -h                 Show this message
  *  --debug|-D <level>          Turn on debugging flag'
  *  --user <user> | -u <user>   User to run as
  *  --type <type> | -t <type>   The type of application (defaults to rack)
@@ -98,6 +112,8 @@ void parse_the_command_line(int argc, char *argv[])
       char * pEnd;
       dbg = strtol(argv[2], &pEnd, 10);
       argc--; argv++;
+    } else if (!strncmp(opt, "--help", 6) || !strncmp(opt, "-h", 2)) {
+      usage(0);
     } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
       memset(app_type, 0, BUF_SIZE);
       strncpy(app_type, argv[2], strlen(argv[2]));

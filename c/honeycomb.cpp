@@ -67,119 +67,6 @@ int Honeycomb::setup_defaults() {
   return 0;
 }
 
-/**
- * Decode the erlang tuple
- * The erlang tuple decoding happens for all the tuples that get sent over the wire
- * to the c-node.
-int Honeycomb::ei_decode(ei::Serializer& ei) {
-  // {Cmd::string(), [Option]}
-  //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
-  int sz;
-  std::string op_str, val;
-  
-  m_err.str("");
-  delete [] m_cenv;
-  m_cenv = NULL;
-  m_env.clear();
-  m_nice = INT_MAX;
-    
-  if (ei.decodeString(m_cmd) < 0) {
-    m_err << "badarg: cmd string expected or string size too large" << m_cmd << "Command!";
-    return -1;
-  } else if ((sz = ei.decodeListSize()) < 0) {
-    m_err << "option list expected";
-    return -1;
-  } else if (sz == 0) {
-    m_cd  = "";
-    m_kill_cmd = "";
-    return 0;
-  }
-  
-  // Run through the commands and decode them
-  enum OptionT            { CD,   ENV,   KILL,   NICE,   USER,   STDOUT,   STDERR,  MOUNT } opt;
-  const char* options[] = {"cd", "env", "kill", "nice", "user", "stdout", "stderr", "mount"};
-  
-  for(int i=0; i < sz; i++) {
-    if (ei.decodeTupleSize() != 2 || (int)(opt = (OptionT)ei.decodeAtomIndex(options, op_str)) < 0) {
-      m_err << "badarg: cmd option must be an atom"; 
-      return -1;
-    }
-    DEBUG_MSG("Found option: %s\n", op_str.c_str());
-    switch(opt) {
-      case CD:
-      case KILL:
-      case USER: {
-        // {cd, Dir::string()} | {kill, Cmd::string()} | {user, Cmd::string()} | etc.
-        if (ei.decodeString(val) < 0) {m_err << opt << " bad option"; return -1;}
-        if (opt == CD) {m_cd = val;}
-        else if (opt == KILL) {m_kill_cmd = val;}
-        else if (opt == USER) {
-          struct passwd *pw = getpwnam(val.c_str());
-          if (pw == NULL) {m_err << "Invalid user: " << val << " : " << ::strerror(errno); return -1;}
-          m_user = pw->pw_uid;
-        }
-        break;
-      }
-      case NICE: {
-        if (ei.decodeInt(m_nice) < 0 || m_nice < -20 || m_nice > 20) {m_err << "Nice must be between -20 and 20"; return -1;}
-        break;
-      }
-      case ENV: {
-        int env_sz = ei.decodeListSize();
-        if (env_sz < 0) {m_err << "Must pass a list for env option"; return -1;}
-        
-        for(int i=0; i < env_sz; i++) {
-          std::string str;
-          if (ei.decodeString(str) >= 0) {
-            m_env.push_back(str);
-            m_cenv[m_cenv_c+i] = m_env.back().c_str();
-          } else {m_err << "Invalid env argument at " << i; return -1;}
-        }
-        m_cenv[m_cenv_c+1] = NULL; // Make sure we have a NULL terminated list
-        m_cenv_c = env_sz+m_cenv_c; // save the new value... we don't really need to do this, though
-        break;
-      }
-      case STDOUT:
-      case STDERR: {
-        int t = 0;
-        int sz = 0;
-        std::string str, fop;
-        t = ei.decodeType(sz);
-        if (t == ERL_ATOM_EXT) ei.decodeAtom(str);
-        else if (t == ERL_STRING_EXT) ei.decodeString(str);
-        else {
-          m_err << "Atom or string tuple required for " << op_str;
-          return -1;
-        }
-        // Setup the writer
-        std::string& rs = (opt == STDOUT) ? m_stdout : m_stderr;
-        std::stringstream stream;
-        int fd = (opt == STDOUT) ? 1 : 2;
-        if (str == "null") {stream << fd << ">/dev/null"; rs = stream.str();}
-        else if (str == "stderr" && opt == STDOUT) {rs = "1>&2";}
-        else if (str == "stdout" && opt == STDERR) {rs = "2>&1";}
-        else if (str != "") {stream << fd << ">\"" << str << "\"";rs = stream.str();}
-        break;
-      }
-      default:
-        m_err << "bad options: " << op_str; return -1;
-    }
-  }
-  
-  if (m_stdout == "1>&2" && m_stderr != "2>&1") {
-    m_err << "cirtular reference of stdout and stderr";
-    return -1;
-  } else if (!m_stdout.empty() || !m_stderr.empty()) {
-    std::stringstream stream; stream << m_cmd;
-    if (!m_stdout.empty()) stream << " " << m_stdout;
-    if (!m_stderr.empty()) stream << " " << m_stderr;
-    m_cmd = stream.str();
-  }
-  
-  return 0;
-}
-**/
-
 #ifndef MAX_ARGS
 #define MAX_ARGS 64
 #endif
@@ -230,7 +117,7 @@ int Honeycomb::comb_exec(std::string cmd) {
 		}
 
     // Make it executable
-    if (chmod(sFile.c_str(), 040750) != 0) {
+    if (chmod(sFile.c_str(), 040700) != 0) {
       fprintf(stderr, "Could not change permissions to '%s' %o\n", sFile.c_str(), 040750);
     }
     
@@ -391,53 +278,57 @@ int Honeycomb::bundle(int dlvl) {
   ensure_cd_exists();
   
   temp_drop();
+  
+  // Change into the working directory
+  if (chdir(m_cd.c_str())) {
+    perror("chdir:");
+    return -1;
+  }
+  
+  // Clone the app in the directory if there is an scm_url
+  // Get the clone command
+  if (m_scm_url != "") {
+    DEBUG_MSG("Cloning from %s\n", m_scm_url.c_str());
+    std::string clone_command ("git clone --depth 0 %s home/app");
+    if (m_honeycomb_config->clone_command != NULL) clone_command = m_honeycomb_config->clone_command;
+    char str_clone_command[256];
+    // The str_clone_command looks like:
+    //  /usr/bin/git clone --depth 0 [git_url] [m_cd]/home/app
+    snprintf(str_clone_command, 256, clone_command.c_str(), m_scm_url.c_str());
+    // Do the cloning
+    // Do not like me some system(3)
+    int status, argc = 0;
+    const char* argv[64];
+    pid_t pid;
+    argv[argc] = strtok(str_clone_command, " \r\t\n");
+
+    while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
+
+    // Run in a new process
+    if ((pid = fork()) == -1) {
+      perror("fork");
+      return -1;
+    }
+    if (pid == 0) {
+      // we are in the child process
+      if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
+        fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
+        return EXIT_FAILURE;
+      }
+    }
+
+    while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+    assert(0 == status);
+  }
+  
   if ((p != NULL) && (p->command != NULL)) {
     debug(dlvl, 1, "Running client code instead\n");
     printf("p: %s\n", p->command);
+    // Run the user's command
     comb_exec(p->command);
   } else {
     //Default action
     printf("Running default action for bundle\n");
-    // Change into the working directory
-    if (chdir(m_cd.c_str())) {
-      perror("chdir:");
-      return -1;
-    }
-    // Clone the app in the directory if there is an scm_url
-    // Get the clone command
-    if (m_scm_url != "") {
-      DEBUG_MSG("Cloning from %s\n", m_scm_url.c_str());
-      std::string clone_command ("/usr/bin/git clone --depth 0 %s home/app");
-      if (m_honeycomb_config->clone_command != NULL) clone_command = m_honeycomb_config->clone_command;
-      char str_clone_command[256];
-      // The str_clone_command looks like:
-      //  /usr/bin/git clone --depth 0 [git_url] [m_cd]/home/app
-      snprintf(str_clone_command, 256, clone_command.c_str(), m_scm_url.c_str());
-      // Do the cloning
-      // Do not like me some system(3)
-      int status, argc = 0;
-      const char* argv[64];
-      pid_t pid;
-      argv[argc] = strtok(str_clone_command, " \r\t\n");
-
-      while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
-
-      // Run in a new process
-      if ((pid = fork()) == -1) {
-        perror("fork");
-        return -1;
-      }
-      if (pid == 0) {
-        // we are in the child process
-        if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
-          fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
-          return EXIT_FAILURE;
-        }
-      }
-
-      while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
-      assert(0 == status);
-    }
   }
   restore_perms();
   
