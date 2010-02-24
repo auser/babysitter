@@ -39,6 +39,7 @@ int Honeycomb::setup_defaults() {
   char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
   char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=%s", image());
   char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
+  char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
   
   const char* default_env_vars[] = {
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
@@ -47,6 +48,7 @@ int Honeycomb::setup_defaults() {
    app_type_buf,
    image_buf,
    sha_buf,
+   scm_url_buf,
    NULL
   };
   

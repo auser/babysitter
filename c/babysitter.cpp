@@ -28,7 +28,8 @@ int userid = 0;
 std::string config_file_dir;
 std::string root_dir;
 std::string sha;                            // The sha
-ConfigMapT  known_configs;                 // Map containing all the known application configurations (in /etc/beehive/apps)
+std::string scm_url;                        // The scm url
+ConfigMapT  known_configs;                  // Map containing all the known application configurations (in /etc/beehive/apps)
 phase_type  action;
 char        app_type[BUF_SIZE];             // App type defaults to rack
 char        usr_action_str[BUF_SIZE];       // Used for error printing
@@ -71,6 +72,7 @@ void setup_defaults() {
  *  --type <type> | -t <type>   The type of application (defaults to rack)
  *  --root <dir> | -r <dir>     The directory where the bees will be created
  *  --sha <sha> | -s <sha>      The sha of the bee
+ *  --scm_url <url> | -u <url>  The scm_url
  *  --config <dir> | -c <dir>   The directory or file containing the config files
  *  action                      Action to run
 **/
@@ -94,6 +96,9 @@ void parse_the_command_line(int argc, char *argv[])
       argc--; argv++;
     } else if (!strncmp(opt, "--sha", 6) || !strncmp(opt, "-s", 2)) {
       sha = argv[2];
+      argc--; argv++;
+    } else if (!strncmp(opt, "--scm_url", 6) || !strncmp(opt, "-u", 2)) {
+      scm_url = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--config", 8) || !strncmp(opt, "-c", 2)) {
       config_file_dir = argv[2];
@@ -189,6 +194,7 @@ int main (int argc, char *argv[])
   Honeycomb comb (app_type, c);
   comb.set_cd(root_dir);
   comb.set_sha(sha);
+  comb.set_scm_url(scm_url);
   
   switch(action) {
     case T_BUNDLE: 
