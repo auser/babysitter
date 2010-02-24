@@ -1,5 +1,5 @@
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 4
+#define DEBUG_LEVEL 0
 #endif
 
 #ifndef SCRIPT_HEADER
