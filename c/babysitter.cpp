@@ -134,7 +134,7 @@ int main (int argc, char *argv[])
     usage(1);
   }
   char *action_str = phase_type_to_string(action);
-  parse_config_dir(config_file_dir, known_configs);
+  parse_config_dir(config_file_dir, dbg);
   
   debug(dbg, 1, "--- running action: %s ---\n", action_str);
   debug(dbg, 1, "\tapp type: %s\n", app_type);
@@ -142,14 +142,6 @@ int main (int argc, char *argv[])
   debug(dbg, 1, "\tuser id: %d\n", userid);
   debug(dbg, 1, "\tnumber of configs in config directory: %d\n", (int)known_configs.size());
   debug(dbg, 1, "--- ---\n");
-  
-  // Honeycomb
-  ConfigMapT::iterator it;
-  if (known_configs.count(app_type) < 1) {
-    fprintf(stderr, "There is no config file set for this application type.\nPlease set the application type properly, or consult the administrator to support the application type: %s\n", app_type);
-    usage(1);
-  }
-  debug(dbg, 2, "\tconfig for %s app found\n", app_type);
   
   if (dbg > 3) {
     for(ConfigMapT::iterator it=known_configs.begin(), end=known_configs.end(); it != end; ++it) {
@@ -170,6 +162,14 @@ int main (int argc, char *argv[])
       }
     }
   }
+  
+  // Honeycomb
+  ConfigMapT::iterator it;
+  if (known_configs.count(app_type) < 1) {
+    fprintf(stderr, "There is no config file set for this application type.\nPlease set the application type properly, or consult the administrator to support the application type: %s\n", app_type);
+    usage(1);
+  }
+  debug(dbg, 2, "\tconfig for %s app found\n", app_type);
   
   it = known_configs.find(app_type);
   honeycomb_config *c = it->second;

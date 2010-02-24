@@ -20,7 +20,9 @@ const char *conf_ext = ".conf";
 unsigned int conf_len = strlen(conf_ext);
 
 int yywrap() {
-  if (config_file_count < 0) return 1;
+  if (config_file_count < 0) {
+    return 1;
+  }
   current_file = files[config_file_count];
   const char *filename = current_file.c_str();
     // open a file handle to a particular file:
@@ -85,7 +87,7 @@ honeycomb_config *parse_config_file(const char* filename) {
 * and place them into the known_configs map with the filename without the extension
 * for access later.
 **/
-int parse_config_dir(std::string directory, ConfigMapT &known_configs) {  
+int parse_config_dir(std::string directory, int dlvl = 0) {  
   DIR           *d;
   struct dirent *dir;
   
@@ -99,7 +101,7 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
     // If this is a directory
     if( dir->d_type == DT_DIR ) {
       std::string next_dir (directory + "/" + dir->d_name);
-      parse_config_dir(next_dir, known_configs);
+      parse_config_dir(next_dir);
     } else {
       unsigned int len = strlen(dir->d_name);
       if (len >= strlen(conf_ext)) {
@@ -109,7 +111,7 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
           char *name = (char *) malloc (sizeof(char) * (len - conf_len));
           memcpy(name, dir->d_name, (len - conf_len));
           std::string file = (directory + dir->d_name);
-          debug(DEBUG_LEVEL, 4, "Found file: %s [%d]\n", file.c_str(), config_file_count);
+          debug(dlvl, 4, "Found file: %s [%d]\n", file.c_str(), config_file_count);
           files[config_file_count++] = file;
         }
       }
@@ -117,7 +119,7 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
   }
   closedir( d );
   std::string first_file = files[--config_file_count];
-  debug(DEBUG_LEVEL, 4"First file: %s [%d]\n", first_file.c_str(), config_file_count);
+  debug(dlvl, 4, "First file: %s [%d]\n", first_file.c_str(), config_file_count);
   
   // Clear out the config struct for now
   honeycomb_config *config = a_new_honeycomb_config_object();
@@ -128,7 +130,7 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
     perror(first_file.c_str()); 
     exit(1);
   }
-  while (yylex()) ;
+  yyparse(config);
   return 0;
 }
 

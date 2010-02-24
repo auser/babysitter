@@ -1492,12 +1492,17 @@ yyreduce:
 
   case 20:
 #line 144 "honeycomb.y"
-    {debug(DEBUG_LEVEL, 3, "Found string: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
+    {debug(DEBUG_LEVEL, 3, "Found line: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
+    break;
+
+  case 21:
+#line 145 "honeycomb.y"
+    {debug(DEBUG_LEVEL, 3, "Found line: '%s'\n", (yyvsp[(1) - (1)].stype));strcpy((yyval.stype),(yyvsp[(1) - (1)].stype));}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1501 "y.tab.c"
+#line 1506 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

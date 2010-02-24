@@ -141,8 +141,8 @@ block:
 
 // Line terminated by '\n'
 line:
-  line STRING                      {debug(DEBUG_LEVEL, 3, "Found string: '%s'\n", $1);strcpy($$,$1);}
-  | STRING
+  line STRING                     {debug(DEBUG_LEVEL, 3, "Found line: '%s'\n", $1);strcpy($$,$1);}
+  | STRING                        {debug(DEBUG_LEVEL, 3, "Found line: '%s'\n", $1);strcpy($$,$1);}
   ;
 
 %%
