@@ -221,8 +221,11 @@ public:
   
 private:
   void init();
+  std::string find_binary(const std::string& file);
+  bool abs_path(const std::string & path);
   uid_t random_uid();
   int setup_defaults();
+  int build_env_vars();
   const char * const to_string(long long int n, unsigned char base);
   int temp_drop();
   int perm_drop();

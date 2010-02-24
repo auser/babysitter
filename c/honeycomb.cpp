@@ -25,6 +25,7 @@
 // Erlang interface
 // #include "ei++.h"
 
+#include "babysitter_utils.h"
 #include "honeycomb_config.h"
 #include "honeycomb.h"
 #include "hc_support.h"
@@ -32,9 +33,18 @@
 /*---------------------------- Implementation ------------------------------*/
 
 // using namespace ei;
+#define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
 int Honeycomb::setup_defaults() {
+  return 0;
+}
+int Honeycomb::build_env_vars() {
   /* Setup environment defaults */
+  std::string pth = DEFAULT_PATH;
+  // char *p2 = getenv("PATH");
+  // if (p2) {pth = p2;}  
+  unsigned int path_size = pth.length();
+  char path_buf[path_size]; memset(path_buf, 0, path_size); sprintf(path_buf, "PATH=%s", pth.c_str());
   char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_ROOT=%s", cd());
   char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
   char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%d", (int)user());
@@ -43,6 +53,7 @@ int Honeycomb::setup_defaults() {
   char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
   
   const char* default_env_vars[] = {
+    path_buf,
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
    "HOME=/home/app",
    app_name_buf, 
@@ -272,6 +283,7 @@ int Honeycomb::bundle(int dlvl) {
   debug(dlvl, 3, "Found the phase for the bundling action: %p\n", p);
   
   debug(dlvl, 3, "Running before hook for bundling\n");
+  build_env_vars();
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
@@ -300,7 +312,12 @@ int Honeycomb::bundle(int dlvl) {
     int status, argc = 0;
     const char* argv[64];
     pid_t pid;
-    argv[argc] = strtok(str_clone_command, " \r\t\n");
+    // Get the binary
+    std::string bin = find_binary("git");
+    argv[argc] = bin.c_str();
+    // Remove the first one
+    printf("binary: %s\n", bin.c_str());
+    strtok(str_clone_command, " \r\t\n");
 
     while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
 
@@ -320,6 +337,13 @@ int Honeycomb::bundle(int dlvl) {
     while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
     assert(0 == status);
   }
+  
+  std::string git_root_dir = m_cd + "/home/app";
+  m_sha = parse_sha_from_git_directory(git_root_dir);
+  
+  // Because we may have modified the environment's SHA, we should rebuild it
+  free(m_cenv);
+  build_env_vars();
   
   if ((p != NULL) && (p->command != NULL)) {
     debug(dlvl, 1, "Running client code instead\n");
@@ -390,6 +414,43 @@ uid_t Honeycomb::random_uid() {
   DEBUG_MSG("Could not generate a good random UID after 10 attempts. Bummer!");
   return(-1);
 }
+
+std::string Honeycomb::find_binary(const std::string& file) {
+  // assert(geteuid() != 0 && getegid() != 0); // We can't be root to run this.
+  
+  if (file == "") return "";
+  
+  if (abs_path(file)) return file;
+  
+  std::string pth = DEFAULT_PATH;
+  char *p2 = getenv("PATH");
+  if (p2) {pth = p2;}
+  
+  std::string::size_type i = 0;
+  std::string::size_type f = pth.find(":", i);
+  do {
+    std::string s = pth.substr(i, f - i) + "/" + file;
+    
+    if (0 == access(s.c_str(), X_OK)) {return s;}
+    i = f + 1;
+    f = pth.find(':', i);
+  } while(std::string::npos != f);
+  
+  if (!abs_path(file)) {
+    fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
+    return NULL;
+  }
+  if (0 == access(file.c_str(), X_OK)) return file;
+  
+  fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
+  return NULL;
+}
+
+bool Honeycomb::abs_path(const std::string & path) {
+  return FS_SLASH == path[0] || ('.' == path[0] && FS_SLASH == path[1]);
+}
+
+// Turn to string, by base
 const char * const Honeycomb::to_string(long long int n, unsigned char base) {
   static char bfr[32];
   const char * frmt = "%lld";

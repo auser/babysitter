@@ -16,6 +16,7 @@
 #include <map>
 
 // Our own includes
+#include "babysitter_utils.h"
 #include "honeycomb_config.h"
 #include "hc_support.h"
 #include "babysitter.h"

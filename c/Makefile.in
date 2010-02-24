@@ -33,7 +33,7 @@ UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 
-INTERMEDIATES = honeycomb.o hc_support.o honeycomb_config.o
+INTERMEDIATES = babysitter_utils.o honeycomb.o hc_support.o honeycomb_config.o
 #$(patsubst %.cpp, %.o, $(wildcard *.cpp))
 OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter babysitter_daemon
 #OUTPUTFILES := config_parser honeycomb eipp babysitter 
@@ -78,6 +78,9 @@ config_parser:
 honeycomb: config_parser honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
+babysitter_utils.o:
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c babysitter_utils.cpp
+	
 honeycomb_config.o: honeycomb
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb_config.cpp
 

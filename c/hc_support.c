@@ -6,6 +6,7 @@
 
 #define BUF_SIZE 1024
 
+// Debug
 int debug(const long int cur_level, int level, char *fmt, ...)
 {
   int r;
