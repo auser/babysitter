@@ -27,6 +27,7 @@ int userid = 0;
 // Configs
 std::string config_file_dir;
 std::string root_dir;
+std::string sha;                            // The sha
 ConfigMapT  known_configs;                 // Map containing all the known application configurations (in /etc/beehive/apps)
 phase_type  action;
 char        app_type[BUF_SIZE];             // App type defaults to rack
@@ -68,6 +69,8 @@ void setup_defaults() {
  *  --debug|-D <level>          Turn on debugging flag'
  *  --user <user> | -u <user>   User to run as
  *  --type <type> | -t <type>   The type of application (defaults to rack)
+ *  --root <dir> | -r <dir>     The directory where the bees will be created
+ *  --sha <sha> | -s <sha>      The sha of the bee
  *  --config <dir> | -c <dir>   The directory or file containing the config files
  *  action                      Action to run
 **/
@@ -88,6 +91,9 @@ void parse_the_command_line(int argc, char *argv[])
     } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
       memset(app_type, 0, BUF_SIZE);
       strncpy(app_type, argv[2], strlen(argv[2]));
+      argc--; argv++;
+    } else if (!strncmp(opt, "--sha", 6) || !strncmp(opt, "-s", 2)) {
+      sha = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--config", 8) || !strncmp(opt, "-c", 2)) {
       config_file_dir = argv[2];
@@ -144,6 +150,7 @@ int main (int argc, char *argv[])
   debug(dbg, 1, "--- running action: %s ---\n", action_str);
   debug(dbg, 1, "\tapp type: %s\n", app_type);
   debug(dbg, 1, "\troot dir: %s\n", root_dir.c_str());
+  debug(dbg, 1, "\tsha: %s\n", sha.c_str());
   debug(dbg, 1, "\tconfig dir: %s\n", config_file_dir.c_str());
   debug(dbg, 1, "\tuser id: %d\n", userid);
   debug(dbg, 1, "\tnumber of configs in config directory: %d\n", (int)known_configs.size());
@@ -181,6 +188,7 @@ int main (int argc, char *argv[])
   honeycomb_config *c = it->second;
   Honeycomb comb (app_type, c);
   comb.set_cd(root_dir);
+  comb.set_sha(sha);
   
   switch(action) {
     case T_BUNDLE: 

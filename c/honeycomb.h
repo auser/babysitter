@@ -137,8 +137,9 @@ private:
   std::string             m_run_dir;   // The directory to run bees and honeycombs from
   mode_t                  m_mode;      // The mode of the m_cd
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
+  std::string             m_sha;       // Sha
   std::string             m_app_type;  // The type of the application
-    std::string             m_skel;      // A skeleton choot directory to work from
+    std::string             m_skel_dir;      // A skeleton choot directory to work from
   std::string             m_stdout;    // The stdout to use for the execution of the command
   std::string             m_stderr;    // The stderr to use for the execution of the command
   mount_type*             m_mount;     // A mount associated with the honeycomb
@@ -181,7 +182,9 @@ public:
   const char*  cd()       const { return m_cd.c_str(); }
   const char*  scm_url()  const { return m_scm_url.c_str(); }
   const char*  run_dir()  const { return m_run_dir.c_str(); }
-  const char*  skel()     const { return m_skel.c_str(); }
+  const char*  skel()     const { return m_skel_dir.c_str(); }
+  const char*  sha()      const { return m_sha.c_str(); }
+  const char*  image()    const { return m_image.c_str(); }
   char* const* env()      const { return (char* const*)m_cenv; }
   string_set   executables() const { return m_executables; }
   string_set   directories() const { return m_dirs; }
@@ -205,6 +208,7 @@ public:
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_cd(std::string cd) {m_cd = cd;}
+  void set_sha(std::string sha) {m_sha = sha;}
   
 private:
   void init();

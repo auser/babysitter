@@ -37,12 +37,16 @@ int Honeycomb::setup_defaults() {
   /* Setup environment defaults */
   char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", cd());
   char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
+  char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=%s", image());
+  char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
   
   const char* default_env_vars[] = {
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
    "HOME=/mnt",
    app_name_buf, 
    app_type_buf,
+   image_buf,
+   sha_buf,
    NULL
   };
   
@@ -619,7 +623,7 @@ void Honeycomb::init() {
     //--- image
     if (m_honeycomb_config->image != NULL) m_image = m_honeycomb_config->image;
     //--- skel directory
-    if (m_honeycomb_config->skel_dir != NULL) m_image = m_honeycomb_config->skel_dir;    
+    if (m_honeycomb_config->skel_dir != NULL) m_skel_dir = m_honeycomb_config->skel_dir;    
     
     //--- confinement_mode
     m_mode = 04755; // Not sure if this should be dynamic-able, yet.

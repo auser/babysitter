@@ -36,7 +36,7 @@ extern int yylineno;
 // grammar
 program:
   program decl              {};
-  | decl                    {debug(DEBUG_LEVEL, 4, "Done!\n");}
+  | decl                    {}
   ;
     
 decl:
@@ -126,6 +126,7 @@ hook:
 // Attributes
 attr:
   RESERVED ':' line              {
+    debug(DEBUG_LEVEL, 4, "Found reserved: %d\n", $1);
     add_attribute(config, $1, $3);
     free($3);
   }

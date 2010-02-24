@@ -434,8 +434,8 @@ static const yytype_int8 yyrhs[] =
 static const yytype_uint8 yyrline[] =
 {
        0,    38,    38,    39,    43,    44,    45,    46,    50,    59,
-      69,    77,    78,    84,    94,   104,   114,   128,   132,   139,
-     144,   145
+      69,    77,    78,    84,    94,   104,   114,   128,   133,   140,
+     145,   146
 };
 #endif
 
@@ -1355,7 +1355,7 @@ yyreduce:
 
   case 3:
 #line 39 "honeycomb.y"
-    {debug(DEBUG_LEVEL, 4, "Done!\n");}
+    {}
     break;
 
   case 4:
@@ -1483,36 +1483,37 @@ yyreduce:
   case 17:
 #line 128 "honeycomb.y"
     {
+    debug(DEBUG_LEVEL, 4, "Found reserved: %d\n", (yyvsp[(1) - (3)].atype));
     add_attribute(config, (yyvsp[(1) - (3)].atype), (yyvsp[(3) - (3)].stype));
     free((yyvsp[(3) - (3)].stype));
   }
     break;
 
   case 18:
-#line 132 "honeycomb.y"
+#line 133 "honeycomb.y"
     {
     debug(DEBUG_LEVEL, 4, "Found empty attribute\n");
   }
     break;
 
   case 19:
-#line 139 "honeycomb.y"
+#line 140 "honeycomb.y"
     {debug(DEBUG_LEVEL, 3, "Found a block\n");(yyval.stype) = (yyvsp[(1) - (1)].stype);}
     break;
 
   case 20:
-#line 144 "honeycomb.y"
+#line 145 "honeycomb.y"
     {debug(DEBUG_LEVEL, 3, "Found line: '%s'\n", (yyvsp[(1) - (2)].stype));strcpy((yyval.stype),(yyvsp[(1) - (2)].stype));}
     break;
 
   case 21:
-#line 145 "honeycomb.y"
+#line 146 "honeycomb.y"
     {debug(DEBUG_LEVEL, 3, "Found line: '%s'\n", (yyvsp[(1) - (1)].stype));strcpy((yyval.stype),(yyvsp[(1) - (1)].stype));}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1516 "y.tab.c"
+#line 1517 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1726,7 +1727,7 @@ yyreturn:
 }
 
 
-#line 148 "honeycomb.y"
+#line 149 "honeycomb.y"
 
 
 int yyerror(const char *str)
