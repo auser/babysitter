@@ -13,7 +13,6 @@
 extern FILE *yyin;
 
 int yywrap() {
-  printf("yywrap in honeycomb_config\n");
   return 1;
 }
 
@@ -74,7 +73,6 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
           char *name = (char *) malloc (sizeof(char) * (len - conf_len));
           memcpy(name, dir->d_name, (len - conf_len));
           std::string file = (directory + "/" + dir->d_name);
-          printf("storing in known_configs[%s] = %s\n", name, file.c_str());
           known_configs[name] = parse_config_file(file);
         }
       }

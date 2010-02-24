@@ -209,6 +209,9 @@ public:
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_cd(std::string cd) {m_cd = cd;}
   void set_sha(std::string sha) {m_sha = sha;}
+  void add_file(std::string file) {m_files.insert(file);}
+  void add_dir(std::string dir) { m_dirs.insert(dir); }
+  void add_executable(std::string exec) { m_executables.insert(exec); }
   
 private:
   void init();

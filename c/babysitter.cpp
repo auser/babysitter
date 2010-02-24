@@ -29,6 +29,9 @@ std::string config_file_dir;
 std::string root_dir;
 std::string sha;                            // The sha
 std::string scm_url;                        // The scm url
+string_set  execs;                          // Executables to add
+string_set  files;                          // Files to add
+string_set  dirs;                           // Dirs to add
 ConfigMapT  known_configs;                  // Map containing all the known application configurations (in /etc/beehive/apps)
 phase_type  action;
 char        app_type[BUF_SIZE];             // App type defaults to rack
@@ -72,6 +75,9 @@ void setup_defaults() {
  *  --type <type> | -t <type>   The type of application (defaults to rack)
  *  --root <dir> | -r <dir>     The directory where the bees will be created
  *  --sha <sha> | -s <sha>      The sha of the bee
+ *  --exec <exec> | -e <exec>   Add an executable to the paths
+ *  --file <file> | -f <file>   Add this file to the path
+ *  --dir <dir> | -d <dir>      The directory
  *  --scm_url <url> | -u <url>  The scm_url
  *  --config <dir> | -c <dir>   The directory or file containing the config files
  *  action                      Action to run
@@ -96,6 +102,15 @@ void parse_the_command_line(int argc, char *argv[])
       argc--; argv++;
     } else if (!strncmp(opt, "--sha", 6) || !strncmp(opt, "-s", 2)) {
       sha = argv[2];
+      argc--; argv++;
+    } else if (!strncmp(opt, "--exec", 6) || !strncmp(opt, "-e", 2)) {
+      execs.insert(argv[2]);
+      argc--; argv++;      
+    } else if (!strncmp(opt, "--file", 6) || !strncmp(opt, "-f", 2)) {
+      files.insert(argv[2]);
+      argc--; argv++;
+    } else if (!strncmp(opt, "--dir", 6) || !strncmp(opt, "-d", 2)) {
+      dirs.insert(argv[2]);
       argc--; argv++;
     } else if (!strncmp(opt, "--scm_url", 6) || !strncmp(opt, "-u", 2)) {
       scm_url = argv[2];
@@ -158,6 +173,11 @@ int main (int argc, char *argv[])
   debug(dbg, 1, "\tsha: %s\n", sha.c_str());
   debug(dbg, 1, "\tconfig dir: %s\n", config_file_dir.c_str());
   debug(dbg, 1, "\tuser id: %d\n", userid);
+  if (dbg > 1) {
+    printf("--- files ---\n"); for(string_set::iterator it=files.begin(); it != files.end(); it++) printf("\t - %s\n", it->c_str());
+    printf("--- dirs ---\n"); for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++) printf("\t - %s\n", it->c_str());
+    printf("--- execs ---\n"); for(string_set::iterator it=execs.begin(); it != execs.end(); it++) printf("\t - %s\n", it->c_str());
+  }
   debug(dbg, 1, "\tnumber of configs in config directory: %d\n", (int)known_configs.size());
   debug(dbg, 1, "--- ---\n");
   
@@ -192,6 +212,11 @@ int main (int argc, char *argv[])
   it = known_configs.find(app_type);
   honeycomb_config *c = it->second;
   Honeycomb comb (app_type, c);
+  
+  for(string_set::iterator it=files.begin(); it != files.end(); it++) comb.add_file(it->c_str());
+  for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++) comb.add_dir(it->c_str());
+  for(string_set::iterator it=execs.begin(); it != execs.end(); it++) comb.add_executable(it->c_str());
+  
   comb.set_cd(root_dir);
   comb.set_sha(sha);
   comb.set_scm_url(scm_url);
