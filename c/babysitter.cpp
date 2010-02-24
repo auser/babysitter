@@ -22,13 +22,14 @@
 
 int alarm_max_time      = 12;
 static long int dbg     = 0;
-int userid = 0;
+int userid = -1;
 
 // Configs
-std::string config_file_dir;
-std::string root_dir;
+std::string config_file_dir;                // The directory containing configs
+std::string root_dir;                       // The root directory to work from within
 std::string sha;                            // The sha
 std::string scm_url;                        // The scm url
+std::string image;                          // The image to mount
 string_set  execs;                          // Executables to add
 string_set  files;                          // Files to add
 string_set  dirs;                           // Dirs to add
@@ -57,7 +58,7 @@ void usage(int c)
 }
 
 void setup_defaults() {
-  userid = 0;
+  userid = -1;
   config_file_dir = "/etc/beehive/config";
   action = T_EMPTY;
   root_dir = "/var/beehive/honeycombs";
@@ -75,6 +76,7 @@ void setup_defaults() {
  *  --type <type> | -t <type>   The type of application (defaults to rack)
  *  --root <dir> | -r <dir>     The directory where the bees will be created
  *  --sha <sha> | -s <sha>      The sha of the bee
+ *  --image <file> | -i <file>  The image to mount that contains the bee
  *  --exec <exec> | -e <exec>   Add an executable to the paths
  *  --file <file> | -f <file>   Add this file to the path
  *  --dir <dir> | -d <dir>      The directory
@@ -100,6 +102,9 @@ void parse_the_command_line(int argc, char *argv[])
       memset(app_type, 0, BUF_SIZE);
       strncpy(app_type, argv[2], strlen(argv[2]));
       argc--; argv++;
+    } else if (!strncmp(opt, "--image", 7) || !strncmp(opt, "-i", 2)) {
+      image = argv[2];
+      argc--; argv++;
     } else if (!strncmp(opt, "--sha", 6) || !strncmp(opt, "-s", 2)) {
       sha = argv[2];
       argc--; argv++;
@@ -112,13 +117,13 @@ void parse_the_command_line(int argc, char *argv[])
     } else if (!strncmp(opt, "--dir", 6) || !strncmp(opt, "-d", 2)) {
       dirs.insert(argv[2]);
       argc--; argv++;
-    } else if (!strncmp(opt, "--scm_url", 6) || !strncmp(opt, "-u", 2)) {
+    } else if (!strncmp(opt, "--scm_url", 9) || !strncmp(opt, "-m", 2)) {
       scm_url = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--config", 8) || !strncmp(opt, "-c", 2)) {
       config_file_dir = argv[2];
       argc--; argv++;
-    } else if (!strncmp(opt, "--root", 8) || !strncmp(opt, "-r", 2)) {
+    } else if (!strncmp(opt, "--root", 6) || !strncmp(opt, "-r", 2)) {
       root_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--user", 6) || !strncmp(opt, "-u", 2)) {
@@ -144,9 +149,15 @@ void parse_the_command_line(int argc, char *argv[])
     } else if (!strncmp(opt, "cleanup", 7)) {
       action = T_CLEANUP;
     } else {
-      action = T_UNKNOWN;
-      memset(usr_action_str, 0, BUF_SIZE);
-      strncpy(usr_action_str, opt, strlen(opt));
+      if(action == T_EMPTY)
+      {
+        action = T_UNKNOWN;
+        memset(usr_action_str, 0, BUF_SIZE);
+        strncpy(usr_action_str, opt, strlen(opt));
+      } else {
+        fprintf(stderr, "Unknown switch: %s. Try passing --help for help options\n", opt);
+        usage(1);
+      }
     }
     argc--; argv++;
   }
@@ -217,6 +228,8 @@ int main (int argc, char *argv[])
   for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++) comb.add_dir(it->c_str());
   for(string_set::iterator it=execs.begin(); it != execs.end(); it++) comb.add_executable(it->c_str());
   
+  comb.set_image(image);
+  comb.set_user(userid);
   comb.set_cd(root_dir);
   comb.set_sha(sha);
   comb.set_scm_url(scm_url);
@@ -225,15 +238,15 @@ int main (int argc, char *argv[])
     case T_BUNDLE: 
       comb.bundle(dbg); break;
     case T_START:
-      comb.start(); break;
+      comb.start(dbg); break;
     case T_STOP:
-      comb.stop(); break;
+      comb.stop(dbg); break;
     case T_MOUNT:
-      comb.mount(); break;
+      comb.mount(dbg); break;
     case T_UNMOUNT:
-      comb.unmount(); break;
+      comb.unmount(dbg); break;
     case T_CLEANUP:
-      comb.cleanup(); break;
+      comb.cleanup(dbg); break;
     case T_EMPTY:
     case T_UNKNOWN:
     break;

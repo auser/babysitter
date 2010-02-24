@@ -35,17 +35,19 @@
 
 int Honeycomb::setup_defaults() {
   /* Setup environment defaults */
-  char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", cd());
+  char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_ROOT=%s", cd());
   char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
+  char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%d", (int)user());
   char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=%s", image());
   char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
   char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
   
   const char* default_env_vars[] = {
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   "HOME=/mnt",
+   "HOME=/home/app",
    app_name_buf, 
    app_type_buf,
+   user_id_buf,
    image_buf,
    sha_buf,
    scm_url_buf,
@@ -53,7 +55,7 @@ int Honeycomb::setup_defaults() {
   };
   
   int m_cenv_c = 0;
-  const int max_env_vars = 1000;
+  const int max_env_vars = 2048;
   
   if ((m_cenv = (const char**) new char* [max_env_vars]) == NULL) {
     m_err << "Could not allocate enough memory to create list"; return -1;
@@ -444,23 +446,23 @@ int Honeycomb::bundle(int dlvl) {
   return 0;
 }
 
-int Honeycomb::start() 
+int Honeycomb::start(int dlvl) 
 {
   return 0;
 }
-int Honeycomb::stop()
+int Honeycomb::stop(int dlvl)
 {
   return 0;
 }
-int Honeycomb::mount()
+int Honeycomb::mount(int dlvl)
 {
   return 0;
 }
-int Honeycomb::unmount()
+int Honeycomb::unmount(int dlvl)
 {
   return 0;
 }
-int Honeycomb::cleanup()
+int Honeycomb::cleanup(int dlvl)
 {
   return 0;
 }

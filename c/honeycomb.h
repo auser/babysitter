@@ -167,7 +167,7 @@ public:
     m_honeycomb_config = c;
     init();
   }
-  Honeycomb(std::string app_type) : m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_cenv(NULL),m_scm_url("") {
+  Honeycomb(std::string app_type) : m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url("") {
     m_app_type = app_type;
   }
   Honeycomb() {
@@ -199,15 +199,21 @@ public:
   int valid();
   // Actions
   int bundle(int debug_level);
-  int start();
-  int stop();
-  int mount();
-  int unmount();
-  int cleanup();
+  int start(int debug_level);
+  int stop(int debug_level);
+  int mount(int debug_level);
+  int unmount(int debug_level);
+  int cleanup(int debug_level);
   
+  void set_user(uid_t u) { m_user = u; }
+  void set_image(std::string i) { m_image = i; }
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
   void set_scm_url(std::string url) {m_scm_url = url;}
-  void set_cd(std::string cd) {m_cd = cd;}
+  void set_cd(std::string dir) {
+    m_root_dir = dir;
+    if (m_user == (uid_t)-1) m_user = random_uid();
+    m_cd = m_root_dir + "/" + to_string(m_user, 10);
+  }
   void set_sha(std::string sha) {m_sha = sha;}
   void add_file(std::string file) {m_files.insert(file);}
   void add_dir(std::string dir) { m_dirs.insert(dir); }
