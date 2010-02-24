@@ -84,7 +84,7 @@ typedef struct _honeycomb_config_ {
 // compatability purposes. 
 #include "honeycomb.h"
 
-int parse_config_dir(std::string directory, int dlvl);
+int parse_config_dir(std::string directory, ConfigMapT &known_configs);
 
 #endif
 
