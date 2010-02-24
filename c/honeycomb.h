@@ -133,8 +133,6 @@ private:
   // ei::StringBuffer<256>   m_tmp;       // Temporary storage
   // ei::Serializer          m_eis;       // Erlang serializer
   std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
-  std::string             m_cmd;       // The command to execute to start
-  std::string             m_kill_cmd;  // A special command to kill the process (if needed)
   std::string             m_root_dir;  // The root directory to start from
   std::string             m_run_dir;   // The directory to run bees and honeycombs from
   mode_t                  m_mode;      // The mode of the m_cd
@@ -180,13 +178,11 @@ public:
   }
   
   const char*  strerror() const { return m_err.str().c_str(); }
-  const char*  cmd()      const { return m_cmd.c_str(); }
   const char*  cd()       const { return m_cd.c_str(); }
   const char*  scm_url()  const { return m_scm_url.c_str(); }
   const char*  run_dir()  const { return m_run_dir.c_str(); }
   const char*  skel()     const { return m_skel.c_str(); }
   char* const* env()      const { return (char* const*)m_cenv; }
-  const char*  kill_cmd() const { return m_kill_cmd.c_str(); }
   string_set   executables() const { return m_executables; }
   string_set   directories() const { return m_dirs; }
   uid_t        user()     const { return m_user; }
@@ -233,23 +229,16 @@ private:
  **/
 class Bee {
 public:
-  std::string     cmd;            // Executed command
-  mount_type*     mount_point;    // Mount-point related to this process
   pid_t           cmd_pid;        // Pid of the custom kill command
-  std::string     kill_cmd;       // Kill command to use (if provided - otherwise use SIGTERM)
-  kill_cmd_pid_t  kill_cmd_pid;   // Pid of the command that <pid> is supposed to kill
   // ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
   bool            sigterm;        // <true> if sigterm was issued.
   bool            sigkill;        // <true> if sigkill was issued.
 
-  Bee() : cmd_pid(-1), kill_cmd_pid(-1), sigterm(false), sigkill(false) {}
+  Bee() : cmd_pid(-1), sigterm(false), sigkill(false) {}
   ~Bee() {}
   
   Bee(const Honeycomb& hc, pid_t _cmd_pid) {
-    cmd = hc.cmd();
-    mount_point = hc.type_of_mount();
     cmd_pid = _cmd_pid;
-    kill_cmd = hc.kill_cmd();
   }
   
 };
