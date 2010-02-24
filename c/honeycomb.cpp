@@ -35,9 +35,17 @@
 
 int Honeycomb::setup_defaults() {
   /* Setup environment defaults */
+  char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE);
+  char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE);
+  
+  sprintf(app_name_buf, "APP_NAME=%s", cd());
+  sprintf(app_type_buf, "APP_TYPE=%s", app_type());
+  
   const char* default_env_vars[] = {
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   "HOME=/mnt"
+   "HOME=/mnt",
+   app_name_buf, app_type_buf,
+   NULL
   };
   
   int m_cenv_c = 0;

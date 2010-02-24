@@ -208,6 +208,7 @@ public:
   
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
   void set_scm_url(std::string url) {m_scm_url = url;}
+  void set_cd(std::string cd) {m_cd = cd;}
   
 private:
   void init();

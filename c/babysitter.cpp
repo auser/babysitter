@@ -26,7 +26,8 @@ int userid = 0;
 
 // Configs
 std::string config_file_dir;
-ConfigMapT   known_configs;                 // Map containing all the known application configurations (in /etc/beehive/apps)
+std::string root_dir;
+ConfigMapT  known_configs;                 // Map containing all the known application configurations (in /etc/beehive/apps)
 phase_type  action;
 char        app_type[BUF_SIZE];             // App type defaults to rack
 char        usr_action_str[BUF_SIZE];       // Used for error printing
@@ -54,6 +55,7 @@ void setup_defaults() {
   userid = 0;
   config_file_dir = "/etc/beehive/config";
   action = T_EMPTY;
+  root_dir = "/var/beehive/honeycombs";
   memset(app_type, 0, BUF_SIZE);
   strncpy(app_type, "rack", 4);
 }
@@ -89,6 +91,9 @@ void parse_the_command_line(int argc, char *argv[])
       argc--; argv++;
     } else if (!strncmp(opt, "--config", 8) || !strncmp(opt, "-c", 2)) {
       config_file_dir = argv[2];
+      argc--; argv++;
+    } else if (!strncmp(opt, "--root", 8) || !strncmp(opt, "-r", 2)) {
+      root_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--user", 6) || !strncmp(opt, "-u", 2)) {
       char* run_as_user = argv[2];
@@ -138,6 +143,7 @@ int main (int argc, char *argv[])
   
   debug(dbg, 1, "--- running action: %s ---\n", action_str);
   debug(dbg, 1, "\tapp type: %s\n", app_type);
+  debug(dbg, 1, "\troot dir: %s\n", root_dir.c_str());
   debug(dbg, 1, "\tconfig dir: %s\n", config_file_dir.c_str());
   debug(dbg, 1, "\tuser id: %d\n", userid);
   debug(dbg, 1, "\tnumber of configs in config directory: %d\n", (int)known_configs.size());
@@ -174,6 +180,7 @@ int main (int argc, char *argv[])
   it = known_configs.find(app_type);
   honeycomb_config *c = it->second;
   Honeycomb comb (app_type, c);
+  comb.set_cd(root_dir);
   
   switch(action) {
     case T_BUNDLE: 
