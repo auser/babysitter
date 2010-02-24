@@ -32,7 +32,7 @@ ANYTHING  (.*)
 %%
 
 {WHITESPACE}        ; /* Ignore whitespace */
-\n                  {return yytext[0];}
+{NL}                {return yytext[0];}
 :                   {debug(DEBUG_LEVEL, 4, "Found ':'\n"); return yytext[0];} /* Special characters with meaning to the syntax */
 (NULL|null)         {debug(DEBUG_LEVEL, 2, "Found a null\n"); return NULLABLE;}
 

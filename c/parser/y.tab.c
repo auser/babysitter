@@ -1353,19 +1353,29 @@ yyreduce:
     {}
     break;
 
+  case 3:
+#line 39 "honeycomb.y"
+    {debug(DEBUG_LEVEL, 4, "Done!\n");}
+    break;
+
   case 4:
 #line 43 "honeycomb.y"
-    {debug(DEBUG_LEVEL, 2, "Found phase in program: %p\n", (yyvsp[(1) - (1)].phase));}
+    {debug(DEBUG_LEVEL, 2, "Found phase in program: %p at %d\n", (yyvsp[(1) - (1)].phase), yylineno);}
     break;
 
   case 5:
 #line 44 "honeycomb.y"
-    {debug(DEBUG_LEVEL, 2, "Found a hook in the program\n");}
+    {debug(DEBUG_LEVEL, 2, "Found a hook in the program at %d\n", yylineno);}
     break;
 
   case 6:
 #line 45 "honeycomb.y"
-    {debug(DEBUG_LEVEL, 2, "Found new attribute in program\n");}
+    {debug(DEBUG_LEVEL, 2, "Found new attribute in program at: %d\n", yylineno);}
+    break;
+
+  case 7:
+#line 46 "honeycomb.y"
+    {++yylineno;}
     break;
 
   case 8:
@@ -1502,7 +1512,7 @@ yyreduce:
 
 
 /* Line 1267 of yacc.c.  */
-#line 1506 "y.tab.c"
+#line 1516 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

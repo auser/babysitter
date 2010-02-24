@@ -36,14 +36,14 @@ extern int yylineno;
 // grammar
 program:
   program decl              {};
-  | decl
+  | decl                    {debug(DEBUG_LEVEL, 4, "Done!\n");}
   ;
     
 decl:
-  phase                 {debug(DEBUG_LEVEL, 2, "Found phase in program: %p\n", $1);}
-  | hook                {debug(DEBUG_LEVEL, 2, "Found a hook in the program\n");}
-  | attr                {debug(DEBUG_LEVEL, 2, "Found new attribute in program\n");}
-  | '\n'                /* NULL */
+  phase                 {debug(DEBUG_LEVEL, 2, "Found phase in program: %p at %d\n", $1, yylineno);}
+  | hook                {debug(DEBUG_LEVEL, 2, "Found a hook in the program at %d\n", yylineno);}
+  | attr                {debug(DEBUG_LEVEL, 2, "Found new attribute in program at: %d\n", yylineno);}
+  | '\n'                {++yylineno;}/* NULL */
   ;
 
 phase:

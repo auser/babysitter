@@ -14,7 +14,7 @@ extern FILE *yyin;
 
 int yywrap() {
   printf("yywrap in honeycomb_config\n");
-  return 0;
+  return 1;
 }
 
 honeycomb_config *parse_config_file(std::string conf_file) {  
