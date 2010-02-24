@@ -18,6 +18,8 @@ int debug(const long int cur_level, int level, char *fmt, ...)
 	return r;
 }
 
+// int yywrap() { return done_parsing; }
+
 /**
 * turn a phase_type into a string
 * FOR DEBUGGING

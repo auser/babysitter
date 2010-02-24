@@ -2,8 +2,8 @@
 #include <string.h>
 #include <dirent.h>
 #include <stdlib.h>
-#include <string>
 #include <libgen.h>
+#include <string>
 
 #include "honeycomb_config.h"
 #include "hc_support.h"
@@ -12,15 +12,51 @@
 #ifdef __cplusplus
 
 extern FILE *yyin;
+std::string files[BUF_SIZE];
 extern ConfigMapT known_configs;
-std::list <std::string> *files;
-unsigned int current_config_file_count = 0;
+std::string current_file;
+int config_file_count = 0;
 const char *conf_ext = ".conf";
 unsigned int conf_len = strlen(conf_ext);
-std::string current_file;
+
+int yywrap() {
+  if (config_file_count < 0) return 1;
+  current_file = files[config_file_count];
+  const char *filename = current_file.c_str();
+  printf("file: %s at %d\n", filename, config_file_count);
+    // open a file handle to a particular file:
+  FILE *fd = fopen(filename, "r");
+  // make sure it's valid:
+  if (!fd) {
+      fprintf(stderr, "Could not open the file: '%s'\nCheck the permissions and try again\n", filename);
+   return NULL;
+  }
+  // set lex to read from it instead of defaulting to STDIN:
+  fclose(yyin);
+  yyin = fd;
   
-honeycomb_config *parse_config_file(std::string conf_file) {  
-  const char *filename = conf_file.c_str();
+  // Clear out the config struct for now
+  honeycomb_config *config = a_new_honeycomb_config_object();
+  // Set the filepath on the config
+  add_attribute(config, T_FILEPATH, (char *)filename);
+  
+  debug(DEBUG_LEVEL, 4, "- parsing config file: %s\n", filename);
+  char *basefilename = basename((char *)filename);
+  unsigned int len = strlen(basefilename);
+  
+  char *name = (char *) malloc (sizeof(char) * (len - conf_len));
+  memcpy(name, basefilename, (len - conf_len));
+  
+  debug(DEBUG_LEVEL, 4, "- storing in known_configs[%s] = %s\n", name, filename);
+  
+  known_configs[name] = config;
+  
+  config_file_count--;
+  printf("end of parsing: %s - %d\n", filename, config_file_count);
+  return 0;
+}
+
+honeycomb_config *parse_config_file(const char* filename) {  
   // open a file handle to a particular file:
 	FILE *fd = fopen(filename, "r");
 	// make sure it's valid:
@@ -34,44 +70,13 @@ honeycomb_config *parse_config_file(std::string conf_file) {
 	// Clear out the config struct for now
   honeycomb_config *config = a_new_honeycomb_config_object();
   // Set the filepath on the config
-  char *fp = strdup(conf_file.c_str());
+  char *fp = strdup(filename);
   add_attribute(config, T_FILEPATH, fp);
   free(fp);
 	// parse through the input until there is no more:
   yyparse ((void *) config);
   
   return config;
-}
-
-int yywrap() {
-  fclose(yyin);
-  // Setup a new config object
-  // Clear out the config struct for now
-  honeycomb_config *config = a_new_honeycomb_config_object();
-  // Set the filepath on the config
-  char *fp = strdup(current_file.c_str());
-  add_attribute(config, T_FILEPATH, fp);
-  free(fp);
-  
-  const char *filename = basename(fp);
-  unsigned int len = strlen(filename);
-  char *name = (char *) malloc (sizeof(char) * (len - conf_len));
-  memcpy(name, filename, (len - conf_len));
-  
-  printf("inserting %p as %s\n", config, name);
-  known_configs[name] = config;
-  
-  if (current_config_file_count > files->size()) return 1;
-  std::string file_path = files->front();
-  files->pop_front();
-  
-  printf("Char: %s\n", file_path.c_str());
-  if ((yyin = fopen(file_path.c_str(), "r")) == 0) {
-    perror(file_path.c_str());
-    exit(-1);
-  }
-  current_file = file_path;
-  return 0;
 }
 
 // Parse the config directory for config files
@@ -81,7 +86,7 @@ int yywrap() {
 * and place them into the known_configs map with the filename without the extension
 * for access later.
 **/
-int parse_config_dir(std::string directory) {  
+int parse_config_dir(std::string directory, ConfigMapT &known_configs) {  
   DIR           *d;
   struct dirent *dir;
   
@@ -95,31 +100,36 @@ int parse_config_dir(std::string directory) {
     // If this is a directory
     if( dir->d_type == DT_DIR ) {
       std::string next_dir (directory + "/" + dir->d_name);
-      parse_config_dir(next_dir);
+      parse_config_dir(next_dir, known_configs);
     } else {
       unsigned int len = strlen(dir->d_name);
       if (len >= strlen(conf_ext)) {
         if (strcmp(conf_ext, dir->d_name + len - conf_len) == 0) {
           // Copy the name parsed config file into the known_configs
           // We don't want to leak memory, do we?
-          std::string file = (directory + "/" + dir->d_name);
-          files->push_back(file);
+          char *name = (char *) malloc (sizeof(char) * (len - conf_len));
+          memcpy(name, dir->d_name, (len - conf_len));
+          std::string file = (directory + dir->d_name);
+          printf("Found file: %s [%d]\n", file.c_str(), config_file_count);
+          files[config_file_count++] = file;
         }
       }
     }
   }
-  closedir( d );  
+  closedir( d );
+  std::string first_file = files[--config_file_count];
+  printf("First file: %s [%d]\n", first_file.c_str(), config_file_count);
   
-  std::string file_path = files->front();
-  files->pop_front();
+  // Clear out the config struct for now
+  honeycomb_config *config = a_new_honeycomb_config_object();
+  // Set the filepath on the config
+  add_attribute(config, T_FILEPATH, (char *)first_file.c_str());
   
-  if ((yyin = fopen(file_path.c_str(), "r")) == 0) {
-    perror(file_path.c_str());
-    exit(-1);
+  if ( (yyin = fopen(first_file.c_str(),"r")) == 0 ) {
+    perror(first_file.c_str()); 
+    exit(1);
   }
-  
-  while( yylex() )
-  ;
+  while (yylex()) ;
   return 0;
 }
 

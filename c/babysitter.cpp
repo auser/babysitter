@@ -134,7 +134,7 @@ int main (int argc, char *argv[])
     usage(1);
   }
   char *action_str = phase_type_to_string(action);
-  parse_config_dir(config_file_dir);
+  parse_config_dir(config_file_dir, known_configs);
   
   debug(dbg, 1, "--- running action: %s ---\n", action_str);
   debug(dbg, 1, "\tapp type: %s\n", app_type);
