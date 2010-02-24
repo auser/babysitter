@@ -23,7 +23,6 @@ int yywrap() {
   if (config_file_count < 0) return 1;
   current_file = files[config_file_count];
   const char *filename = current_file.c_str();
-  printf("file: %s at %d\n", filename, config_file_count);
     // open a file handle to a particular file:
   FILE *fd = fopen(filename, "r");
   // make sure it's valid:
@@ -52,7 +51,7 @@ int yywrap() {
   known_configs[name] = config;
   
   config_file_count--;
-  printf("end of parsing: %s - %d\n", filename, config_file_count);
+  debug(DEBUG_LEVEL, 4, "end of parsing: %s - %d\n", filename, config_file_count);
   return 0;
 }
 
@@ -110,7 +109,7 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
           char *name = (char *) malloc (sizeof(char) * (len - conf_len));
           memcpy(name, dir->d_name, (len - conf_len));
           std::string file = (directory + dir->d_name);
-          printf("Found file: %s [%d]\n", file.c_str(), config_file_count);
+          debug(DEBUG_LEVEL, 4, "Found file: %s [%d]\n", file.c_str(), config_file_count);
           files[config_file_count++] = file;
         }
       }
@@ -118,7 +117,7 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
   }
   closedir( d );
   std::string first_file = files[--config_file_count];
-  printf("First file: %s [%d]\n", first_file.c_str(), config_file_count);
+  debug(DEBUG_LEVEL, 4"First file: %s [%d]\n", first_file.c_str(), config_file_count);
   
   // Clear out the config struct for now
   honeycomb_config *config = a_new_honeycomb_config_object();
