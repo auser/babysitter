@@ -229,9 +229,11 @@ int Honeycomb::comb_exec(std::string cmd) {
       // we are in a new process
       argv[2] = sFile.c_str();
       argv[3] = NULL;
+      // int i = 0;
+      //for (i = 0; i < 4; i++) printf("argv[%i] = %s\n", i, argv[i]);
       
       if (execve(argv[2], (char* const*)argv, (char* const*)m_cenv) < 0) {
-        fprintf(stderr, "Cannot execute '%s' because '%s'", argv[2], ::strerror(errno));
+        fprintf(stderr, "Cannot execute file '%s' because '%s'", argv[2], ::strerror(errno));
         perror("execute");
         unlink(filename);
         return -1;
@@ -246,7 +248,10 @@ int Honeycomb::comb_exec(std::string cmd) {
     
     // First, we have to construct the command
     int argc = 0;
-    char *str_cmd = strdup(cmd.c_str());
+    char str_cmd[BUF_SIZE];
+    memset(str_cmd, 0, BUF_SIZE); // Clear it
+    
+    memcpy(str_cmd, cmd.c_str(), strlen(cmd.c_str()));
     argv[argc] = strtok(str_cmd, " \r\t\n");
     
     while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
@@ -258,6 +263,7 @@ int Honeycomb::comb_exec(std::string cmd) {
     }
     if (pid == 0) {
       // we are in the child process
+      
       if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
         fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
         return EXIT_FAILURE;
@@ -372,8 +378,9 @@ int Honeycomb::bundle(int dlvl) {
   
   temp_drop();
   if ((p != NULL) && (p->command != NULL)) {
-    printf("Running client code instead\n");
+    debug(dlvl, 1, "Running client code instead\n");
     printf("p: %s\n", p->command);
+    comb_exec(p->command);
   } else {
     //Default action
     printf("Running default action for bundle\n");
@@ -445,36 +452,6 @@ int Honeycomb::cleanup()
 {
   return 0;
 }
-
-pid_t Honeycomb::execute() {
-  pid_t chld = fork();
-  
-  // We are in the child pid
-  perm_drop(); // Drop into new user forever!!!!
-  
-  if(chld < 0) {
-    fprintf(stderr, "Could not fork into new process :(\n");
-    return(-1);
-   } else { 
-    // Build the environment vars
-    const std::string shell = getenv("SHELL");
-    const std::string shell_args = "-c";
-    const char* argv[] = { shell.c_str(), shell_args.c_str(), m_cmd.c_str() };
-   
-    if (execve(m_cmd.c_str(), (char* const*)argv, (char* const*)m_cenv) < 0) {
-      fprintf(stderr, "Cannot execute '%s' because '%s'", m_cmd.c_str(), ::strerror(errno));
-      return EXIT_FAILURE;
-    }
-  } 
-  
-  if (m_nice != INT_MAX && setpriority(PRIO_PROCESS, chld, m_nice) < 0) {
-    fprintf(stderr, "Cannot set priority of pid %d", chld);
-    return(-1);
-  }
-  
-  return chld;
-}
-
 void Honeycomb::set_rlimits() {
   if(m_nofiles) set_rlimit(RLIMIT_NOFILE, m_nofiles);
 }

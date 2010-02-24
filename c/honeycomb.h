@@ -211,7 +211,6 @@ public:
   
 private:
   void init();
-  pid_t execute();
   uid_t random_uid();
   int setup_defaults();
   const char * const to_string(long long int n, unsigned char base);
