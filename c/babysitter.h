@@ -11,10 +11,12 @@
 //---
 // Variables
 //---
+std::deque <PidStatusT> exited_children;
 
 //---
 // Functions
 //---
 void  setup_defaults();
+void setup_signal_handlers(struct sigaction sact, struct sigaction sterm, std::deque<PidStatusT> exited_children);
 
 #endif

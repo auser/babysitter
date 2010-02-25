@@ -48,6 +48,31 @@ void version(FILE *fp)
   fprintf(fp, "babysitter version %1f\n", BABYSITTER_VERSION);
 }
 
+/**
+ * Setup the signal handlers for *this* process
+ **/
+void setup_signal_handlers(struct sigaction sact, struct sigaction sterm, std::deque<PidStatusT> exited_children)
+{
+  sterm.sa_handler = gotsignal;
+  sigemptyset(&sterm.sa_mask);
+  sigaddset(&sterm.sa_mask, SIGCHLD);
+  sterm.sa_flags = 0;
+  sigaction(SIGINT,  &sterm, NULL);
+  sigaction(SIGTERM, &sterm, NULL);
+  sigaction(SIGHUP,  &sterm, NULL);
+  sigaction(SIGPIPE, &sterm, NULL);
+
+  sact.sa_handler = NULL;
+  sact.sa_sigaction = gotsigchild;
+  sigemptyset(&sact.sa_mask);
+  sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
+  sigaction(SIGCHLD, &sact, NULL);
+  
+  // Deque of all pids that exited and have their exit status available.
+  exited_children.resize(SIGCHLD_MAX_SIZE);
+}
+
+
 void usage(int c)
 {
   FILE *fp = c ? stderr : stdout;
