@@ -11,6 +11,8 @@
 #ifdef __cplusplus
 
 extern FILE *yyin;
+char *current_parsed_file;
+extern int yylineno;
 
 int yywrap() {
   return 1;
@@ -25,8 +27,16 @@ honeycomb_config *parse_config_file(std::string conf_file) {
     fprintf(stderr, "Could not open the file: '%s'\nCheck the permissions and try again\n", filename);
 		return NULL;
 	}
+	
+  if ( (current_parsed_file = (char *) malloc(sizeof(char *) * strlen(filename))) == NULL ) {
+    fprintf(stderr, "Could not allocate a new char. Out of memory\n");
+    exit(-1);
+  }
+  memset(current_parsed_file, 0, BUF_SIZE);
+  memcpy(current_parsed_file, conf_file.c_str(), conf_file.length());
 	// set lex to read from it instead of defaulting to STDIN:
 	yyin = fd;
+  yylineno = 0;
 	
 	// Clear out the config struct for now
   honeycomb_config *config = a_new_honeycomb_config_object();

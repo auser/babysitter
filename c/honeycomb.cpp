@@ -47,9 +47,9 @@ int Honeycomb::build_env_vars() {
   char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
   char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
   char m_size_buf[BUF_SIZE]; memset(m_size_buf, 0, BUF_SIZE); sprintf(m_size_buf, "BEE_SIZE=%d", (int)(m_size / 1024));
-  char app_root_buf[BUF_SIZE]; memset(app_root_buf, 0, BUF_SIZE); sprintf(app_root_buf, "APP_ROOT=%s", cd());
+  char app_root_buf[BUF_SIZE]; memset(app_root_buf, 0, BUF_SIZE); sprintf(app_root_buf, "WORKING_DIR=%s", working_dir());
   char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", name());
-  char hive_dir_buf[BUF_SIZE]; memset(hive_dir_buf, 0, BUF_SIZE); sprintf(hive_dir_buf, "HIVE_DIR=%s", hive_dir());
+  char storage_dir_buf[BUF_SIZE]; memset(storage_dir_buf, 0, BUF_SIZE); sprintf(storage_dir_buf, "STORAGE_DIR=%s", storage_dir());
   char bee_port_buf[BUF_SIZE]; memset(bee_port_buf, 0, BUF_SIZE); sprintf(bee_port_buf, "BEE_PORT=%d", port());
   char run_dir_buf[BUF_SIZE]; memset(run_dir_buf, 0, BUF_SIZE); sprintf(run_dir_buf, "RUN_DIR=%s", run_dir());
   
@@ -62,10 +62,10 @@ int Honeycomb::build_env_vars() {
   const char* default_env_vars[] = {
     path_buf,
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   "HOME=/home/app",
+   // "HOME=/home/app",
    "FILESYSTEM=ext3",
    app_name_buf,
-   hive_dir_buf,
+   storage_dir_buf,
    app_type_buf,
    app_root_buf,
    user_id_buf,
@@ -79,16 +79,15 @@ int Honeycomb::build_env_vars() {
   };
   
   int m_cenv_c = 0;
-  const int max_env_vars = BUF_SIZE*10;
   
-  if ((m_cenv = (const char**) new char* [max_env_vars]) == NULL) {
-    m_err << "Could not allocate enough memory to create list"; return -1;
+  if ( (m_cenv = (const char **) malloc(sizeof(char *) * (int)sizeof(default_env_vars))) == NULL ) {
+    fprintf(stderr, "Could not allocate a new char. Out of memory\n");
+    exit(-1);
   }
   
+  memset(m_cenv, 0, (int)sizeof(default_env_vars));
   memcpy(m_cenv, default_env_vars, (int)sizeof(default_env_vars));
   m_cenv_c = sizeof(default_env_vars) / sizeof(char *);
-  
-  m_cd = m_root_dir + "/" + to_string(m_user, 10);
   
   return 0;
 }
@@ -185,10 +184,10 @@ int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
     
     memcpy(str_cmd, cmd.c_str(), strlen(cmd.c_str()));
     
-    std::string bin = find_binary(str_cmd);
-    argv[argc] = bin.c_str();
+    argv[argc] = strtok(str_cmd, " \r\t\n");
     // Remove the first one
-    strtok(str_cmd, " \r\t\n");
+    std::string bin = find_binary(argv[argc]);
+    argv[argc] = bin.c_str();
     
     // argv[argc] = strtok(str_cmd, " \r\t\n");
     
@@ -243,12 +242,12 @@ void Honeycomb::ensure_exists(std::string dir) {
   
   // Not sure if this and the next step is appropriate here anymore... *thinking about it*
   if (mkdir(dir.c_str(), m_mode)) {
-    m_err << "Could not create the new confinement root " << m_cd;
+    std::cerr << "Could not create the new confinement root " << dir << std::endl;
   }
   
   // Make the directory owned by the user
   if (chown(dir.c_str(), m_user, m_group)) {
-    m_err << "Could not chown to the effective user: " << m_user;
+    std::cerr << "Could not chown to the effective user: " << m_user << std::endl;
   }
 }
 
@@ -316,12 +315,12 @@ int Honeycomb::bundle(int dlvl) {
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
-  ensure_exists(m_cd);
+  ensure_exists(m_working_dir);
   
   temp_drop();
   
   // Change into the working directory
-  if (chdir(m_cd.c_str())) {
+  if (chdir(m_working_dir.c_str())) {
     perror("chdir:");
     return -1;
   }
@@ -334,7 +333,7 @@ int Honeycomb::bundle(int dlvl) {
     if (m_honeycomb_config->clone_command != NULL) clone_command = m_honeycomb_config->clone_command;
     char str_clone_command[256];
     // The str_clone_command looks like:
-    //  /usr/bin/git clone --depth 0 [git_url] [m_cd]/home/app
+    //  /usr/bin/git clone --depth 0 [git_url] [m_working_dir]/home/app
     snprintf(str_clone_command, 256, clone_command.c_str(), m_scm_url.c_str());
     // Do the cloning
     // Do not like me some system(3)
@@ -366,9 +365,9 @@ int Honeycomb::bundle(int dlvl) {
     assert(0 == status);
   }
   
-  std::string git_root_dir = m_cd + "/home/app";
+  std::string git_root_dir = m_working_dir + "/home/app";
   m_sha = parse_sha_from_git_directory(git_root_dir);
-  m_size = dir_size_r(m_cd.c_str());
+  m_size = dir_size_r(m_working_dir.c_str());
   
   // Because we may have modified the environment's SHA, we should rebuild it
   free(m_cenv);
@@ -603,13 +602,10 @@ void Honeycomb::init() {
     } else m_group = getgid();
     
     //--- root_directory
-    m_root_dir = "/var/beehive/honeycombs"; // Default
     if (m_honeycomb_config->root_dir != NULL) m_root_dir = m_honeycomb_config->root_dir;
-    //--- hive_dir
-    m_hive_dir = "/var/beehive/hive"; // Default
-    if (m_honeycomb_config->hive_dir != NULL) m_hive_dir = m_honeycomb_config->hive_dir;
+    //--- storage_dir
+    if (m_honeycomb_config->storage_dir != NULL) m_storage_dir = m_honeycomb_config->storage_dir;
     //--- run_dir
-    m_run_dir = "/var/beehive/run_dir"; // Default
     if (m_honeycomb_config->run_dir != NULL) m_run_dir = m_honeycomb_config->run_dir;
     
     //--- executables
@@ -649,9 +645,12 @@ void Honeycomb::init() {
     //--- confinement_mode
     m_mode = 04755; // Not sure if this should be dynamic-able, yet.
     
-    // The m_cd path is the confinement_root plus the user's uid
+    // The m_working_dir path is the confinement_root plus the user's uid
     // because it's randomly generated
-    m_cd = m_root_dir + "/" + to_string(m_user, 10);
+    std::string usr_postfix (to_string(m_user, 10));
+    m_working_dir = m_working_dir + "/" + usr_postfix;
+    m_run_dir = m_run_dir +  "/" + usr_postfix;
+    m_storage_dir = m_storage_dir + "/" + usr_postfix;
   }
 }
 

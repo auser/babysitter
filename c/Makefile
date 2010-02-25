@@ -12,7 +12,7 @@ mandir = $(prefix)/man/man1
 CFLAGS = $(CPPFLAGS) -g -O2 -I ./parser
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = $(top_srcdir)/c/parser/y.tab.o $(top_srcdir)/c/parser/lex.yy.o
-INC_LIBS = -L/opt/erlang/lib/erlang/lib/erl_interface-3.6.3/lib -lerl_interface -lei -lstdc++ -lfl
+INC_LIBS = -L/usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/lib -lerl_interface -lei -lstdc++ -lfl
 EXECUTABLE_DIR = $(top_srcdir)/priv/bin
 
 ifeq ($(shell uname),Linux)
@@ -25,7 +25,7 @@ endif
 
 # Defines
 CC = g++
-CPPFLAGS =  -I /opt/erlang/lib/erlang/lib/erl_interface-3.6.3/include -Wall -fPIC -I./
+CPPFLAGS =  -I /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./
 LIBS = -lstdc++ 
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
@@ -40,7 +40,7 @@ OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter babysitter_daemon
 
 DEFS = -DHAVE_CONFIG_H
  
-ERLDIR = /opt/erlang/lib/erlang
+ERLDIR = /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang
  
 all: prepare honeycomb $(OUTPUTFILES)
 
@@ -53,7 +53,7 @@ debug:
 .SUFFIXES: .o .cpp .h
   
 test_suite: suite.o $(TEST_OBJECTS) $(UNDER_TEST)
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lcheck -o $@ $^ /opt/erlang/lib/erlang/lib/erl_interface-3.6.3/lib/libei.a	
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lcheck -o $@ $^ /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/lib/libei.a	
  
 test: test_suite
 	$(MAKE) TEST=-DTEST
@@ -84,10 +84,10 @@ babysitter_utils.o:
 honeycomb_config.o: honeycomb
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb_config.cpp
 
-babysitter_daemon:
+babysitter_daemon: $(INTERMEDIATES)
 	$(CC) $(CFLAGS) -I/include -o $(EXECUTABLE_DIR)/babysitter_daemon babysitter_daemon.cpp $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS) $(INC_LIBS)
 
-babysitter:
+babysitter: $(INTERMEDIATES)
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter babysitter.cpp $(INTERMEDIATES) $(PARSER_LIBS)
 
 clean:

@@ -12,7 +12,10 @@ all:
 	(echo 0.1 > VERSION)	
 	(cd c;$(MAKE))
 	(cd erl;$(MAKE); $(MAKE) boot)
- 
+
+babysitter:
+	(cd c;$(MAKE) babysitter)
+
 clean:
 	(cd c;$(MAKE) clean)
 	(cd erl;$(MAKE) clean)

@@ -5,6 +5,7 @@
 #include "hc_support.h"
 
 extern int yylineno;
+extern char *current_parsed_file;
 %}
 
 %union {
@@ -150,6 +151,6 @@ line:
 
 int yyerror(const char *str)
 {
-  fprintf(stderr, "Parsing error [%i]: %s\n", yylineno, str);
+  fprintf(stderr, "Parsing error %s [%i]: %s\n", current_parsed_file, yylineno, str);
   return 0;
 }

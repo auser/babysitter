@@ -70,7 +70,7 @@ typedef struct _honeycomb_config_ {
   char *group;          // The group to run this honeycomb
   char *image;          // Image to mount as bee
   char *skel_dir;       // Skeleton directory to copy instead of building it
-  char *hive_dir;       // Directory to store the bees in
+  char *storage_dir;       // Directory to store the bees in
   // Phases
   size_t num_phases;
   phase **phases;

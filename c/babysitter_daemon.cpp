@@ -125,64 +125,9 @@ int   stop_child(Bee& bee, int transId, const TimeVal& now, bool notify = true);
 
 void  setup_defaults();
 
-// int send_error_str(int transId, bool asAtom, const char* fmt, ...)
-void dmesg(const char *fmt, ...) {
-  if(dbg)
-  {
-    char str[BUF_SIZE];
-    va_list vargs;
-    va_start (vargs, fmt);
-    vsnprintf(str, sizeof(str), fmt, vargs);
-    va_end   (vargs);
-
-    fprintf(stderr, fmt, str);
-  }
-}
-
-/**
- * Check for the pending messages, so we don't miss any
- * child signal messages
- **/
-void check_pending() {
-  sigset_t  set;
-  siginfo_t info;
-  sigemptyset(&set);
-  if (sigpending(&set) == 0) {
-    if (sigismember(&set, SIGCHLD))      gotsigchild(SIGCHLD, &info, NULL);
-    else if (sigismember(&set, SIGPIPE)) {pipe_valid = false; gotsignal(SIGPIPE);}
-    else if (sigismember(&set, SIGTERM)) gotsignal(SIGTERM);
-    else if (sigismember(&set, SIGINT))  gotsignal(SIGINT);
-    else if (sigismember(&set, SIGHUP))  gotsignal(SIGHUP);
-  }
-}
-
 void usage() {
   std::cerr << HELP_MESSAGE;
   exit(1);
-}
-
-/*-------------------------- Setup functions -----------------------------*/
-/**
- * Setup the signal handlers for *this* process
- **/
-void setup_signal_handlers() {
-  sterm.sa_handler = gotsignal;
-  sigemptyset(&sterm.sa_mask);
-  sigaddset(&sterm.sa_mask, SIGCHLD);
-  sterm.sa_flags = 0;
-  sigaction(SIGINT,  &sterm, NULL);
-  sigaction(SIGTERM, &sterm, NULL);
-  sigaction(SIGHUP,  &sterm, NULL);
-  sigaction(SIGPIPE, &sterm, NULL);
-
-  sact.sa_handler = NULL;
-  sact.sa_sigaction = gotsigchild;
-  sigemptyset(&sact.sa_mask);
-  sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
-  sigaction(SIGCHLD, &sact, NULL);
-  
-  // Deque of all pids that exited and have their exit status available.
-  exited_children.resize(SIGCHLD_MAX_SIZE);
 }
 
 /**
@@ -416,7 +361,7 @@ int main(int argc, char* argv[])
       }
     }
     
-    dmesg("Exiting (%d)\n", old_terminated);
+    debug("Exiting (%d)\n", old_terminated);
     return old_terminated;
 }
 
@@ -457,7 +402,6 @@ pid_t start_child(Honeycomb& op)
 {
   ei::StringBuffer<128> err;
     
-  dmesg("Building the chroot environment\n");
   const std::string base_dir = "/var/babysitter";
   //op.build_environment(base_dir, 040755);
   // return op.build_and_execute(base_dir, 040755);

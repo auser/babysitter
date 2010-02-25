@@ -21,14 +21,25 @@
 #include "hc_support.h"
 #include "babysitter.h"
 
+// Globals
 int alarm_max_time      = 12;
 int userid = -1;
+
+std::deque<PidStatusT> exited_children;
+sigjmp_buf  jbuf;
+bool oktojump   = false;
+bool pipe_valid = true;      // Is the pip still valid?
+int  terminated = 0;         // indicates that we got a SIGINT / SIGTERM event
+long int dbg     = 0;        // Debug flag
+bool signaled   = false;     // indicates that SIGCHLD was signaled
+
 
 // Configs
 std::string config_file_dir;                // The directory containing configs
 std::string root_dir;                       // The root directory to work from within
 std::string run_dir;                        // The directory to run the bees
-std::string hive_dir;                       // Hive dir
+std::string working_dir;                    // Working directory
+std::string storage_dir;                    // Storage dir
 std::string sha;                            // The sha
 std::string name;                           // Name
 std::string scm_url;                        // The scm url
@@ -134,8 +145,26 @@ int process_child_signal(pid_t pid)
   }
 }   
 
+/**
+ * Check for the pending messages, so we don't miss any
+ * child signal messages
+ **/
+void check_pending()
+{
+  sigset_t  set;
+  siginfo_t info;
+  sigemptyset(&set);
+  if (sigpending(&set) == 0) {
+    if (sigismember(&set, SIGCHLD))      gotsigchild(SIGCHLD, &info, NULL);
+    else if (sigismember(&set, SIGPIPE)) {pipe_valid = false; gotsignal(SIGPIPE);}
+    else if (sigismember(&set, SIGTERM)) gotsignal(SIGTERM);
+    else if (sigismember(&set, SIGINT))  gotsignal(SIGINT);
+    else if (sigismember(&set, SIGHUP))  gotsignal(SIGHUP);
+  }
+}
 
-void usage(int c)
+
+void usage(int c, bool detailed = false)
 {
   FILE *fp = c ? stderr : stdout;
     
@@ -145,30 +174,42 @@ void usage(int c)
   fprintf(fp, "Usage: babysitter <command> [options]\n"
   "babysitter bundle | mount | start | stop | unmount | cleanup\n"
   "* Options\n"
-  "*  --help            | -H              Show this message\n"
-  "*  --debug           | -D <level>      Turn on debugging flag'\n"
-  "*  --port <port>     | -p <port>       The port to run on"
-  "*  --hive_dir <dir>  | -h <dir>        Hive directory to store the sleeping bees\n"
-  "*  --name <name>     | -n <name>       Name of the app\n"
-  "*  --user <user>     | -u <user>       User to run as\n"
-  "*  --type <type>     | -t <type>       The type of application (defaults to rack)\n"
-  "*  --root <dir>      | -r <dir>        The directory where the bees will be created\n"
-  "*  --run_dir <dir>   | -l <dir>        The directory to run the bees"
-  "*  --sha <sha>       | -s <sha>        The sha of the bee\n"
-  "*  --image <file>    | -i <file>       The image to mount that contains the bee\n"
-  "*  --exec <exec>     | -e <exec>       Add an executable to the paths\n"
-  "*  --file <file>     | -f <file>       Add this file to the path\n"
-  "*  --dir <dir>       | -d <dir>        The directory\n"
-  "*  --scm_url <url>   | -u <url>        The scm_url\n"
-  "*  --config <dir>    | -c <dir>        The directory or file containing the config files\n\n"
+  "*  --help [detailed]   | -h [d]          Show this message. [detailed|d] will generate more information.\n"
+  "*  --storage_dir <dir> | -b <dir>        Hive directory to store the sleeping bees\n"
+  "*  --config <dir>      | -c <dir>        The directory or file containing the config files (default: /etc/beehive/config)\n"
+  "*  --dir <dir>         | -d <dir>        The directory\n"
+  "*  --debug             | -D <level>      Turn on debugging flag\n"
+  "*  --exec <exec>       | -e <exec>       Add an executable to the paths\n"
+  "*  --file <file>       | -f <file>       Add this file to the path\n"
+  "*  --image <file>      | -i <file>       The image to mount that contains the bee\n"
+  "*  --scm_url <url>     | -m <url>        The scm_url\n"
+  "*  --name <name>       | -n <name>       Name of the app\n"
+  "*  --root <dir>        | -o <dir>        Base directory (default: /var/beehive)\n"
+  "*  --port <port>       | -p <port>       The port\n"
+  "*  --run_dir <dir>     | -r <dir>        The directory to run the bees (default: $ROOT_DIR/active)\n"
+  "*  --sha <sha>         | -s <sha>        The sha of the bee\n"
+  "*  --type <type>       | -t <type>       The type of application (defaults to rack)\n"
+  "*  --user <user>       | -u <user>       User to run as\n"
+  "*  --working <dir>     | -w <dir>        Working directory (default: $ROOT_DIR/scratch)\n"
+  "\n"
   );
   
+  if (detailed)
+    fprintf(fp, "Usage: babysitter <command> [options]\n"
+      "Babysitter commands:\n"
+      "\tbundle - This bundles the bee into a single file\n"
+      "\n"
+      );
+      
   exit(c);
 }
 
 void setup_defaults() {
   userid = -1;
   config_file_dir = "/etc/beehive/config";
+  root_dir = "/var/beehive";
+  run_dir = root_dir + "/active";
+  working_dir = root_dir + "/scratch";
   action = T_EMPTY;
   memset(app_type, 0, BUF_SIZE);
   strncpy(app_type, "rack", 4);
@@ -192,15 +233,18 @@ void parse_the_command_line(int argc, char *argv[])
       char * pEnd;
       dbg = strtol(argv[2], &pEnd, 10);
       argc--; argv++;
-    } else if (!strncmp(opt, "--help", 6) || !strncmp(opt, "-H", 2)) {
-      usage(0);
+    } else if (!strncmp(opt, "--help", 6) || !strncmp(opt, "-h", 2)) {
+      if(argv[2] != NULL && (!strncmp(argv[2], "d", 1) || !strncmp(argv[2], "detailed", 8)))
+        usage(0, true);
+      else 
+        usage(0, false);
     } else if (!strncmp(opt, "--name", 6) || !strncmp(opt, "-n", 2)) {
       name = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--port", 6) || !strncmp(opt, "-p", 2)) {
       port = atoi(argv[2]);
       argc--; argv++;
-    } else if (!strncmp(opt, "--run_dir", 9) || !strncmp(opt, "-h", 2)) {
+    } else if (!strncmp(opt, "--run_dir", 9) || !strncmp(opt, "-r", 2)) {
       run_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
@@ -210,8 +254,8 @@ void parse_the_command_line(int argc, char *argv[])
     } else if (!strncmp(opt, "--image", 7) || !strncmp(opt, "-i", 2)) {
       image = argv[2];
       argc--; argv++;
-    } else if (!strncmp(opt, "--hive_dir", 10) || !strncmp(opt, "-b", 2)) {
-      hive_dir = argv[2];
+    } else if (!strncmp(opt, "--storage_dir", 10) || !strncmp(opt, "-b", 2)) {
+      storage_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--sha", 6) || !strncmp(opt, "-s", 2)) {
       sha = argv[2];
@@ -231,8 +275,11 @@ void parse_the_command_line(int argc, char *argv[])
     } else if (!strncmp(opt, "--config", 8) || !strncmp(opt, "-c", 2)) {
       config_file_dir = argv[2];
       argc--; argv++;
-    } else if (!strncmp(opt, "--root", 6) || !strncmp(opt, "-r", 2)) {
+    } else if (!strncmp(opt, "--root", 6) || !strncmp(opt, "-o", 2)) {
       root_dir = argv[2];
+      argc--; argv++;
+    } else if (!strncmp(opt, "--working_dir", 13) || !strncmp(opt, "-w", 2)) {
+      working_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--user", 6) || !strncmp(opt, "-u", 2)) {
       char* run_as_user = argv[2];
@@ -341,10 +388,11 @@ int main (int argc, char *argv[])
   if (image != "") comb.set_image(image);
   if (userid != -1) comb.set_user(userid);
   if (sha != "") comb.set_sha(sha);
+  if (working_dir != "") comb.set_working_dir(working_dir);
   if (root_dir != "") comb.set_root_dir(root_dir);
   if (scm_url != "") comb.set_scm_url(scm_url);
   if (port != -1) comb.set_port(port);
-  if (hive_dir != "") comb.set_hive_dir(hive_dir);
+  if (storage_dir != "") comb.set_storage_dir(storage_dir);
   if (run_dir != "") comb.set_run_dir(run_dir);
   
   switch(action) {

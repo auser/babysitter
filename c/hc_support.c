@@ -3,8 +3,7 @@
 #include <assert.h>
 
 #include "hc_support.h"
-
-#define BUF_SIZE 1024
+#include "honeycomb.h"
 
 // Debug
 int debug(const long int cur_level, int level, char *fmt, ...)
@@ -119,7 +118,7 @@ honeycomb_config* a_new_honeycomb_config_object(void) {
   c->group = NULL;
   c->image = NULL;
   c->skel_dir = NULL;
-  c->hive_dir = NULL;
+  c->storage_dir = NULL;
   
   return c;
 	// Should never get here
@@ -237,8 +236,8 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
       c->image = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->image, 0, strlen(value)); memcpy(c->image, value, strlen(value)); break;
     case T_HIVE_DIR:
-      c->hive_dir = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->hive_dir, 0, strlen(value)); memcpy(c->hive_dir, value, strlen(value)); break;
+      c->storage_dir = (char *)malloc(sizeof(char *) * strlen(value));
+      memset(c->storage_dir, 0, strlen(value)); memcpy(c->storage_dir, value, strlen(value)); break;
     case T_SKEL_DIR:
       c->skel_dir = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->skel_dir, 0, strlen(value)); memcpy(c->skel_dir, value, strlen(value)); break;
@@ -269,7 +268,7 @@ void free_config(honeycomb_config *c) {
   if (c->group) free(c->group);
   if (c->image) free(c->image);
   if (c->skel_dir) free(c->skel_dir);
-  if (c->hive_dir) free(c->hive_dir);
+  if (c->storage_dir) free(c->storage_dir);
 }
 
 // Free a phase struct

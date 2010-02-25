@@ -27,13 +27,13 @@
 //---
 // Variables
 //---
-std::deque<PidStatusT> exited_children;
-sigjmp_buf  jbuf;                   // Jump buffer
-static bool oktojump   = false;
-static bool pipe_valid = true;      // Is the pip still valid?
-static int  terminated = 0;         // indicates that we got a SIGINT / SIGTERM event
-static long int dbg     = 0;        // Debug flag
-static bool signaled   = false;     // indicates that SIGCHLD was signaled
+extern std::deque<PidStatusT> exited_children;
+extern sigjmp_buf  jbuf;                   // Jump buffer
+extern bool oktojump;
+extern bool pipe_valid;      // Is the pip still valid?
+extern int  terminated;         // indicates that we got a SIGINT / SIGTERM event
+extern long int dbg;        // Debug flag
+extern bool signaled;     // indicates that SIGCHLD was signaled
 
 //---
 // Functions
@@ -43,5 +43,6 @@ void  setup_signal_handlers(struct sigaction sact, struct sigaction sterm);
 void  gotsigchild(int signal, siginfo_t* si, void* context);
 void  gotsignal(int sig);
 int   process_child_signal(pid_t pid);
+void  check_pending();
 
 #endif

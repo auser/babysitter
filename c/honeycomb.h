@@ -1,5 +1,11 @@
+#ifndef BUF_SIZE
+#define BUF_SIZE 2048
+#endif
+
 #ifndef HONEYCOMB_H
 #define HONEYCOMB_H
+
+#ifdef __cplusplus
 
 /**
  * Honeycomb
@@ -34,10 +40,6 @@ using std::string;
 #include "hc_support.h"
 
 /*---------------------------- Defines ------------------------------------*/
-#ifndef BUF_SIZE
-#define BUF_SIZE 2048
-#endif
-
 
 // #define DEBUG 0
 
@@ -132,35 +134,35 @@ class Honeycomb {
 private:
   // ei::StringBuffer<256>   m_tmp;       // Temporary storage
   // ei::Serializer          m_eis;       // Erlang serializer
-  std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
-  std::string             m_root_dir;  // The root directory to start from
-  std::string             m_run_dir;   // The directory to run bees and honeycombs from
-  std::string             m_hive_dir;  // The directory to store the sleeping bees
-  mode_t                  m_mode;      // The mode of the m_cd
-  std::string             m_cd;        // The directory to execute the command (generated, if not given)
-  std::string             m_name;      // Name
-  std::string             m_sha;       // Sha
-  std::string             m_app_type;  // The type of the application
-    std::string             m_skel_dir;      // A skeleton choot directory to work from
-  std::string             m_stdout;    // The stdout to use for the execution of the command
-  std::string             m_stderr;    // The stderr to use for the execution of the command
-  mount_type*             m_mount;     // A mount associated with the honeycomb
-  std::string             m_image;     // The image to mount
-  string_set              m_executables; // Executables to be bundled in the honeycomb
-  string_set              m_dirs;      // Directories to be included in the app
-  string_set              m_files;     // Extra directories to be included in the honeycomb
-  std::list<std::string>  m_env;       // A list of environment variables to use when starting
-  int                     m_port;      // The port to run
+  std::string             m_root_dir;     // The root directory to start from
+  std::string             m_run_dir;      // The directory to run bees and honeycombs from
+  std::string             m_storage_dir;  // The directory to store the sleeping bees
+  std::string             m_working_dir;  // Working directory
+  
+  mode_t                  m_mode;         // The mode of the m_working_dir
+  std::string             m_name;         // Name
+  std::string             m_sha;          // Sha
+  std::string             m_app_type;     // The type of the application
+    std::string             m_skel_dir;   // A skeleton choot directory to work from
+  std::string             m_stdout;       // The stdout to use for the execution of the command
+  std::string             m_stderr;       // The stderr to use for the execution of the command
+  mount_type*             m_mount;        // A mount associated with the honeycomb
+  std::string             m_image;        // The image to mount
+  string_set              m_executables;  // Executables to be bundled in the honeycomb
+  string_set              m_dirs;         // Directories to be included in the app
+  string_set              m_files;        // Extra directories to be included in the honeycomb
+  std::list<std::string>  m_env;          // A list of environment variables to use when starting
+  int                     m_port;         // The port to run
     // Resource sets
-    rlim_t                m_nofiles;     // Number of files
-  long                    m_nice;      // The "niceness" level
-  size_t                  m_size;      // The directory size
-  uid_t                   m_user;      // run as user (generated if not given)
-  gid_t                   m_group;     // run as this group
-  const char**            m_cenv;      // The string list of environment variables
+    rlim_t                m_nofiles;      // Number of files
+  long                    m_nice;         // The "niceness" level
+  size_t                  m_size;         // The directory size
+  uid_t                   m_user;         // run as user (generated if not given)
+  gid_t                   m_group;        // run as this group
+  const char**            m_cenv;         // The string list of environment variables
   // Internal
-  std::string             m_scm_url;   // The url for the scm path (to clone from)
-  int                     m_cenv_c;    // The current count of the environment variables
+  std::string             m_scm_url;      // The url for the scm path (to clone from)
+  int                     m_cenv_c;       // The current count of the environment variables
   string_set              m_already_copied;
   honeycomb_config*       m_honeycomb_config; // We'll compute this on the app type
 
@@ -170,7 +172,12 @@ public:
     m_honeycomb_config = c;
     init();
   }
-  Honeycomb(std::string app_type) : m_cd(""),m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url("") {
+  Honeycomb(std::string app_type) : m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url("") {
+    m_root_dir = "/var/beehive";
+    m_run_dir = m_root_dir + "/bees";
+    m_storage_dir = m_root_dir + "/combs";
+    m_working_dir = m_root_dir + "/working";
+    
     m_app_type = app_type;
   }
   Honeycomb() {
@@ -181,14 +188,13 @@ public:
     m_cenv = NULL;
   }
   
-  const char*  strerror() const { return m_err.str().c_str(); }
-  const char*  cd()       const { return m_cd.c_str(); }
+  const char*  working_dir()  const { return m_working_dir.c_str(); }
   const char*  scm_url()  const { return m_scm_url.c_str(); }
   const char*  run_dir()  const { return m_run_dir.c_str(); }
   const char*  skel()     const { return m_skel_dir.c_str(); }
   const char*  sha()      const { return m_sha.c_str(); }
   const char*  image()    const { return m_image.c_str(); }
-  const char*  hive_dir() const { return m_hive_dir.c_str(); }
+  const char*  storage_dir() const { return m_storage_dir.c_str(); }
   const char*  name()    const { return m_name.c_str(); }
   int          port()     const { return m_port; }
   char* const* env()      const { return (char* const*)m_cenv; }
@@ -201,16 +207,7 @@ public:
   const char*  app_type() const { return m_app_type.c_str(); }
   const honeycomb_config *config() const {return m_honeycomb_config; }
   
-  // int ei_decode(ei::Serializer& ei);
-  int valid();
-  // Actions
-  int bundle(int debug_level);
-  int start(int debug_level);
-  int stop(int debug_level);
-  int mount(int debug_level);
-  int unmount(int debug_level);
-  int cleanup(int debug_level);
-  
+  // Setters
   void set_name(std::string n) { m_name = n; }
   void set_port(int p) { m_port = p; }
   void set_user(uid_t u) { m_user = u; }
@@ -219,13 +216,24 @@ public:
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_root_dir(std::string dir) {m_root_dir = dir;}
   void set_run_dir(std::string d) {m_run_dir = d;}
-  void set_cd(std::string dir) {m_cd = dir;}
+  void set_storage_dir(std::string d) {m_storage_dir = d;}
+  
+  void set_working_dir(std::string dir) {m_working_dir = dir;}
   void set_sha(std::string sha) {m_sha = sha;}
-  void set_hive_dir(std::string d) {m_hive_dir = d;}
   void add_file(std::string file) {m_files.insert(file);}
   void add_dir(std::string dir) { m_dirs.insert(dir); }
   void add_executable(std::string exec) { m_executables.insert(exec); }
   
+  // Actions
+  int bundle(int debug_level);
+  int start(int debug_level);
+  int stop(int debug_level);
+  int mount(int debug_level);
+  int unmount(int debug_level);
+  int cleanup(int debug_level);
+  
+  int valid();
+    
 private:
   void init();
   std::string find_binary(const std::string& file);
@@ -268,4 +276,5 @@ public:
 
 /*--------------------------------------------------------------------------*/
 
+#endif
 #endif

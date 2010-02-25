@@ -24,7 +24,7 @@ endif
 
 # Defines
 CC = g++
-CPPFLAGS =  -I /opt/erlang/lib/erlang/lib/erl_interface-3.6.3/include -Wall -fPIC -I./
+CPPFLAGS =  -I /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./
 LIBS = -lstdc++ 
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
@@ -38,7 +38,7 @@ OUTPUTFILES := $(INTERMEDIATES)
 
 DEFS = -DHAVE_CONFIG_H
  
-ERLDIR = /opt/erlang/lib/erlang
+ERLDIR = /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang
  
 all: $(OUTPUTFILES)
  

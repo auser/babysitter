@@ -73,7 +73,7 @@ ANYTHING  (.*)
 ^run_dir             {yylval.atype = T_RUN_DIR; return RESERVED;}
 ^image               {yylval.atype = T_IMAGE; return RESERVED;}
 ^skel_dir            {yylval.atype = T_SKEL_DIR; return RESERVED;}
-^hive_dir            {yylval.atype = T_HIVE_DIR; return RESERVED;}
+^storage_dir            {yylval.atype = T_HIVE_DIR; return RESERVED;}
 
   /* blocks */
 \{                  {

@@ -84,10 +84,10 @@ babysitter_utils.o:
 honeycomb_config.o: honeycomb
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb_config.cpp
 
-babysitter_daemon:
+babysitter_daemon: $(INTERMEDIATES)
 	$(CC) $(CFLAGS) @ELF_CFLAGS@ -o $(EXECUTABLE_DIR)/babysitter_daemon babysitter_daemon.cpp $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS) $(INC_LIBS)
 
-babysitter:
+babysitter: $(INTERMEDIATES)
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter babysitter.cpp $(INTERMEDIATES) $(PARSER_LIBS)
 
 clean:
