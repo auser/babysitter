@@ -51,6 +51,7 @@ int Honeycomb::build_env_vars() {
   char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", name());
   char hive_dir_buf[BUF_SIZE]; memset(hive_dir_buf, 0, BUF_SIZE); sprintf(hive_dir_buf, "HIVE_DIR=%s", hive_dir());
   char bee_port_buf[BUF_SIZE]; memset(bee_port_buf, 0, BUF_SIZE); sprintf(bee_port_buf, "BEE_PORT=%d", port());
+  char run_dir_buf[BUF_SIZE]; memset(run_dir_buf, 0, BUF_SIZE); sprintf(run_dir_buf, "RUN_DIR=%s", run_dir());
   
   // BEE_WORKING_DIR
   unsigned int path_size = pth.length();
@@ -68,6 +69,7 @@ int Honeycomb::build_env_vars() {
    app_type_buf,
    app_root_buf,
    user_id_buf,
+   run_dir_buf,
    bee_port_buf,
    image_buf,
    sha_buf,
@@ -219,13 +221,13 @@ void Honeycomb::exec_hook(std::string action, int stage, phase *p) {
   }
 }
 
-void Honeycomb::ensure_cd_exists() {
+void Honeycomb::ensure_exists(std::string dir) {
   struct stat stt;
-  if (0 == stat(m_root_dir.c_str(), &stt)) {
+  if (0 == stat(dir.c_str(), &stt)) {
     // Should we check on the ownership?
   } else if (ENOENT == errno) {
-    if (mkdir(m_root_dir.c_str(), m_mode)) {
-      fprintf(stderr, "Error: %s and could not create the directory: %s\n", ::strerror(errno), m_root_dir.c_str());
+    if (mkdir(dir.c_str(), m_mode)) {
+      fprintf(stderr, "Error: %s and could not create the directory: %s\n", ::strerror(errno), dir.c_str());
     }
   } else {
     fprintf(stderr, "Unknown error: %s Exiting...\n", ::strerror(errno));
@@ -233,12 +235,12 @@ void Honeycomb::ensure_cd_exists() {
   }
   
   // Not sure if this and the next step is appropriate here anymore... *thinking about it*
-  if (mkdir(m_cd.c_str(), m_mode)) {
+  if (mkdir(dir.c_str(), m_mode)) {
     m_err << "Could not create the new confinement root " << m_cd;
   }
   
   // Make the directory owned by the user
-  if (chown(m_cd.c_str(), m_user, m_group)) {
+  if (chown(dir.c_str(), m_user, m_group)) {
     m_err << "Could not chown to the effective user: " << m_user;
   }
 }
@@ -304,11 +306,10 @@ int Honeycomb::bundle(int dlvl) {
   debug(dlvl, 3, "Running before hook for bundling\n");
   build_env_vars();
   
-  printf("before bundle\n\n");
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
-  ensure_cd_exists();
+  ensure_exists(m_cd);
   
   temp_drop();
   
@@ -383,6 +384,39 @@ int Honeycomb::bundle(int dlvl) {
 
 int Honeycomb::start(int dlvl) 
 {
+  debug(dlvl, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
+  phase *p = find_phase(m_honeycomb_config, T_START);
+  
+  debug(dlvl, 3, "Found the phase for the bundling action: %p\n", p);
+  
+  debug(dlvl, 3, "Running before hook for bundling\n");
+  build_env_vars();
+  
+  exec_hook("start", BEFORE, p);
+  // Run command
+  //--- Make sure the directory exists
+  ensure_exists(m_run_dir);
+  
+  temp_drop();
+  
+  // Change into the working directory
+  if (chdir(m_run_dir.c_str())) {
+    perror("chdir:");
+    return -1;
+  }
+  
+  if ((p != NULL) && (p->command != NULL)) {
+    debug(dlvl, 1, "Running client code: %s\n", p->command);
+    // Run the user's command
+    comb_exec(p->command);
+  } else {
+    //Default action
+    printf("Running default action for bundle\n");
+  }
+  
+  restore_perms();
+  
+  exec_hook("start", AFTER, p);
   return 0;
 }
 int Honeycomb::stop(int dlvl)
@@ -567,6 +601,9 @@ void Honeycomb::init() {
     //--- hive_dir
     m_hive_dir = "/var/beehive/hive"; // Default
     if (m_honeycomb_config->hive_dir != NULL) m_hive_dir = m_honeycomb_config->hive_dir;
+    //--- run_dir
+    m_run_dir = "/var/beehive/run_dir"; // Default
+    if (m_honeycomb_config->run_dir != NULL) m_run_dir = m_honeycomb_config->run_dir;
     
     //--- executables
     m_executables.insert("/bin/ls");

@@ -218,6 +218,7 @@ public:
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_root_dir(std::string dir) {m_root_dir = dir;}
+  void set_run_dir(std::string d) {m_run_dir = d;}
   void set_cd(std::string dir) {m_cd = dir;}
   void set_sha(std::string sha) {m_sha = sha;}
   void set_hive_dir(std::string d) {m_hive_dir = d;}
@@ -242,7 +243,7 @@ private:
   // Building
   int comb_exec(std::string cmd); // Run a hook on the system
   void exec_hook(std::string action, int stage, phase *p);
-  void ensure_cd_exists();
+  void ensure_exists(std::string s);
   string_set *string_set_from_lines_in_file(std::string filepath);
 };
 

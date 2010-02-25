@@ -28,6 +28,7 @@ int userid = -1;
 // Configs
 std::string config_file_dir;                // The directory containing configs
 std::string root_dir;                       // The root directory to work from within
+std::string run_dir;                        // The directory to run the bees
 std::string hive_dir;                       // Hive dir
 std::string sha;                            // The sha
 std::string name;                           // Name
@@ -57,21 +58,22 @@ void usage(int c)
   fprintf(fp, "Usage: babysitter <command> [options]\n"
   "babysitter bundle | mount | start | stop | unmount | cleanup\n"
   "* Options\n"
-  "*  --help | -h                 Show this message\n"
-  "*  --debug|-D <level>          Turn on debugging flag'\n"
-  "*  --port <port> | -p <port>   The port to run on"
-  "*  --hive_dir <dir> | -b <dir> Hive directory to store the sleeping bees\n"
-  "*  --name <name> | -n <name>   Name of the app\n"
-  "*  --user <user> | -u <user>   User to run as\n"
-  "*  --type <type> | -t <type>   The type of application (defaults to rack)\n"
-  "*  --root <dir> | -r <dir>     The directory where the bees will be created\n"
-  "*  --sha <sha> | -s <sha>      The sha of the bee\n"
-  "*  --image <file> | -i <file>  The image to mount that contains the bee\n"
-  "*  --exec <exec> | -e <exec>   Add an executable to the paths\n"
-  "*  --file <file> | -f <file>   Add this file to the path\n"
-  "*  --dir <dir> | -d <dir>      The directory\n"
-  "*  --scm_url <url> | -u <url>  The scm_url\n"
-  "*  --config <dir> | -c <dir>   The directory or file containing the config files\n\n"
+  "*  --help            | -h              Show this message\n"
+  "*  --debug           | -D <level>      Turn on debugging flag'\n"
+  "*  --port <port>     | -p <port>       The port to run on"
+  "*  --hive_dir <dir>  | -b <dir>        Hive directory to store the sleeping bees\n"
+  "*  --name <name>     | -n <name>       Name of the app\n"
+  "*  --user <user>     | -u <user>       User to run as\n"
+  "*  --type <type>     | -t <type>       The type of application (defaults to rack)\n"
+  "*  --root <dir>      | -r <dir>        The directory where the bees will be created\n"
+  "*  --run_dir <dir>   | -l <dir>        The directory to run the bees"
+  "*  --sha <sha>       | -s <sha>        The sha of the bee\n"
+  "*  --image <file>    | -i <file>       The image to mount that contains the bee\n"
+  "*  --exec <exec>     | -e <exec>       Add an executable to the paths\n"
+  "*  --file <file>     | -f <file>       Add this file to the path\n"
+  "*  --dir <dir>       | -d <dir>        The directory\n"
+  "*  --scm_url <url>   | -u <url>        The scm_url\n"
+  "*  --config <dir>    | -c <dir>        The directory or file containing the config files\n\n"
   );
   
   exit(c);
@@ -110,6 +112,9 @@ void parse_the_command_line(int argc, char *argv[])
       argc--; argv++;
     } else if (!strncmp(opt, "--port", 6) || !strncmp(opt, "-p", 2)) {
       port = atoi(argv[2]);
+      argc--; argv++;
+    } else if (!strncmp(opt, "--run_dir", 9) || !strncmp(opt, "-l", 2)) {
+      run_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
       memset(app_type, 0, BUF_SIZE);
@@ -200,6 +205,7 @@ int main (int argc, char *argv[])
   debug(dbg, 1, "\tsha: %s\n", sha.c_str());
   debug(dbg, 1, "\tconfig dir: %s\n", config_file_dir.c_str());
   debug(dbg, 1, "\tuser id: %d\n", userid);
+  debug(dbg, 1, "\trun dir: %d\n", run_dir.c_str());
   if (dbg > 1) {
     printf("--- files ---\n"); for(string_set::iterator it=files.begin(); it != files.end(); it++) printf("\t - %s\n", it->c_str());
     printf("--- dirs ---\n"); for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++) printf("\t - %s\n", it->c_str());
@@ -252,6 +258,7 @@ int main (int argc, char *argv[])
   if (scm_url != "") comb.set_scm_url(scm_url);
   if (port != -1) comb.set_port(port);
   if (hive_dir != "") comb.set_hive_dir(hive_dir);
+  if (run_dir != "") comb.set_run_dir(run_dir);
   
   switch(action) {
     case T_BUNDLE: 
