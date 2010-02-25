@@ -50,6 +50,7 @@ int Honeycomb::build_env_vars() {
   char app_root_buf[BUF_SIZE]; memset(app_root_buf, 0, BUF_SIZE); sprintf(app_root_buf, "APP_ROOT=%s", cd());
   char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", name());
   char hive_dir_buf[BUF_SIZE]; memset(hive_dir_buf, 0, BUF_SIZE); sprintf(hive_dir_buf, "HIVE_DIR=%s", hive_dir());
+  char bee_port_buf[BUF_SIZE]; memset(bee_port_buf, 0, BUF_SIZE); sprintf(bee_port_buf, "BEE_PORT=%d", port());
   
   // BEE_WORKING_DIR
   unsigned int path_size = pth.length();
@@ -67,6 +68,7 @@ int Honeycomb::build_env_vars() {
    app_type_buf,
    app_root_buf,
    user_id_buf,
+   bee_port_buf,
    image_buf,
    sha_buf,
    scm_url_buf,

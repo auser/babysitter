@@ -150,6 +150,7 @@ private:
   string_set              m_dirs;      // Directories to be included in the app
   string_set              m_files;     // Extra directories to be included in the honeycomb
   std::list<std::string>  m_env;       // A list of environment variables to use when starting
+  int                     m_port;      // The port to run
     // Resource sets
     rlim_t                m_nofiles;     // Number of files
   long                    m_nice;      // The "niceness" level
@@ -189,6 +190,7 @@ public:
   const char*  image()    const { return m_image.c_str(); }
   const char*  hive_dir() const { return m_hive_dir.c_str(); }
   const char*  name()    const { return m_name.c_str(); }
+  int          port()     const { return m_port; }
   char* const* env()      const { return (char* const*)m_cenv; }
   string_set   executables() const { return m_executables; }
   string_set   directories() const { return m_dirs; }
@@ -210,6 +212,7 @@ public:
   int cleanup(int debug_level);
   
   void set_name(std::string n) { m_name = n; }
+  void set_port(int p) { m_port = p; }
   void set_user(uid_t u) { m_user = u; }
   void set_image(std::string i) { m_image = i; }
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}

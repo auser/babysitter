@@ -38,6 +38,7 @@ string_set  files;                          // Files to add
 string_set  dirs;                           // Dirs to add
 ConfigMapT  known_configs;                  // Map containing all the known application configurations (in /etc/beehive/apps)
 phase_type  action;
+int port;                                   // Port to run
 char        app_type[BUF_SIZE];             // App type defaults to rack
 char        usr_action_str[BUF_SIZE];       // Used for error printing
 
@@ -58,6 +59,7 @@ void usage(int c)
   "* Options\n"
   "*  --help | -h                 Show this message\n"
   "*  --debug|-D <level>          Turn on debugging flag'\n"
+  "*  --port <port> | -p <port>   The port to run on"
   "*  --hive_dir <dir> | -b <dir> Hive directory to store the sleeping bees\n"
   "*  --name <name> | -n <name>   Name of the app\n"
   "*  --user <user> | -u <user>   User to run as\n"
@@ -86,21 +88,6 @@ void setup_defaults() {
 /**
  * Relatively inefficient command-line parsing, but... 
  * this isn't speed-critical, so it doesn't matter
- *
- * Options
- *  --help | -h                 Show this message
- *  --debug|-D <level>          Turn on debugging flag'
- *  --user <user> | -u <user>   User to run as
- *  --type <type> | -t <type>   The type of application (defaults to rack)
- *  --root <dir> | -r <dir>     The directory where the bees will be created
- *  --sha <sha> | -s <sha>      The sha of the bee
- *  --image <file> | -i <file>  The image to mount that contains the bee
- *  --exec <exec> | -e <exec>   Add an executable to the paths
- *  --file <file> | -f <file>   Add this file to the path
- *  --dir <dir> | -d <dir>      The directory
- *  --scm_url <url> | -u <url>  The scm_url
- *  --config <dir> | -c <dir>   The directory or file containing the config files
- *  action                      Action to run
 **/
 void parse_the_command_line(int argc, char *argv[])
 {
@@ -120,6 +107,9 @@ void parse_the_command_line(int argc, char *argv[])
       usage(0);
     } else if (!strncmp(opt, "--name", 6) || !strncmp(opt, "-n", 2)) {
       name = argv[2];
+      argc--; argv++;
+    } else if (!strncmp(opt, "--port", 6) || !strncmp(opt, "-p", 2)) {
+      port = atoi(argv[2]);
       argc--; argv++;
     } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
       memset(app_type, 0, BUF_SIZE);
@@ -260,6 +250,7 @@ int main (int argc, char *argv[])
   if (sha != "") comb.set_sha(sha);
   if (root_dir != "") comb.set_root_dir(root_dir);
   if (scm_url != "") comb.set_scm_url(scm_url);
+  if (port != -1) comb.set_port(port);
   if (hive_dir != "") comb.set_hive_dir(hive_dir);
   
   switch(action) {
