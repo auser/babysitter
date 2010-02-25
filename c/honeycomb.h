@@ -241,7 +241,7 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  int comb_exec(std::string cmd); // Run a hook on the system
+  int comb_exec(std::string cmd, bool should_wait); // Run a hook on the system
   void exec_hook(std::string action, int stage, phase *p);
   void ensure_exists(std::string s);
   string_set *string_set_from_lines_in_file(std::string filepath);

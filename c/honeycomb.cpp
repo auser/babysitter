@@ -97,7 +97,7 @@ int Honeycomb::build_env_vars() {
 #define MAX_ARGS 64
 #endif
 // Run a hook on the system
-int Honeycomb::comb_exec(std::string cmd) {
+int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
   setup_defaults(); // Setup default environments
   const std::string shell = getenv("SHELL");  
   const std::string shell_args = "-c";
@@ -166,11 +166,16 @@ int Honeycomb::comb_exec(std::string cmd) {
         return -1;
       }
     }
-    while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
-    assert(0 == status);
+    if (should_wait) {
+      while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+      assert(0 == status);
+      
+      // Cleanup :)
+      printf("Cleaning up...\n");
+      unlink(filename);
+    } 
     // Cleanup :)
-    printf("Cleaning up...\n");
-    unlink(filename);
+    printf("Done...\n");
   } else {
     
     // First, we have to construct the command
@@ -203,8 +208,10 @@ int Honeycomb::comb_exec(std::string cmd) {
       }
     }
     
-    while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
-    assert(0 == status);
+    if (should_wait) {
+      while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+      assert(0 == status);
+    }
   }
   
   return 0;
@@ -408,7 +415,7 @@ int Honeycomb::start(int dlvl)
   if ((p != NULL) && (p->command != NULL)) {
     debug(dlvl, 1, "Running client code: %s\n", p->command);
     // Run the user's command
-    comb_exec(p->command);
+    comb_exec(p->command, false);
   } else {
     //Default action
     printf("Running default action for bundle\n");
