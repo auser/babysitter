@@ -60,19 +60,19 @@ ANYTHING  (.*)
   return KEYWORD;
 }
 
-directories         {yylval.atype = T_DIRECTORIES; return RESERVED;}
-executables         {yylval.atype = T_EXECUTABLES; return RESERVED;}
-files               {yylval.atype = T_FILES; return RESERVED;}
-clone_command       {yylval.atype = T_CLONE_CMD; return RESERVED;}
-user                {yylval.atype = T_USER; return RESERVED;}
-group               {yylval.atype = T_GROUP; return RESERVED;}
-env                 {yylval.atype = T_ENV; return RESERVED;}
-stdout              {yylval.atype = T_STDOUT; return RESERVED;}
-stdin               {yylval.atype = T_STDIN; return RESERVED;}
-root_dir            {yylval.atype = T_ROOT_DIR; return RESERVED;}
-run_dir             {yylval.atype = T_RUN_DIR; return RESERVED;}
-image               {yylval.atype = T_IMAGE; return RESERVED;}
-skel_dir            {yylval.atype = T_SKEL_DIR; return RESERVED;}
+^directories         {yylval.atype = T_DIRECTORIES; return RESERVED;}
+^executables         {yylval.atype = T_EXECUTABLES; return RESERVED;}
+^files               {yylval.atype = T_FILES; return RESERVED;}
+^clone_command       {yylval.atype = T_CLONE_CMD; return RESERVED;}
+^user                {yylval.atype = T_USER; return RESERVED;}
+^group               {yylval.atype = T_GROUP; return RESERVED;}
+^env                 {yylval.atype = T_ENV; return RESERVED;}
+^stdout              {yylval.atype = T_STDOUT; return RESERVED;}
+^stdin               {yylval.atype = T_STDIN; return RESERVED;}
+^root_dir            {yylval.atype = T_ROOT_DIR; return RESERVED;}
+^run_dir             {yylval.atype = T_RUN_DIR; return RESERVED;}
+^image               {yylval.atype = T_IMAGE; return RESERVED;}
+^skel_dir            {yylval.atype = T_SKEL_DIR; return RESERVED;}
 
   /* blocks */
 \{                  {

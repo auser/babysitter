@@ -57,6 +57,7 @@ int Honeycomb::build_env_vars() {
     path_buf,
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
    "HOME=/home/app",
+   "FILESYSTEM=ext3",
    app_name_buf, 
    app_type_buf,
    user_id_buf,
@@ -166,7 +167,13 @@ int Honeycomb::comb_exec(std::string cmd) {
     memset(str_cmd, 0, BUF_SIZE); // Clear it
     
     memcpy(str_cmd, cmd.c_str(), strlen(cmd.c_str()));
-    argv[argc] = strtok(str_cmd, " \r\t\n");
+    
+    std::string bin = find_binary(str_cmd);
+    argv[argc] = bin.c_str();
+    // Remove the first one
+    strtok(str_cmd, " \r\t\n");
+    
+    // argv[argc] = strtok(str_cmd, " \r\t\n");
     
     while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
     
@@ -286,6 +293,8 @@ int Honeycomb::bundle(int dlvl) {
   
   debug(dlvl, 3, "Running before hook for bundling\n");
   build_env_vars();
+  
+  printf("before bundle\n\n");
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
@@ -318,7 +327,6 @@ int Honeycomb::bundle(int dlvl) {
     std::string bin = find_binary("git");
     argv[argc] = bin.c_str();
     // Remove the first one
-    printf("binary: %s\n", bin.c_str());
     strtok(str_clone_command, " \r\t\n");
 
     while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
