@@ -51,6 +51,7 @@ int Honeycomb::build_env_vars() {
   char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=%s", image());
   char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
   char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
+  char m_size_buf[BUF_SIZE]; memset(m_size_buf, 0, BUF_SIZE); sprintf(m_size_buf, "BEE_SIZE=%d", (int)(m_size / 1024));
   
   const char* default_env_vars[] = {
     path_buf,
@@ -62,6 +63,7 @@ int Honeycomb::build_env_vars() {
    image_buf,
    sha_buf,
    scm_url_buf,
+   m_size_buf,
    NULL
   };
   
@@ -340,14 +342,14 @@ int Honeycomb::bundle(int dlvl) {
   
   std::string git_root_dir = m_cd + "/home/app";
   m_sha = parse_sha_from_git_directory(git_root_dir);
+  m_size = dir_size_r(m_cd.c_str());
   
   // Because we may have modified the environment's SHA, we should rebuild it
   free(m_cenv);
   build_env_vars();
   
   if ((p != NULL) && (p->command != NULL)) {
-    debug(dlvl, 1, "Running client code instead\n");
-    printf("p: %s\n", p->command);
+    debug(dlvl, 1, "Running client code: %s\n", p->command);
     // Run the user's command
     comb_exec(p->command);
   } else {

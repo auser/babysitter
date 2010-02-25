@@ -151,7 +151,7 @@ private:
     // Resource sets
     rlim_t                m_nofiles;     // Number of files
   long                    m_nice;      // The "niceness" level
-  size_t                  m_size;      // The heap/stack size
+  size_t                  m_size;      // The directory size
   uid_t                   m_user;      // run as user (generated if not given)
   gid_t                   m_group;     // run as this group
   const char**            m_cenv;      // The string list of environment variables
