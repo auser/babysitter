@@ -58,10 +58,10 @@ void usage(int c)
   fprintf(fp, "Usage: babysitter <command> [options]\n"
   "babysitter bundle | mount | start | stop | unmount | cleanup\n"
   "* Options\n"
-  "*  --help            | -h              Show this message\n"
+  "*  --help            | -H              Show this message\n"
   "*  --debug           | -D <level>      Turn on debugging flag'\n"
   "*  --port <port>     | -p <port>       The port to run on"
-  "*  --hive_dir <dir>  | -b <dir>        Hive directory to store the sleeping bees\n"
+  "*  --hive_dir <dir>  | -h <dir>        Hive directory to store the sleeping bees\n"
   "*  --name <name>     | -n <name>       Name of the app\n"
   "*  --user <user>     | -u <user>       User to run as\n"
   "*  --type <type>     | -t <type>       The type of application (defaults to rack)\n"
@@ -105,7 +105,7 @@ void parse_the_command_line(int argc, char *argv[])
       char * pEnd;
       dbg = strtol(argv[2], &pEnd, 10);
       argc--; argv++;
-    } else if (!strncmp(opt, "--help", 6) || !strncmp(opt, "-h", 2)) {
+    } else if (!strncmp(opt, "--help", 6) || !strncmp(opt, "-H", 2)) {
       usage(0);
     } else if (!strncmp(opt, "--name", 6) || !strncmp(opt, "-n", 2)) {
       name = argv[2];
@@ -113,7 +113,7 @@ void parse_the_command_line(int argc, char *argv[])
     } else if (!strncmp(opt, "--port", 6) || !strncmp(opt, "-p", 2)) {
       port = atoi(argv[2]);
       argc--; argv++;
-    } else if (!strncmp(opt, "--run_dir", 9) || !strncmp(opt, "-l", 2)) {
+    } else if (!strncmp(opt, "--run_dir", 9) || !strncmp(opt, "-h", 2)) {
       run_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
