@@ -119,7 +119,7 @@ honeycomb_config* a_new_honeycomb_config_object(void) {
   c->group = NULL;
   c->image = NULL;
   c->skel_dir = NULL;
-  
+  c->hive_dir = NULL;
   
   return c;
 	// Should never get here
@@ -236,6 +236,9 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
     case T_IMAGE:
       c->image = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->image, 0, strlen(value)); memcpy(c->image, value, strlen(value)); break;
+    case T_HIVE_DIR:
+      c->hive_dir = (char *)malloc(sizeof(char *) * strlen(value));
+      memset(c->hive_dir, 0, strlen(value)); memcpy(c->hive_dir, value, strlen(value)); break;
     case T_SKEL_DIR:
       c->skel_dir = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->skel_dir, 0, strlen(value)); memcpy(c->skel_dir, value, strlen(value)); break;
@@ -266,6 +269,7 @@ void free_config(honeycomb_config *c) {
   if (c->group) free(c->group);
   if (c->image) free(c->image);
   if (c->skel_dir) free(c->skel_dir);
+  if (c->hive_dir) free(c->hive_dir);
 }
 
 // Free a phase struct

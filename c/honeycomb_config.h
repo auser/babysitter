@@ -43,6 +43,7 @@ typedef enum _attr_type_ {
   T_SKEL_DIR,
   T_RUN_DIR,
   T_CLONE_CMD,
+  T_HIVE_DIR,
   T_ROOT_DIR
 } attr_type;
 
@@ -69,6 +70,7 @@ typedef struct _honeycomb_config_ {
   char *group;          // The group to run this honeycomb
   char *image;          // Image to mount as bee
   char *skel_dir;       // Skeleton directory to copy instead of building it
+  char *hive_dir;       // Directory to store the bees in
   // Phases
   size_t num_phases;
   phase **phases;

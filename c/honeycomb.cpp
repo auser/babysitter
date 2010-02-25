@@ -40,26 +40,32 @@ int Honeycomb::setup_defaults() {
 }
 int Honeycomb::build_env_vars() {
   /* Setup environment defaults */
-  std::string pth = DEFAULT_PATH;
-  // char *p2 = getenv("PATH");
-  // if (p2) {pth = p2;}  
-  unsigned int path_size = pth.length();
-  char path_buf[path_size]; memset(path_buf, 0, path_size); sprintf(path_buf, "PATH=%s", pth.c_str());
-  char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_ROOT=%s", cd());
+  std::string pth = DEFAULT_PATH;  
   char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
   char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%d", (int)user());
   char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=%s", image());
   char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
   char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
   char m_size_buf[BUF_SIZE]; memset(m_size_buf, 0, BUF_SIZE); sprintf(m_size_buf, "BEE_SIZE=%d", (int)(m_size / 1024));
+  char app_root_buf[BUF_SIZE]; memset(app_root_buf, 0, BUF_SIZE); sprintf(app_root_buf, "APP_ROOT=%s", cd());
+  char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", name());
+  char hive_dir_buf[BUF_SIZE]; memset(hive_dir_buf, 0, BUF_SIZE); sprintf(hive_dir_buf, "HIVE_DIR=%s", hive_dir());
+  
+  // BEE_WORKING_DIR
+  unsigned int path_size = pth.length();
+  char path_buf[path_size+1]; 
+  memset(path_buf, 0, path_size+1); 
+  sprintf(path_buf, "PATH=%s", pth.c_str());
   
   const char* default_env_vars[] = {
     path_buf,
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
    "HOME=/home/app",
    "FILESYSTEM=ext3",
-   app_name_buf, 
+   app_name_buf,
+   hive_dir_buf,
    app_type_buf,
+   app_root_buf,
    user_id_buf,
    image_buf,
    sha_buf,
@@ -69,14 +75,16 @@ int Honeycomb::build_env_vars() {
   };
   
   int m_cenv_c = 0;
-  const int max_env_vars = 2048;
+  const int max_env_vars = BUF_SIZE*10;
   
   if ((m_cenv = (const char**) new char* [max_env_vars]) == NULL) {
     m_err << "Could not allocate enough memory to create list"; return -1;
   }
   
-  memcpy(m_cenv, default_env_vars, (std::min((int)max_env_vars, (int)sizeof(default_env_vars)) * sizeof(char *)));
+  memcpy(m_cenv, default_env_vars, (int)sizeof(default_env_vars));
   m_cenv_c = sizeof(default_env_vars) / sizeof(char *);
+  
+  m_cd = m_root_dir + "/" + to_string(m_user, 10);
   
   return 0;
 }
@@ -553,9 +561,10 @@ void Honeycomb::init() {
     
     //--- root_directory
     m_root_dir = "/var/beehive/honeycombs"; // Default
-    if (m_honeycomb_config->root_dir != NULL) {
-      m_root_dir = m_honeycomb_config->root_dir;
-    }
+    if (m_honeycomb_config->root_dir != NULL) m_root_dir = m_honeycomb_config->root_dir;
+    //--- hive_dir
+    m_hive_dir = "/var/beehive/hive"; // Default
+    if (m_honeycomb_config->hive_dir != NULL) m_hive_dir = m_honeycomb_config->hive_dir;
     
     //--- executables
     m_executables.insert("/bin/ls");
@@ -596,7 +605,7 @@ void Honeycomb::init() {
     
     // The m_cd path is the confinement_root plus the user's uid
     // because it's randomly generated
-    m_cd = m_root_dir + "/" + to_string(m_user, 10);    
+    m_cd = m_root_dir + "/" + to_string(m_user, 10);
   }
 }
 

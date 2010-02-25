@@ -37,20 +37,20 @@ ANYTHING  (.*)
 (NULL|null)         {debug(DEBUG_LEVEL, 2, "Found a null\n"); return NULLABLE;}
 
   /* Hooks */
-{KEYWORDS}\.before  {
+^{KEYWORDS}\.before  {
                       /* strip off the .before (gross) */
                       yylval.stype = collect_to_period(yytext);
                       debug(DEBUG_LEVEL, 3, "next before hook: %s\n", yytext); 
                       return BEFORE;
                     }
-{KEYWORDS}\.after   {
+^{KEYWORDS}\.after   {
                       /* strip off the .after (gross) */
                       yylval.stype = collect_to_period(yytext);
                       debug(DEBUG_LEVEL, 3, "next after hook: %s\n", yytext); 
                       return AFTER;
                     }
   /* Keywords */
-{KEYWORDS}          {
+^{KEYWORDS}          {
   debug(DEBUG_LEVEL, 3, "next phase: %s\n", yytext);
   
   yylval.stype = (char *) malloc(sizeof(char) * strlen(yytext));
@@ -73,6 +73,7 @@ ANYTHING  (.*)
 ^run_dir             {yylval.atype = T_RUN_DIR; return RESERVED;}
 ^image               {yylval.atype = T_IMAGE; return RESERVED;}
 ^skel_dir            {yylval.atype = T_SKEL_DIR; return RESERVED;}
+^hive_dir            {yylval.atype = T_HIVE_DIR; return RESERVED;}
 
   /* blocks */
 \{                  {

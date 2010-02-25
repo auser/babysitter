@@ -28,7 +28,9 @@ int userid = -1;
 // Configs
 std::string config_file_dir;                // The directory containing configs
 std::string root_dir;                       // The root directory to work from within
+std::string hive_dir;                       // Hive dir
 std::string sha;                            // The sha
+std::string name;                           // Name
 std::string scm_url;                        // The scm url
 std::string image;                          // The image to mount
 string_set  execs;                          // Executables to add
@@ -56,6 +58,8 @@ void usage(int c)
   "* Options\n"
   "*  --help | -h                 Show this message\n"
   "*  --debug|-D <level>          Turn on debugging flag'\n"
+  "*  --hive_dir <dir> | -b <dir> Hive directory to store the sleeping bees\n"
+  "*  --name <name> | -n <name>   Name of the app\n"
   "*  --user <user> | -u <user>   User to run as\n"
   "*  --type <type> | -t <type>   The type of application (defaults to rack)\n"
   "*  --root <dir> | -r <dir>     The directory where the bees will be created\n"
@@ -75,7 +79,6 @@ void setup_defaults() {
   userid = -1;
   config_file_dir = "/etc/beehive/config";
   action = T_EMPTY;
-  root_dir = "/var/beehive/honeycombs";
   memset(app_type, 0, BUF_SIZE);
   strncpy(app_type, "rack", 4);
 }
@@ -115,12 +118,18 @@ void parse_the_command_line(int argc, char *argv[])
       argc--; argv++;
     } else if (!strncmp(opt, "--help", 6) || !strncmp(opt, "-h", 2)) {
       usage(0);
+    } else if (!strncmp(opt, "--name", 6) || !strncmp(opt, "-n", 2)) {
+      name = argv[2];
+      argc--; argv++;
     } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
       memset(app_type, 0, BUF_SIZE);
       strncpy(app_type, argv[2], strlen(argv[2]));
       argc--; argv++;
     } else if (!strncmp(opt, "--image", 7) || !strncmp(opt, "-i", 2)) {
       image = argv[2];
+      argc--; argv++;
+    } else if (!strncmp(opt, "--hive_dir", 10) || !strncmp(opt, "-b", 2)) {
+      hive_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--sha", 6) || !strncmp(opt, "-s", 2)) {
       sha = argv[2];
@@ -245,11 +254,13 @@ int main (int argc, char *argv[])
   for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++) comb.add_dir(it->c_str());
   for(string_set::iterator it=execs.begin(); it != execs.end(); it++) comb.add_executable(it->c_str());
   
-  comb.set_image(image);
-  comb.set_user(userid);
-  comb.set_cd(root_dir);
-  comb.set_sha(sha);
-  comb.set_scm_url(scm_url);
+  if (name != "") comb.set_name(name);
+  if (image != "") comb.set_image(image);
+  if (userid != -1) comb.set_user(userid);
+  if (sha != "") comb.set_sha(sha);
+  if (root_dir != "") comb.set_root_dir(root_dir);
+  if (scm_url != "") comb.set_scm_url(scm_url);
+  if (hive_dir != "") comb.set_hive_dir(hive_dir);
   
   switch(action) {
     case T_BUNDLE: 

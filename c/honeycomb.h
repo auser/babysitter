@@ -135,8 +135,10 @@ private:
   std::stringstream       m_err;       // Error message to use to pass backwards to the erlang caller
   std::string             m_root_dir;  // The root directory to start from
   std::string             m_run_dir;   // The directory to run bees and honeycombs from
+  std::string             m_hive_dir;  // The directory to store the sleeping bees
   mode_t                  m_mode;      // The mode of the m_cd
   std::string             m_cd;        // The directory to execute the command (generated, if not given)
+  std::string             m_name;      // Name
   std::string             m_sha;       // Sha
   std::string             m_app_type;  // The type of the application
     std::string             m_skel_dir;      // A skeleton choot directory to work from
@@ -185,6 +187,8 @@ public:
   const char*  skel()     const { return m_skel_dir.c_str(); }
   const char*  sha()      const { return m_sha.c_str(); }
   const char*  image()    const { return m_image.c_str(); }
+  const char*  hive_dir() const { return m_hive_dir.c_str(); }
+  const char*  name()    const { return m_name.c_str(); }
   char* const* env()      const { return (char* const*)m_cenv; }
   string_set   executables() const { return m_executables; }
   string_set   directories() const { return m_dirs; }
@@ -205,16 +209,15 @@ public:
   int unmount(int debug_level);
   int cleanup(int debug_level);
   
+  void set_name(std::string n) { m_name = n; }
   void set_user(uid_t u) { m_user = u; }
   void set_image(std::string i) { m_image = i; }
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
   void set_scm_url(std::string url) {m_scm_url = url;}
-  void set_cd(std::string dir) {
-    m_root_dir = dir;
-    if (m_user == (uid_t)-1) m_user = random_uid();
-    m_cd = m_root_dir + "/" + to_string(m_user, 10);
-  }
+  void set_root_dir(std::string dir) {m_root_dir = dir;}
+  void set_cd(std::string dir) {m_cd = dir;}
   void set_sha(std::string sha) {m_sha = sha;}
+  void set_hive_dir(std::string d) {m_hive_dir = d;}
   void add_file(std::string file) {m_files.insert(file);}
   void add_dir(std::string dir) { m_dirs.insert(dir); }
   void add_executable(std::string exec) { m_executables.insert(exec); }
