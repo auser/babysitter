@@ -197,7 +197,16 @@ void usage(int c, bool detailed = false)
   if (detailed)
     fprintf(fp, "Usage: babysitter <command> [options]\n"
       "Babysitter commands:\n"
-      "\tbundle - This bundles the bee into a single file\n"
+      "\tbundle   - This bundles the bee into a single file\n"
+      "\tmount    - This is responsible for actually mounting the bee\n"
+      "\tstart    - This will call the start command action on the bee\n"
+      "\tstop     - This will call the stop command action on the bee\n"
+      "\tunmount  - This will call the unmount command on the bee\n"
+      "\tcleanup  - This will force the cleanup action on the bee\n"
+      "\n"
+      "All of the actions are described in configuration files. By passing the --config <dir> | -c <dir>\n"
+      "switches, you can override the default configuration file directory location.\n"
+      "The bees are mapped to their respective configuration file name by the type of bee that's launched\n"
       "\n"
       );
       
@@ -207,9 +216,9 @@ void usage(int c, bool detailed = false)
 void setup_defaults() {
   userid = -1;
   config_file_dir = "/etc/beehive/config";
-  root_dir = "/var/beehive";
-  run_dir = root_dir + "/active";
-  working_dir = root_dir + "/scratch";
+  // root_dir = "/var/beehive";
+  // run_dir = root_dir + "/active";
+  // working_dir = root_dir + "/scratch";
   action = T_EMPTY;
   memset(app_type, 0, BUF_SIZE);
   strncpy(app_type, "rack", 4);

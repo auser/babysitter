@@ -64,7 +64,7 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 11 "honeycomb.y"
+#line 12 "honeycomb.y"
 {
   int i; 
   char* stype;

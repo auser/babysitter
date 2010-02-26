@@ -1,6 +1,7 @@
 %{
 #include <stdio.h>
 #include <string.h>
+
 #include "honeycomb_config.h"
 #include "hc_support.h"
 

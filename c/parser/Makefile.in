@@ -17,7 +17,7 @@ clean:
 lex:
 	lex honeycomb.l
 
-y.tab.h: lex honeycomb.y
+y.tab.h: lex honeycomb.y 
 	yacc $(YACCFLAGS) honeycomb.y
 
 test_hc_config: honeycomb.c y.tab.h hc_support.o $(LIB_OBJ)

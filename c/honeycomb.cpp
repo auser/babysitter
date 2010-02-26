@@ -25,10 +25,10 @@
 // Erlang interface
 // #include "ei++.h"
 
-#include "babysitter_utils.h"
 #include "honeycomb_config.h"
 #include "honeycomb.h"
 #include "hc_support.h"
+#include "babysitter_utils.h"
 
 /*---------------------------- Implementation ------------------------------*/
 
@@ -228,27 +228,7 @@ void Honeycomb::exec_hook(std::string action, int stage, phase *p) {
 }
 
 void Honeycomb::ensure_exists(std::string dir) {
-  struct stat stt;
-  if (0 == stat(dir.c_str(), &stt)) {
-    // Should we check on the ownership?
-  } else if (ENOENT == errno) {
-    if (mkdir(dir.c_str(), m_mode)) {
-      fprintf(stderr, "Error: %s and could not create the directory: %s\n", ::strerror(errno), dir.c_str());
-    }
-  } else {
-    fprintf(stderr, "Unknown error: %s Exiting...\n", ::strerror(errno));
-    exit(-1);
-  }
-  
-  // Not sure if this and the next step is appropriate here anymore... *thinking about it*
-  if (mkdir(dir.c_str(), m_mode)) {
-    std::cerr << "Could not create the new confinement root " << dir << std::endl;
-  }
-  
-  // Make the directory owned by the user
-  if (chown(dir.c_str(), m_user, m_group)) {
-    std::cerr << "Could not chown to the effective user: " << m_user << std::endl;
-  }
+  mkdir_p(dir, m_user, m_group, m_mode);
 }
 
 string_set *Honeycomb::string_set_from_lines_in_file(std::string filepath) {
@@ -315,6 +295,7 @@ int Honeycomb::bundle(int dlvl) {
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
+  debug(dlvl, 3, "Making sure the working directory: '%s' exists\n", m_working_dir.c_str());
   ensure_exists(m_working_dir);
   
   temp_drop();

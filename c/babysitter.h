@@ -14,6 +14,7 @@
 #include <deque>
 
 #include "honeycomb.h"
+#include "babysitter_utils.h"
 
 #ifndef BABYSITTER_VERSION
 // TODO: Make this read from the VERSION file at root
