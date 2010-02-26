@@ -87,7 +87,7 @@ int Honeycomb::build_env_vars() {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
     exit(-1);
   }
-  
+    
   memset(m_cenv, 0, (int)sizeof(default_env_vars));
   memcpy(m_cenv, default_env_vars, (int)sizeof(default_env_vars));
   
@@ -159,8 +159,6 @@ int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
       // we are in a new process
       argv[2] = sFile.c_str();
       argv[3] = NULL;
-      // int i = 0;
-      //for (i = 0; i < 4; i++) printf("argv[%i] = %s\n", i, argv[i]);
       
       if (execve(argv[2], (char* const*)argv, (char* const*)m_cenv) < 0) {
         fprintf(stderr, "Cannot execute file '%s' because '%s'", argv[2], ::strerror(errno));
