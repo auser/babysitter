@@ -1,6 +1,7 @@
 autom4te.cache/*
 c/Makefile
 erl/Makefile
+test/c/Makefile
 ebin/*.beam
 ebin/*.boot
 ebin/*.rel
