@@ -218,7 +218,7 @@ void usage(int c, bool detailed = false)
       "\tbundle.after: mail -s 'Bundled' root@localhost\n\n"
       "These actions will be called when babysitter calls the action.\n"
       "There are 5 actions that can be overridden from their defaults from within babysitter.These are\n"
-      "bundle, mount, start, stop, unmount and cleanup\n"
+      "bundle, mount, start, stop, unmount and cleanup\n\n"
       "The environment variables that are available to the bee are as follows:\n"
       "\tBEE_IMAGE    - The location of the compressed bee (or locaton or the compressed bee, when 'bundle' is called)\n"
       "\tAPP_NAME     - The name of the application\n"
@@ -231,7 +231,6 @@ void usage(int c, bool detailed = false)
       "\tFILESYSTEM   - The preferred filesystem type\n"
       "\tWORKING_DIR  - The directory to work from within\n"
       "\tSTORAGE_DIR  - The directory to store the final bees in\n"
-      "\t\n"
       "\n"
       );
       
