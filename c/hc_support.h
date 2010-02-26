@@ -3,7 +3,7 @@
 #endif
 
 #ifndef SCRIPT_HEADER
-#define SCRIPT_HEADER "#!/bin/sh -ex"
+#define SCRIPT_HEADER "#!/bin/sh -e"
 #endif
 
 #ifndef YYPARSE_PARAM

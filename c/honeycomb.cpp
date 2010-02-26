@@ -40,9 +40,9 @@ int Honeycomb::setup_defaults() {
 }
 int Honeycomb::build_env_vars() {
   /* Setup environment defaults */
-  std::string pth = DEFAULT_PATH;  
-  char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
+  char temp[BUF_SIZE]; memset(temp, 0, BUF_SIZE);
   char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%o", user());
+  char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
   char group_id_buf[BUF_SIZE]; memset(group_id_buf, 0, BUF_SIZE); sprintf(group_id_buf, "APP_GROUP=%o", group());
   char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=%s", image());
   char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
@@ -55,19 +55,15 @@ int Honeycomb::build_env_vars() {
   char run_dir_buf[BUF_SIZE]; memset(run_dir_buf, 0, BUF_SIZE); sprintf(run_dir_buf, "RUN_DIR=%s", run_dir());
   
   // BEE_WORKING_DIR
+  std::string pth = DEFAULT_PATH;
   unsigned int path_size = pth.length();
-  char path_buf[path_size+1]; 
-  memset(path_buf, 0, path_size+1); 
+  char path_buf[path_size]; 
+  memset(path_buf, 0, path_size); 
   sprintf(path_buf, "PATH=%s", pth.c_str());
   
   const char* default_env_vars[] = {
-    path_buf,
-   "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   // "HOME=/home/app",
-   "FILESYSTEM=ext3",
    app_name_buf,
    storage_dir_buf,
-   app_type_buf,
    app_root_buf,
    user_id_buf,
    group_id_buf,
@@ -77,19 +73,23 @@ int Honeycomb::build_env_vars() {
    sha_buf,
    scm_url_buf,
    m_size_buf,
+   path_buf,
+   app_type_buf,
+   "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
+   "HOME=/home/app",
+   "FILESYSTEM=ext3",
    NULL
   };
   
-  int m_cenv_c = 0;
-  
-  if ( (m_cenv = (const char **) malloc(sizeof(char *) * (int)sizeof(default_env_vars))) == NULL ) {
+  m_cenv_c = sizeof(default_env_vars) / sizeof(char *);
+    
+  if ( (m_cenv = (const char **) malloc(sizeof(char *) * m_cenv_c)) == NULL ) {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
     exit(-1);
   }
   
   memset(m_cenv, 0, (int)sizeof(default_env_vars));
   memcpy(m_cenv, default_env_vars, (int)sizeof(default_env_vars));
-  m_cenv_c = sizeof(default_env_vars) / sizeof(char *);
   
   return 0;
 }
@@ -100,6 +100,8 @@ int Honeycomb::build_env_vars() {
 // Run a hook on the system
 int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
   setup_defaults(); // Setup default environments
+  build_env_vars();
+  
   const std::string shell = getenv("SHELL");  
   const std::string shell_args = "-c";
   const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str(), NULL };
@@ -172,11 +174,9 @@ int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
       assert(0 == status);
       
       // Cleanup :)
-      printf("Cleaning up...\n");
       unlink(filename);
     } 
     // Cleanup :)
-    printf("Done...\n");
   } else {
     
     // First, we have to construct the command
@@ -290,7 +290,7 @@ void Honeycomb::setup_internals()
   
   m_working_dir = m_working_dir + "/" + usr_postfix;
   m_run_dir = m_run_dir +  "/" + usr_postfix;
-  m_storage_dir = m_storage_dir + "/" + usr_postfix;
+  // m_storage_dir = m_storage_dir + "/" + usr_postfix;
 }
 
 //---
@@ -305,7 +305,6 @@ int Honeycomb::bundle(int dlvl) {
   debug(dlvl, 3, "Found the phase for the bundling action: %p\n", p);
   
   debug(dlvl, 3, "Running before hook for bundling\n");
-  build_env_vars();
   
   exec_hook("bundle", BEFORE, p);
   // Run command
@@ -364,9 +363,6 @@ int Honeycomb::bundle(int dlvl) {
     m_sha = parse_sha_from_git_directory(git_root_dir);
     m_size = dir_size_r(m_working_dir.c_str());
   }
-    
-  // Because we may have modified the environment's SHA, we should rebuild it
-  build_env_vars();
   
   if ((p != NULL) && (p->command != NULL)) {
     debug(dlvl, 1, "Running client code: %s\n", p->command);
@@ -395,7 +391,6 @@ int Honeycomb::start(int dlvl)
   debug(dlvl, 3, "Found the phase for the bundling action: %p\n", p);
   
   debug(dlvl, 3, "Running before hook for bundling\n");
-  build_env_vars();
   
   exec_hook("start", BEFORE, p);
   // Run command

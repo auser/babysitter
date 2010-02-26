@@ -53,6 +53,7 @@ const char *parse_sha_from_git_directory(std::string root_directory)
   }
   memset(sha_val_ret, 0, strlen(sha_val)); // Clear it out
   memcpy(sha_val_ret, sha_val, strlen(sha_val));
+  *(sha_val_ret + strlen(sha_val)) = '\0';
   
   return sha_val_ret;
 }
