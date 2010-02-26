@@ -23,7 +23,7 @@
 
 // Globals
 int alarm_max_time      = 12;
-int userid = -1;
+int to_set_user_id = -1;
 
 std::deque<PidStatusT> exited_children;
 sigjmp_buf  jbuf;
@@ -214,11 +214,8 @@ void usage(int c, bool detailed = false)
 }
 
 void setup_defaults() {
-  userid = -1;
+  to_set_user_id = -1;
   config_file_dir = "/etc/beehive/config";
-  // root_dir = "/var/beehive";
-  // run_dir = root_dir + "/active";
-  // working_dir = root_dir + "/scratch";
   action = T_EMPTY;
   memset(app_type, 0, BUF_SIZE);
   strncpy(app_type, "rack", 4);
@@ -291,13 +288,12 @@ void parse_the_command_line(int argc, char *argv[])
       working_dir = argv[2];
       argc--; argv++;
     } else if (!strncmp(opt, "--user", 6) || !strncmp(opt, "-u", 2)) {
-      char* run_as_user = argv[2];
-      struct passwd *pw = NULL;
-      if ((pw = getpwnam(run_as_user)) == NULL) {
-        fprintf(stderr, "User %s not found!\n", run_as_user);
-        exit(3);
+      struct passwd *pw;
+      if ((pw = getpwnam(argv[2])) == 0) {
+        to_set_user_id = (uid_t)pw->pw_uid;
+      } else {
+        fprintf(stderr, "Could not get name for user: %s: %s\n", argv[2], ::strerror(errno));
       }
-      userid = pw->pw_uid;
       argc--; argv++;
     // ACTIONS
     } else if (!strncmp(opt, "bundle", 6)) {
@@ -332,6 +328,7 @@ int main (int argc, char *argv[])
 {
   setup_defaults();
   parse_the_command_line(argc, argv);
+
   if (action == T_UNKNOWN) {
     fprintf(stderr, "Unknown action: %s\n", usr_action_str);
     usage(1);
@@ -347,7 +344,7 @@ int main (int argc, char *argv[])
   debug(dbg, 1, "\troot dir: %s\n", root_dir.c_str());
   debug(dbg, 1, "\tsha: %s\n", sha.c_str());
   debug(dbg, 1, "\tconfig dir: %s\n", config_file_dir.c_str());
-  debug(dbg, 1, "\tuser id: %d\n", userid);
+  debug(dbg, 1, "\tuser id: %d\n", to_set_user_id);
   debug(dbg, 1, "\trun dir: %d\n", run_dir.c_str());
   if (dbg > 1) {
     printf("--- files ---\n"); for(string_set::iterator it=files.begin(); it != files.end(); it++) printf("\t - %s\n", it->c_str());
@@ -395,7 +392,7 @@ int main (int argc, char *argv[])
   
   if (name != "") comb.set_name(name);
   if (image != "") comb.set_image(image);
-  if (userid != -1) comb.set_user(userid);
+  if (to_set_user_id != -1) comb.set_user(to_set_user_id);
   if (sha != "") comb.set_sha(sha);
   if (working_dir != "") comb.set_working_dir(working_dir);
   if (root_dir != "") comb.set_root_dir(root_dir);

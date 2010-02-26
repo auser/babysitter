@@ -42,7 +42,8 @@ int Honeycomb::build_env_vars() {
   /* Setup environment defaults */
   std::string pth = DEFAULT_PATH;  
   char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
-  char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%d", (int)user());
+  char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%o", user());
+  char group_id_buf[BUF_SIZE]; memset(group_id_buf, 0, BUF_SIZE); sprintf(group_id_buf, "APP_GROUP=%o", group());
   char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=%s", image());
   char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
   char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
@@ -69,6 +70,7 @@ int Honeycomb::build_env_vars() {
    app_type_buf,
    app_root_buf,
    user_id_buf,
+   group_id_buf,
    run_dir_buf,
    bee_port_buf,
    image_buf,
@@ -279,11 +281,24 @@ string_set *Honeycomb::string_set_from_lines_in_file(std::string filepath) {
   return lines;
 }
 
+void Honeycomb::setup_internals()
+{
+  // The m_working_dir path is the confinement_root plus the user's uid
+  // because it's randomly generated
+  std::string usr_p (to_string(m_user, 10));
+  std::string usr_postfix = m_name + "/" + usr_p;
+  
+  m_working_dir = m_working_dir + "/" + usr_postfix;
+  m_run_dir = m_run_dir +  "/" + usr_postfix;
+  m_storage_dir = m_storage_dir + "/" + usr_postfix;
+}
+
 //---
 // ACTIONS
 //---
 
 int Honeycomb::bundle(int dlvl) {
+  setup_internals();
   debug(dlvl, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
   phase *p = find_phase(m_honeycomb_config, T_BUNDLE);
   
@@ -344,14 +359,13 @@ int Honeycomb::bundle(int dlvl) {
 
     while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
     assert(0 == status);
+    
+    std::string git_root_dir = m_working_dir + "/home/app";
+    m_sha = parse_sha_from_git_directory(git_root_dir);
+    m_size = dir_size_r(m_working_dir.c_str());
   }
-  
-  std::string git_root_dir = m_working_dir + "/home/app";
-  m_sha = parse_sha_from_git_directory(git_root_dir);
-  m_size = dir_size_r(m_working_dir.c_str());
-  
+    
   // Because we may have modified the environment's SHA, we should rebuild it
-  free(m_cenv);
   build_env_vars();
   
   if ((p != NULL) && (p->command != NULL)) {
@@ -371,6 +385,7 @@ int Honeycomb::bundle(int dlvl) {
 
 int Honeycomb::start(int dlvl) 
 {
+  setup_internals();
   debug(dlvl, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
   phase *p = find_phase(m_honeycomb_config, T_START);
   
@@ -580,7 +595,7 @@ void Honeycomb::init() {
         m_group = getgid();
       }
       else m_group = grp->gr_gid;
-    } else m_group = getgid();
+    } else m_group = random_uid();
     
     //--- root_directory
     if (m_honeycomb_config->root_dir != NULL) m_root_dir = m_honeycomb_config->root_dir;
@@ -624,14 +639,10 @@ void Honeycomb::init() {
     if (m_honeycomb_config->skel_dir != NULL) m_skel_dir = m_honeycomb_config->skel_dir;    
     
     //--- confinement_mode
-    m_mode = 04755; // Not sure if this should be dynamic-able, yet.
+    m_mode = S_IRWXU | S_IRGRP | S_IROTH; // Not sure if this should be dynamic-able, yet.
     
-    // The m_working_dir path is the confinement_root plus the user's uid
-    // because it's randomly generated
-    std::string usr_postfix (to_string(m_user, 10));
-    m_working_dir = m_working_dir + "/" + usr_postfix;
-    m_run_dir = m_run_dir +  "/" + usr_postfix;
-    m_storage_dir = m_storage_dir + "/" + usr_postfix;
+    //--- We need a name!
+    if (m_name == "") m_name = to_string(random_uid(), 10);
   }
 }
 

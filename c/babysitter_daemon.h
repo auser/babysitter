@@ -28,6 +28,5 @@ const std::string HELP_MESSAGE =
 // Functions
 //---
 void  setup_defaults();
-int parse_config_dir();
 
 #endif

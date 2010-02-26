@@ -4,6 +4,7 @@
 
 #include "hc_support.h"
 #include "honeycomb.h"
+#include "honeycomb_config.h"
 
 // Debug
 int debug(const long int cur_level, int level, char *fmt, ...)
@@ -96,7 +97,6 @@ honeycomb_config* a_new_honeycomb_config_object(void) {
   
   if ( (c = (honeycomb_config *) malloc(sizeof(honeycomb_config))) == NULL ) {
     fprintf(stderr, "Could not allocate a new honeycomb_config object. Out of memory\n");
-    free(c);
     exit(-1);
   }
   c->num_phases = 0;

@@ -103,7 +103,7 @@ MapKillPidT  transient_pids;        // Map of pids of custom kill commands.
 
 fd_set readfds;
 struct sigaction sact, sterm;
-int userid = 0;
+int to_set_user_id = 0;
 
 // Configs
 std::string config_file_dir;
@@ -170,7 +170,7 @@ int parse_the_command_line(int argc, char* argv[]) {
           fprintf(stderr, "User %s not found!\n", run_as_user);
           exit(3);
         }
-        userid = pw->pw_uid;
+        to_set_user_id = pw->pw_uid;
         break;
     }
   }

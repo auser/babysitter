@@ -78,9 +78,6 @@ config_parser:
 honeycomb: config_parser honeycomb.cpp honeycomb.h
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
 
-babysitter_utils.o:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c babysitter_utils.cpp
-
 honeycomb_config.o: honeycomb
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb_config.cpp
 

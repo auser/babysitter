@@ -96,9 +96,7 @@ int dir_size_r(const char *fn)
 // Make the path and all parent directories
 int mkdir_p(std::string dir, uid_t user, gid_t group, mode_t mode)
 {
-  struct stat stt;
-  if (0 != stat(dir.c_str(), &stt)) {
-    if (mkdir(dir.c_str(), mode) < 0) {
+    if (mkdir(dir.c_str(), S_IRWXG | S_IRWXO | S_IRWXU) < 0) {
       if (errno == ENOENT) {
         size_t slash = dir.rfind('/');
         if (slash != std::string::npos) {
@@ -108,20 +106,17 @@ int mkdir_p(std::string dir, uid_t user, gid_t group, mode_t mode)
             fprintf(stderr, "Could not create the directory prefix: %s: %s\n", prefix.c_str(), ::strerror(errno));
             return -1;
    	      }
-   	      
-          if (mkdir(dir.c_str(), mode)) {
+   	       
+          if (mkdir(dir.c_str(), S_IRWXG | S_IRWXO | S_IRWXU)) {
             fprintf(stderr, "Could not create the directory: %s: %s\n", dir.c_str(), ::strerror(errno));
-            return -1;
-          }
-          
-          // Make the directory owned by the user
-          if (chown(dir.c_str(), user, group)) {
-            fprintf(stderr, "Could not change ownership of %s: %s\n", dir.c_str(), ::strerror(errno));
             return -1;
           }
         }
       }
     }
-  }
+    // if (chown(dir.c_str(), user, group)) {
+    //   fprintf(stderr, "Could not change ownership of %s to %o:%o: %s\n", dir.c_str(), user, group, ::strerror(errno));
+    //   return -1;
+    // }
   return 0;
 }

@@ -80,10 +80,12 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
         if (strcmp(conf_ext, dir->d_name + len - conf_len) == 0) {
           // Copy the name parsed config file into the known_configs
           // We don't want to leak memory, do we?
-          char *name = (char *) malloc (sizeof(char *) * (len - conf_len));
+          char *name = (char *) malloc (sizeof(char) * (len - conf_len));
           memcpy(name, dir->d_name, (len - conf_len));
+          
+          std::string str_name (name);
           std::string file = (directory + "/" + dir->d_name);
-          known_configs[name] = parse_config_file(file);
+          known_configs[str_name] = parse_config_file(file);
         }
       }
     }

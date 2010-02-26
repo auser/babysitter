@@ -174,8 +174,8 @@ public:
   }
   Honeycomb(std::string app_type) : m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url("") {
     m_root_dir = "/var/beehive";
-    m_run_dir = m_root_dir + "/bees";
-    m_storage_dir = m_root_dir + "/combs";
+    m_run_dir = m_root_dir + "/run";
+    m_storage_dir = m_root_dir + "/storage";
     m_working_dir = m_root_dir + "/working";
     
     m_app_type = app_type;
@@ -214,7 +214,12 @@ public:
   void set_image(std::string i) { m_image = i; }
   void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
   void set_scm_url(std::string url) {m_scm_url = url;}
-  void set_root_dir(std::string dir) {m_root_dir = dir;}
+  void set_root_dir(std::string dir) {
+    m_root_dir = dir;
+    m_run_dir = m_root_dir + "/run";
+    m_storage_dir = m_root_dir + "/storage";
+    m_working_dir = m_root_dir + "/working";
+  }
   void set_run_dir(std::string d) {m_run_dir = d;}
   void set_storage_dir(std::string d) {m_storage_dir = d;}
   
@@ -236,6 +241,7 @@ public:
     
 private:
   void init();
+  void setup_internals();
   std::string find_binary(const std::string& file);
   bool abs_path(const std::string & path);
   uid_t random_uid();
