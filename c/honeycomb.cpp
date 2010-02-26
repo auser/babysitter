@@ -61,6 +61,15 @@ int Honeycomb::build_env_vars() {
   memset(path_buf, 0, path_size); 
   sprintf(path_buf, "PATH=%s", pth.c_str());
   
+  std::string extension ("ext3");
+  
+  if (m_image != "") {
+    size_t period = m_image.rfind('.');
+    if (period != std::string::npos) extension = m_image.substr(period+1, m_image.length());
+  }
+  
+  char filesystem_buf[BUF_SIZE]; memset(filesystem_buf, 0, BUF_SIZE); sprintf(filesystem_buf, "FILESYSTEM=%s", extension.c_str());
+  
   const char* default_env_vars[] = {
    app_name_buf,
    storage_dir_buf,
@@ -75,9 +84,9 @@ int Honeycomb::build_env_vars() {
    m_size_buf,
    path_buf,
    app_type_buf,
+   filesystem_buf,
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
    "HOME=/home/app",
-   "FILESYSTEM=ext3",
    NULL
   };
   

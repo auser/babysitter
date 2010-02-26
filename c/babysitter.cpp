@@ -208,6 +208,20 @@ void usage(int c, bool detailed = false)
       "switches, you can override the default configuration file directory location.\n"
       "The bees are mapped to their respective configuration file name by the type of bee that's launched\n"
       "\n"
+      "The environment variables that are available to the bee are as follows:\n"
+      "\tBEE_IMAGE    - The location of the compressed bee (or locaton or the compressed bee, when 'bundle' is called)\n"
+      "\tAPP_NAME     - The name of the application\n"
+      "\tRUN_DIR      - The directory to run a bee from within\n"
+      "\tAPP_TYPE     - The application type\n"
+      "\tBEE_SIZE     - The size of the bee, in Kb\n"
+      "\tAPP_USER     - The ephemeral user id of the operation\n"
+      "\tBEE_PORT     - The port to run the bee on\n"
+      "\tSCM_URL      - The location of the scm to check out from (useful for 'bundle' action)\n"
+      "\tFILESYSTEM   - The preferred filesystem type\n"
+      "\tWORKING_DIR  - The directory to work from within\n"
+      "\tSTORAGE_DIR  - The directory to store the final bees in\n"
+      "\t\n"
+      "\n"
       );
       
   exit(c);
