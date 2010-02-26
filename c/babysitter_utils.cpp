@@ -47,10 +47,11 @@ const char *parse_sha_from_git_directory(std::string root_directory)
   if (sha_val[strlen(sha_val) - 1] == '\n') sha_val[strlen(sha_val) - 1] = 0;
 	
   char *sha_val_ret;
-  if ( (sha_val_ret = (char *) malloc(sizeof(char *) * strlen(sha_val))) == NULL ) {
+  if ( (sha_val_ret = (char *) malloc(sizeof(char) * strlen(sha_val))) == NULL ) {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
     exit(-1);
   }
+  memset(sha_val_ret, 0, strlen(sha_val)); // Clear it out
   memcpy(sha_val_ret, sha_val, strlen(sha_val));
   
   return sha_val_ret;
