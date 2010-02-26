@@ -380,6 +380,9 @@ int Honeycomb::bundle(int dlvl) {
   
   exec_hook("bundle", AFTER, p);
   
+  debug(dlvl, 2, "Removing working directory: %s\n", working_dir());
+  rmdir_p(m_working_dir);
+  
   return 0;
 }
 

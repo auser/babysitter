@@ -1,6 +1,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -118,5 +119,39 @@ int mkdir_p(std::string dir, uid_t user, gid_t group, mode_t mode)
     //   fprintf(stderr, "Could not change ownership of %s to %o:%o: %s\n", dir.c_str(), user, group, ::strerror(errno));
     //   return -1;
     // }
+  return 0;
+}
+
+int rmdir_p(std::string directory)
+{
+  assert( (directory != "") );
+  
+  DIR           *d;
+  struct dirent *dir;
+  
+  d = opendir( directory.c_str() );
+  if( d == NULL ) {
+    return 1;
+  }
+  while( ( dir = readdir( d ) ) ) {
+    if( strcmp( dir->d_name, "." ) == 0 || strcmp( dir->d_name, ".." ) == 0 ) continue;
+
+    // If this is a directory
+    if( dir->d_type == DT_DIR ) {
+      std::string next_dir (directory + "/" + dir->d_name);
+      rmdir_p(next_dir);
+    } else {
+      std::string file = (directory + "/" + dir->d_name);
+      assert( file != "" );
+      unlink(file.c_str());
+    }
+  }
+  
+  closedir( d );
+  
+  if (rmdir(directory.c_str()) < 0) {
+    fprintf(stderr, "Couldn't delete directory: %s\n", directory.c_str());
+    return -1;
+  }
   return 0;
 }
