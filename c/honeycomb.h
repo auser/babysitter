@@ -257,6 +257,7 @@ private:
   // Building
   int comb_exec(std::string cmd, bool should_wait); // Run a hook on the system
   void exec_hook(std::string action, int stage, phase *p);
+  int run_in_fork_and_maybe_wait(char *argv[], char* const* env, bool should_wait);
   void ensure_exists(std::string s);
   string_set *string_set_from_lines_in_file(std::string filepath);
 };

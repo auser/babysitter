@@ -86,7 +86,7 @@ int Honeycomb::build_env_vars() {
    app_type_buf,
    filesystem_buf,
    "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   "HOME=/home/app",
+   "HOME=home/app",
    NULL
   };
   
@@ -114,13 +114,14 @@ int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
   const std::string shell = getenv("SHELL");  
   const std::string shell_args = "-c";
   const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str(), NULL };
-  pid_t pid; // Pid of the child process
-  int status;
+  bool running_script = false;
+  char filename[40];
   
   // If we are looking at shell script text
   if ( strncmp(cmd.c_str(), "#!", 2) == 0 ) {
-    char filename[40];
     int size, fd;
+    // Note for the future cleanup, that we'll be running a script to cleanup
+    running_script = true;
     
     snprintf(filename, 40, "/tmp/babysitter.XXXXXXXXX");
     
@@ -160,30 +161,8 @@ int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
     }
     
     // Run in a new process
-    if ((pid = fork()) == -1) {
-      perror("fork");
-      return -1;
-    }
-    if (pid == 0) {
-      // we are in a new process
-      argv[2] = sFile.c_str();
-      argv[3] = NULL;
-      
-      if (execve(argv[2], (char* const*)argv, (char* const*)m_cenv) < 0) {
-        fprintf(stderr, "Cannot execute file '%s' because '%s'", argv[2], ::strerror(errno));
-        perror("execute");
-        unlink(filename);
-        return -1;
-      }
-    }
-    if (should_wait) {
-      while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
-      assert(0 == status);
-      
-      // Cleanup :)
-      unlink(filename);
-    } 
-    // Cleanup :)
+    argv[0] = sFile.c_str();
+    argv[1] = NULL;    
   } else {
     
     // First, we have to construct the command
@@ -200,28 +179,17 @@ int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
     
     // argv[argc] = strtok(str_cmd, " \r\t\n");
     
-    while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
+    while (argc++ < MAX_ARGS) 
+      if (! (argv[argc] = strtok(NULL, " \t\n"))) break;
     
-    // Run in a new process
-    if ((pid = fork()) == -1) {
-      perror("fork");
-      return -1;
-    }
-    if (pid == 0) {
-      // we are in the child process
-      
-      if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
-        fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
-        return EXIT_FAILURE;
-      }
-    }
-    
-    if (should_wait) {
-      while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
-      assert(0 == status);
-    }
+    printf("argv[0] = %s\n", argv[0]);
   }
   
+  printf("Running... %s\n", argv[0]);
+  // Run in a new process
+  run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, should_wait);
+  
+  if (running_script) unlink(filename);
   return 0;
 }
 
@@ -296,8 +264,30 @@ void Honeycomb::setup_internals()
   std::string usr_postfix = m_name + "/" + usr_p;
   
   m_working_dir = m_working_dir + "/" + usr_postfix;
-  m_run_dir = m_run_dir +  "/" + usr_postfix;
+  m_run_dir = m_run_dir +  "/" + m_sha;
   // m_storage_dir = m_storage_dir + "/" + usr_postfix;
+}
+
+int Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, bool should_wait) {
+  int status;
+  pid_t pid;
+  // Run in a new process
+  if ((pid = fork()) == -1) {
+    perror("fork");
+    return -1;
+  }
+  if (pid == 0) {
+    // we are in the child process
+    if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
+      fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
+      return -1;
+    }
+  }
+
+  while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+  assert(0 == status);
+  
+  return 0;
 }
 
 //---
@@ -339,9 +329,9 @@ int Honeycomb::bundle(int dlvl) {
     snprintf(str_clone_command, 256, clone_command.c_str(), m_scm_url.c_str());
     // Do the cloning
     // Do not like me some system(3)
-    int status, argc = 0;
-    const char* argv[64];
-    pid_t pid;
+    int argc = 0;
+    const char* argv[] = { NULL };
+    
     // Get the binary
     std::string bin = find_binary("git");
     argv[argc] = bin.c_str();
@@ -349,22 +339,8 @@ int Honeycomb::bundle(int dlvl) {
     strtok(str_clone_command, " \r\t\n");
 
     while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
-
-    // Run in a new process
-    if ((pid = fork()) == -1) {
-      perror("fork");
-      return -1;
-    }
-    if (pid == 0) {
-      // we are in the child process
-      if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
-        fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
-        return EXIT_FAILURE;
-      }
-    }
-
-    while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
-    assert(0 == status);
+    
+    run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, true);
     
     std::string git_root_dir = m_working_dir + "/home/app";
     m_sha = parse_sha_from_git_directory(git_root_dir);
