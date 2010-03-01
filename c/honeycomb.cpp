@@ -40,19 +40,34 @@ int Honeycomb::setup_defaults() {
 }
 int Honeycomb::build_env_vars() {
   /* Setup environment defaults */
-  char temp[BUF_SIZE]; memset(temp, 0, BUF_SIZE);
-  char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%o", user());
-  char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
-  char group_id_buf[BUF_SIZE]; memset(group_id_buf, 0, BUF_SIZE); sprintf(group_id_buf, "APP_GROUP=%o", group());
-  char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=%s", image());
-  char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
-  char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
-  char m_size_buf[BUF_SIZE]; memset(m_size_buf, 0, BUF_SIZE); sprintf(m_size_buf, "BEE_SIZE=%d", (int)(m_size / 1024));
-  char app_root_buf[BUF_SIZE]; memset(app_root_buf, 0, BUF_SIZE); sprintf(app_root_buf, "WORKING_DIR=%s", working_dir());
-  char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", name());
-  char storage_dir_buf[BUF_SIZE]; memset(storage_dir_buf, 0, BUF_SIZE); sprintf(storage_dir_buf, "STORAGE_DIR=%s", storage_dir());
-  char bee_port_buf[BUF_SIZE]; memset(bee_port_buf, 0, BUF_SIZE); sprintf(bee_port_buf, "BEE_PORT=%d", port());
-  char run_dir_buf[BUF_SIZE]; memset(run_dir_buf, 0, BUF_SIZE); sprintf(run_dir_buf, "RUN_DIR=%s", run_dir());
+  // char temp[BUF_SIZE]; memset(temp, 0, BUF_SIZE);
+  string_set *envs = new string_set();
+  envs->insert("APP_USER=" + m_user);
+  envs->insert("APP_TYPE=" + m_app_type);
+  envs->insert("APP_GROUP=" + m_group);
+  envs->insert("BEE_SHA=" + m_sha);
+  envs->insert("BEE_SIZE=" + (int)(m_size / 1024));
+  envs->insert("APP_NAME=" + m_name);
+  envs->insert("BEE_PORT=" + m_port);
+  envs->insert("SCM_URL=" + m_scm_url);
+  envs->insert("BEE_IMAGE=" + m_image);
+  envs->insert("WORKING_DIR=" + m_working_dir);
+  envs->insert("STORAGE_DIR=" + m_storage_dir);
+  envs->insert("RUN_DIR=" + m_run_dir);
+  // char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%o", user());
+  // char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
+  // char group_id_buf[BUF_SIZE]; memset(group_id_buf, 0, BUF_SIZE); sprintf(group_id_buf, "APP_GROUP=%o", group());
+  // char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
+  // char m_size_buf[BUF_SIZE]; memset(m_size_buf, 0, BUF_SIZE); sprintf(m_size_buf, "BEE_SIZE=%d", (int)(m_size / 1024));
+  // char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", name());
+  // char bee_port_buf[BUF_SIZE]; memset(bee_port_buf, 0, BUF_SIZE); sprintf(bee_port_buf, "BEE_PORT=%d", port());
+  // char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
+  // These are eval'd
+  // TODO: Be smart about this
+  // char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=`eval %s`", image());
+  // char app_root_buf[BUF_SIZE]; memset(app_root_buf, 0, BUF_SIZE); sprintf(app_root_buf, "WORKING_DIR=`eval %s`", working_dir());
+  // char storage_dir_buf[BUF_SIZE]; memset(storage_dir_buf, 0, BUF_SIZE); sprintf(storage_dir_buf, "STORAGE_DIR=`eval %s`", storage_dir());
+  // char run_dir_buf[BUF_SIZE]; memset(run_dir_buf, 0, BUF_SIZE); sprintf(run_dir_buf, "RUN_DIR=`eval %s`", run_dir());
   
   // BEE_WORKING_DIR
   std::string pth = DEFAULT_PATH;
@@ -68,29 +83,45 @@ int Honeycomb::build_env_vars() {
     if (period != std::string::npos) extension = m_image.substr(period+1, m_image.length());
   }
   
-  char filesystem_buf[BUF_SIZE]; memset(filesystem_buf, 0, BUF_SIZE); sprintf(filesystem_buf, "FILESYSTEM=%s", extension.c_str());
+  envs->insert("FILESYSTEM=" + extension);
+  envs->insert("LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib");
+  envs->insert( "HOME=home/app");
   
-  const char* default_env_vars[] = {
-   app_name_buf,
-   storage_dir_buf,
-   app_root_buf,
-   user_id_buf,
-   group_id_buf,
-   run_dir_buf,
-   bee_port_buf,
-   image_buf,
-   sha_buf,
-   scm_url_buf,
-   m_size_buf,
-   path_buf,
-   app_type_buf,
-   filesystem_buf,
-   "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-   "HOME=home/app",
-   NULL
-  };
+  const char* default_env_vars[] = { NULL };
   
+  unsigned int i = 0;
+  for (i = 0; i < envs->size(); i++) {
+    printf("env: %s\n", envs[i]->c_str());
+    // default_env_vars[i] = envs[i];
+  }
+  default_env_vars[i] = NULL;
+  // char filesystem_buf[BUF_SIZE]; memset(filesystem_buf, 0, BUF_SIZE); sprintf(filesystem_buf, "FILESYSTEM=%s", extension.c_str());
+  // 
+  // const char* default_env_vars[] = {
+  //  app_name_buf,
+  //  storage_dir_buf,
+  //  app_root_buf,
+  //  user_id_buf,
+  //  group_id_buf,
+  //  run_dir_buf,
+  //  bee_port_buf,
+  //  image_buf,
+  //  sha_buf,
+  //  scm_url_buf,
+  //  m_size_buf,
+  //  path_buf,
+  //  app_type_buf,
+  //  filesystem_buf,
+  //  "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
+  //  "HOME=home/app",
+  //  NULL
+  // };
+    
   m_cenv_c = sizeof(default_env_vars) / sizeof(char *);
+  
+  for (i = 0; i < m_cenv_c; i++) {
+    printf("argument: %s\n", default_env_vars[i]);
+  }
     
   if ( (m_cenv = (const char **) malloc(sizeof(char *) * m_cenv_c)) == NULL ) {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
@@ -264,13 +295,13 @@ void Honeycomb::setup_internals()
   std::string usr_postfix = m_name + "/" + usr_p;
   
   m_working_dir = m_working_dir + "/" + usr_postfix;
-  m_run_dir = m_run_dir +  "/" + m_sha;
   // m_storage_dir = m_storage_dir + "/" + usr_postfix;
 }
 
 int Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, bool should_wait) {
   int status;
   pid_t pid;
+  
   // Run in a new process
   if ((pid = fork()) == -1) {
     perror("fork");
@@ -610,10 +641,7 @@ void Honeycomb::init() {
       stream << m_honeycomb_config->files;
       while ( getline(stream, token, ' ') ) m_files.insert(token);
     }
-    
-    //--- run directory
-    if (m_honeycomb_config->run_dir != NULL) m_run_dir = m_honeycomb_config->run_dir;
-    
+        
     //--- image
     if (m_honeycomb_config->image != NULL) m_image = m_honeycomb_config->image;
     //--- skel directory

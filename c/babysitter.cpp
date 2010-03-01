@@ -415,11 +415,11 @@ int main (int argc, char *argv[])
   for(string_set::iterator it=execs.begin(); it != execs.end(); it++) comb.add_executable(it->c_str());
   
   if (name != "") comb.set_name(name);
+  if (root_dir != "") comb.set_root_dir(root_dir);
   if (image != "") comb.set_image(image);
   if (to_set_user_id != -1) comb.set_user(to_set_user_id);
   if (sha != "") comb.set_sha(sha);
   if (working_dir != "") comb.set_working_dir(working_dir);
-  if (root_dir != "") comb.set_root_dir(root_dir);
   if (scm_url != "") comb.set_scm_url(scm_url);
   if (port != -1) comb.set_port(port);
   if (storage_dir != "") comb.set_storage_dir(storage_dir);

@@ -162,7 +162,7 @@ private:
   const char**            m_cenv;         // The string list of environment variables
   // Internal
   std::string             m_scm_url;      // The url for the scm path (to clone from)
-  int                     m_cenv_c;       // The current count of the environment variables
+  unsigned int            m_cenv_c;       // The current count of the environment variables
   string_set              m_already_copied;
   honeycomb_config*       m_honeycomb_config; // We'll compute this on the app type
 
