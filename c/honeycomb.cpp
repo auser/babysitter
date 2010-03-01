@@ -40,41 +40,7 @@ int Honeycomb::setup_defaults() {
 }
 int Honeycomb::build_env_vars() {
   /* Setup environment defaults */
-  // char temp[BUF_SIZE]; memset(temp, 0, BUF_SIZE);
-  string_set *envs = new string_set();
-  envs->insert("APP_USER=" + m_user);
-  envs->insert("APP_TYPE=" + m_app_type);
-  envs->insert("APP_GROUP=" + m_group);
-  envs->insert("BEE_SHA=" + m_sha);
-  envs->insert("BEE_SIZE=" + (int)(m_size / 1024));
-  envs->insert("APP_NAME=" + m_name);
-  envs->insert("BEE_PORT=" + m_port);
-  envs->insert("SCM_URL=" + m_scm_url);
-  envs->insert("BEE_IMAGE=" + m_image);
-  envs->insert("WORKING_DIR=" + m_working_dir);
-  envs->insert("STORAGE_DIR=" + m_storage_dir);
-  envs->insert("RUN_DIR=" + m_run_dir);
-  // char user_id_buf[BUF_SIZE]; memset(user_id_buf, 0, BUF_SIZE); sprintf(user_id_buf, "APP_USER=%o", user());
-  // char app_type_buf[BUF_SIZE]; memset(app_type_buf, 0, BUF_SIZE); sprintf(app_type_buf, "APP_TYPE=%s", app_type());
-  // char group_id_buf[BUF_SIZE]; memset(group_id_buf, 0, BUF_SIZE); sprintf(group_id_buf, "APP_GROUP=%o", group());
-  // char sha_buf[BUF_SIZE]; memset(sha_buf, 0, BUF_SIZE); sprintf(sha_buf, "BEE_SHA=%s", sha());
-  // char m_size_buf[BUF_SIZE]; memset(m_size_buf, 0, BUF_SIZE); sprintf(m_size_buf, "BEE_SIZE=%d", (int)(m_size / 1024));
-  // char app_name_buf[BUF_SIZE]; memset(app_name_buf, 0, BUF_SIZE); sprintf(app_name_buf, "APP_NAME=%s", name());
-  // char bee_port_buf[BUF_SIZE]; memset(bee_port_buf, 0, BUF_SIZE); sprintf(bee_port_buf, "BEE_PORT=%d", port());
-  // char scm_url_buf[BUF_SIZE]; memset(scm_url_buf, 0, BUF_SIZE); sprintf(scm_url_buf, "SCM_URL=%s", scm_url());
-  // These are eval'd
-  // TODO: Be smart about this
-  // char image_buf[BUF_SIZE]; memset(image_buf, 0, BUF_SIZE); sprintf(image_buf, "BEE_IMAGE=`eval %s`", image());
-  // char app_root_buf[BUF_SIZE]; memset(app_root_buf, 0, BUF_SIZE); sprintf(app_root_buf, "WORKING_DIR=`eval %s`", working_dir());
-  // char storage_dir_buf[BUF_SIZE]; memset(storage_dir_buf, 0, BUF_SIZE); sprintf(storage_dir_buf, "STORAGE_DIR=`eval %s`", storage_dir());
-  // char run_dir_buf[BUF_SIZE]; memset(run_dir_buf, 0, BUF_SIZE); sprintf(run_dir_buf, "RUN_DIR=`eval %s`", run_dir());
-  
-  // BEE_WORKING_DIR
   std::string pth = DEFAULT_PATH;
-  unsigned int path_size = pth.length();
-  char path_buf[path_size]; 
-  memset(path_buf, 0, path_size); 
-  sprintf(path_buf, "PATH=%s", pth.c_str());
   
   std::string extension ("ext3");
   
@@ -83,53 +49,64 @@ int Honeycomb::build_env_vars() {
     if (period != std::string::npos) extension = m_image.substr(period+1, m_image.length());
   }
   
-  envs->insert("FILESYSTEM=" + extension);
-  envs->insert("LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib");
-  envs->insert( "HOME=home/app");
+  std::string usr_p   (to_string(m_user, 10));
+  std::string group_p (to_string(m_group, 10));
+  char size_buf[BUF_SIZE]; memset(size_buf, 0, BUF_SIZE); sprintf(size_buf, "%d", (int)(m_size / 1024));
+  std::string size_p  (size_buf);
+  // free(size_buf);
   
-  const char* default_env_vars[] = { NULL };
+  string_set *envs = new string_set();
+  envs->insert("APP_TYPE=" + m_app_type);
+  envs->insert("APP_USER=" + usr_p);
+  envs->insert("APP_GROUP=" + group_p);
+  envs->insert("BEE_SHA=" + m_sha);
+  envs->insert("BEE_SIZE=" + size_p);
+
+  envs->insert("APP_NAME=" + m_name);
+  envs->insert("BEE_PORT=" + m_port);
+  envs->insert("SCM_URL=" + m_scm_url);
+  envs->insert("BEE_IMAGE=" + m_image);
+  envs->insert("WORKING_DIR=" + m_working_dir);
+
+  envs->insert("STORAGE_DIR=" + m_storage_dir);
+  envs->insert("RUN_DIR=" + m_run_dir);
+  envs->insert("PATH=" + pth);
+  envs->insert("LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib");
+  envs->insert("HOME=home/app");  
+  envs->insert("FILESYSTEM=" + extension);
+  
+  char* default_env_vars[] = { NULL };
   
   unsigned int i = 0;
-  for (i = 0; i < envs->size(); i++) {
-    printf("env: %s\n", envs[i]->c_str());
-    // default_env_vars[i] = envs[i];
+  int total_len = 0;
+  int templen;
+  for (string_set::iterator var = envs->begin(); var != envs->end(); var++) {
+    templen = var->size();
+    if ((default_env_vars[i] = (char *) malloc(sizeof(char *) * templen)) == NULL ) {
+      fprintf(stderr, "Could not malloc memory for env vars: %s\n", ::strerror(errno));
+      exit(-1);
+    }
+    memset(default_env_vars[i], 0, templen);
+    memcpy(default_env_vars[i], var->c_str(), (int)templen);
+    default_env_vars[i][templen] = '\0'; // NULL terminate the string
+    total_len += templen; // Save ourselves a few cycles of computation later
+    i++;
   }
   default_env_vars[i] = NULL;
-  // char filesystem_buf[BUF_SIZE]; memset(filesystem_buf, 0, BUF_SIZE); sprintf(filesystem_buf, "FILESYSTEM=%s", extension.c_str());
-  // 
-  // const char* default_env_vars[] = {
-  //  app_name_buf,
-  //  storage_dir_buf,
-  //  app_root_buf,
-  //  user_id_buf,
-  //  group_id_buf,
-  //  run_dir_buf,
-  //  bee_port_buf,
-  //  image_buf,
-  //  sha_buf,
-  //  scm_url_buf,
-  //  m_size_buf,
-  //  path_buf,
-  //  app_type_buf,
-  //  filesystem_buf,
-  //  "LD_LIBRARY_PATH=/lib;/usr/lib;/usr/local/lib", 
-  //  "HOME=home/app",
-  //  NULL
-  // };
-    
-  m_cenv_c = sizeof(default_env_vars) / sizeof(char *);
+  m_cenv_c = i;
   
-  for (i = 0; i < m_cenv_c; i++) {
-    printf("argument: %s\n", default_env_vars[i]);
-  }
-    
-  if ( (m_cenv = (const char **) malloc(sizeof(char *) * m_cenv_c)) == NULL ) {
+  if ( (m_cenv = (char *) malloc( total_len * sizeof(char) )) == NULL ) {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
     exit(-1);
   }
     
   memset(m_cenv, 0, (int)sizeof(default_env_vars));
   memcpy(m_cenv, default_env_vars, (int)sizeof(default_env_vars));
+  
+  for (i = 0; i < m_cenv_c; i++) {
+    printf("argument: %s - ", default_env_vars[i]);
+    printf("%s\n", (char *)m_cenv[i]);
+  }
   
   return 0;
 }

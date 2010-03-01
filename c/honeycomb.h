@@ -159,7 +159,7 @@ private:
   size_t                  m_size;         // The directory size
   uid_t                   m_user;         // run as user (generated if not given)
   gid_t                   m_group;        // run as this group
-  const char**            m_cenv;         // The string list of environment variables
+  char*                   m_cenv;         // The string list of environment variables
   // Internal
   std::string             m_scm_url;      // The url for the scm path (to clone from)
   unsigned int            m_cenv_c;       // The current count of the environment variables
@@ -224,8 +224,8 @@ public:
   void set_storage_dir(std::string d) {m_storage_dir = d;}
   
   void set_working_dir(std::string dir) {m_working_dir = dir;}
-  void set_sha(std::string sha) {m_sha = sha;}
-  void add_file(std::string file) {m_files.insert(file);}
+  void set_sha(std::string sha) { m_sha = sha; }
+  void add_file(std::string file) { m_files.insert(file); }
   void add_dir(std::string dir) { m_dirs.insert(dir); }
   void add_executable(std::string exec) { m_executables.insert(exec); }
   
