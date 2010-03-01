@@ -35,9 +35,52 @@
 // using namespace ei;
 #define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
+std::string Honeycomb::map_char_to_value(std::string f_name) {
+  if (f_name == "APP_NAME") return m_name;
+  else if (f_name == "BEE_SHA") return m_sha;
+  else if (f_name == "STORAGE_DIR") return m_storage_dir;
+  else
+    return NULL;
+}
+
 int Honeycomb::setup_defaults() {
   return 0;
 }
+
+/**
+ * This will replace BASH-like variables with the corresponding function on the Honeycomb
+**/
+std::string Honeycomb::replace_vars_with_value(std::string original) {
+  std::string var_str, working_string, replace_value;
+  char working_char;
+  unsigned int curr_pos, original_location;
+  unsigned int len = original.length();
+  
+  curr_pos = 0;
+  
+  while (curr_pos < len) {
+    var_str = ""; original_location = curr_pos;
+    if (original[curr_pos] == '$') {
+      original_location = curr_pos++;
+      while( (original[curr_pos] != '\0') && (((original[curr_pos] > 64) && (original[curr_pos] < 91)) || (original[curr_pos] == 95)) ) {
+        // The only "allowed" character that's not a string is '_'
+        
+        var_str.push_back(original[curr_pos]);
+        
+        working_char = original[curr_pos++];
+      }
+      
+      replace_value = map_char_to_value(var_str);
+      
+      working_string += replace_value;
+    } else
+      working_string.push_back(original[curr_pos++]);
+  }
+  
+  return working_string;
+}
+
+
 int Honeycomb::build_env_vars() {
   /* Setup environment defaults */
   std::string pth = DEFAULT_PATH;
@@ -80,32 +123,47 @@ int Honeycomb::build_env_vars() {
   unsigned int i = 0;
   int total_len = 0;
   int templen;
+  size_t found; 
+  std::string working_str;
+  
   for (string_set::iterator var = envs->begin(); var != envs->end(); var++) {
-    templen = var->size();
+    // Not crazy with creating a new string everytime, but... it'll work for now
+    working_str = var->c_str();
+    
+    found = working_str.find('$');
+    if (found != std::string::npos) {
+      working_str = replace_vars_with_value(working_str);
+    }
+    
+    templen = strlen(working_str.c_str());
     if ((default_env_vars[i] = (char *) malloc(sizeof(char *) * templen)) == NULL ) {
       fprintf(stderr, "Could not malloc memory for env vars: %s\n", ::strerror(errno));
       exit(-1);
     }
     memset(default_env_vars[i], 0, templen);
-    memcpy(default_env_vars[i], var->c_str(), (int)templen);
-    default_env_vars[i][templen] = '\0'; // NULL terminate the string
+    strncpy(default_env_vars[i], working_str.c_str(), (int)templen);
+    //default_env_vars[i][templen] = '\0'; // NULL terminate the string
     total_len += templen; // Save ourselves a few cycles of computation later
     i++;
   }
+  
   default_env_vars[i] = NULL;
   m_cenv_c = i;
   
-  if ( (m_cenv = (char *) malloc( total_len * sizeof(char) )) == NULL ) {
+  total_len = total_len * sizeof(char);
+  
+  printf("total_len: %d\t\n", total_len);
+  if ( (m_cenv = (const char**) malloc( total_len )) == NULL ) {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
     exit(-1);
   }
     
-  memset(m_cenv, 0, (int)sizeof(default_env_vars));
-  memcpy(m_cenv, default_env_vars, (int)sizeof(default_env_vars));
+  memset(m_cenv, 0, total_len );
+  memcpy(m_cenv, default_env_vars, total_len);
   
-  for (i = 0; i < m_cenv_c; i++) {
-    printf("argument: %s - ", default_env_vars[i]);
-    printf("%s\n", (char *)m_cenv[i]);
+  if (m_debug_level > 2) {
+    printf("Environment variables:\n");
+    for (i = 0; i < m_cenv_c; i++) { printf("\t%s\n", m_cenv[i]); }
   }
   
   return 0;
@@ -302,19 +360,19 @@ int Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, bool s
 // ACTIONS
 //---
 
-int Honeycomb::bundle(int dlvl) {
+int Honeycomb::bundle() {
   setup_internals();
-  debug(dlvl, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
+  debug(m_debug_level, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
   phase *p = find_phase(m_honeycomb_config, T_BUNDLE);
   
-  debug(dlvl, 3, "Found the phase for the bundling action: %p\n", p);
+  debug(m_debug_level, 3, "Found the phase for the bundling action: %p\n", p);
   
-  debug(dlvl, 3, "Running before hook for bundling\n");
+  debug(m_debug_level, 3, "Running before hook for bundling\n");
   
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
-  debug(dlvl, 3, "Making sure the working directory: '%s' exists\n", m_working_dir.c_str());
+  debug(m_debug_level, 3, "Making sure the working directory: '%s' exists\n", m_working_dir.c_str());
   ensure_exists(m_working_dir);
   
   temp_drop();
@@ -356,7 +414,7 @@ int Honeycomb::bundle(int dlvl) {
   }
   
   if ((p != NULL) && (p->command != NULL)) {
-    debug(dlvl, 1, "Running client code: %s\n", p->command);
+    debug(m_debug_level, 1, "Running client code: %s\n", p->command);
     // Run the user's command
     comb_exec(p->command);
   } else {
@@ -367,21 +425,21 @@ int Honeycomb::bundle(int dlvl) {
   
   exec_hook("bundle", AFTER, p);
   
-  debug(dlvl, 2, "Removing working directory: %s\n", working_dir());
+  debug(m_debug_level, 2, "Removing working directory: %s\n", working_dir());
   rmdir_p(m_working_dir);
   
   return 0;
 }
 
-int Honeycomb::start(int dlvl) 
+int Honeycomb::start() 
 {
   setup_internals();
-  debug(dlvl, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
+  debug(m_debug_level, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
   phase *p = find_phase(m_honeycomb_config, T_START);
   
-  debug(dlvl, 3, "Found the phase for the bundling action: %p\n", p);
+  debug(m_debug_level, 3, "Found the phase for the bundling action: %p\n", p);
   
-  debug(dlvl, 3, "Running before hook for bundling\n");
+  debug(m_debug_level, 3, "Running before hook for bundling\n");
   
   exec_hook("start", BEFORE, p);
   // Run command
@@ -397,7 +455,7 @@ int Honeycomb::start(int dlvl)
   }
   
   if ((p != NULL) && (p->command != NULL)) {
-    debug(dlvl, 1, "Running client code: %s\n", p->command);
+    debug(m_debug_level, 1, "Running client code: %s\n", p->command);
     // Run the user's command
     comb_exec(p->command, false);
   } else {
@@ -410,19 +468,19 @@ int Honeycomb::start(int dlvl)
   exec_hook("start", AFTER, p);
   return 0;
 }
-int Honeycomb::stop(int dlvl)
+int Honeycomb::stop()
 {
   return 0;
 }
-int Honeycomb::mount(int dlvl)
+int Honeycomb::mount()
 {
   return 0;
 }
-int Honeycomb::unmount(int dlvl)
+int Honeycomb::unmount()
 {
   return 0;
 }
-int Honeycomb::cleanup(int dlvl)
+int Honeycomb::cleanup()
 {
   return 0;
 }

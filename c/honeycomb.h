@@ -62,6 +62,7 @@ using std::string;
 
 /*---------------------------- TYPES ---------------------------------------*/
 typedef std::set<std::string> string_set;
+typedef void(*func_ptr)();
 
 typedef enum {UNKNOWN, FAILURE} failure_type_t;
 
@@ -159,12 +160,15 @@ private:
   size_t                  m_size;         // The directory size
   uid_t                   m_user;         // run as user (generated if not given)
   gid_t                   m_group;        // run as this group
-  char*                   m_cenv;         // The string list of environment variables
+  const char**            m_cenv;         // The string list of environment variables
   // Internal
   std::string             m_scm_url;      // The url for the scm path (to clone from)
   unsigned int            m_cenv_c;       // The current count of the environment variables
   string_set              m_already_copied;
   honeycomb_config*       m_honeycomb_config; // We'll compute this on the app type
+  
+  int                     m_debug_level;  // Only for internal usage
+  static func_ptr         m_function_table; // Internal usage
 
 public:
   Honeycomb(std::string app_type, honeycomb_config *c) {
@@ -172,7 +176,7 @@ public:
     m_honeycomb_config = c;
     init();
   }
-  Honeycomb(std::string app_type) : m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url("") {
+  Honeycomb(std::string app_type) : m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url(""),m_debug_level(0) {
     m_root_dir = "/var/beehive";
     m_run_dir = m_root_dir + "/run";
     m_storage_dir = m_root_dir + "/storage";
@@ -188,27 +192,28 @@ public:
     m_cenv = NULL;
   }
   
-  const char*  working_dir()  const { return m_working_dir.c_str(); }
-  const char*  scm_url()  const { return m_scm_url.c_str(); }
-  const char*  run_dir()  const { return m_run_dir.c_str(); }
-  const char*  skel()     const { return m_skel_dir.c_str(); }
-  const char*  sha()      const { return m_sha.c_str(); }
-  const char*  image()    const { return m_image.c_str(); }
-  const char*  storage_dir() const { return m_storage_dir.c_str(); }
-  const char*  name()    const { return m_name.c_str(); }
-  int          port()     const { return m_port; }
-  char* const* env()      const { return (char* const*)m_cenv; }
-  string_set   executables() const { return m_executables; }
-  string_set   directories() const { return m_dirs; }
-  uid_t        user()     const { return m_user; }
-  gid_t        group()    const { return m_group; }
-  int          nice()     const { return m_nice; }
-  mount_type*  type_of_mount() const { return m_mount; }
-  const char*  app_type() const { return m_app_type.c_str(); }
-  const honeycomb_config *config() const {return m_honeycomb_config; }
-  
+  const char*   working_dir()  const { return m_working_dir.c_str(); }
+  const char*   scm_url()  const { return m_scm_url.c_str(); }
+  const char*   run_dir()  const { return m_run_dir.c_str(); }
+  const char*   skel()     const { return m_skel_dir.c_str(); }
+  const char*   sha()      const { return m_sha.c_str(); }
+  const char*   image()    const { return m_image.c_str(); }
+  const char*   storage_dir() const { return m_storage_dir.c_str(); }
+  const char*   name()    const { return m_name.c_str(); }
+  int           port()     const { return m_port; }
+  char* const*  env()      const { return (char* const*)m_cenv; }
+  string_set    executables() const { return m_executables; }
+  string_set    directories() const { return m_dirs; }
+  uid_t         user()     const { return m_user; }
+  gid_t         group()    const { return m_group; }
+  int           nice()     const { return m_nice; }
+  mount_type*   type_of_mount() const { return m_mount; }
+  const char*   app_type() const { return m_app_type.c_str(); }
+  const         honeycomb_config *config() const {return m_honeycomb_config; }  
+    
   // Setters
   void set_name(std::string n) { m_name = n; }
+  void set_debug_level(int d) { m_debug_level = d; }
   void set_port(int p) { m_port = p; }
   void set_user(uid_t u) { m_user = u; }
   void set_image(std::string i) { m_image = i; }
@@ -230,12 +235,12 @@ public:
   void add_executable(std::string exec) { m_executables.insert(exec); }
   
   // Actions
-  int bundle(int debug_level);
-  int start(int debug_level);
-  int stop(int debug_level);
-  int mount(int debug_level);
-  int unmount(int debug_level);
-  int cleanup(int debug_level);
+  int bundle();
+  int start();
+  int stop();
+  int mount();
+  int unmount();
+  int cleanup();
   
   int valid();
     
@@ -259,6 +264,8 @@ private:
   void exec_hook(std::string action, int stage, phase *p);
   int run_in_fork_and_maybe_wait(char *argv[], char* const* env, bool should_wait);
   void ensure_exists(std::string s);
+  std::string replace_vars_with_value(std::string original);
+  std::string map_char_to_value(std::string f_name);
   string_set *string_set_from_lines_in_file(std::string filepath);
 };
 

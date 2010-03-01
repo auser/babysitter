@@ -424,20 +424,21 @@ int main (int argc, char *argv[])
   if (port != -1) comb.set_port(port);
   if (storage_dir != "") comb.set_storage_dir(storage_dir);
   if (run_dir != "") comb.set_run_dir(run_dir);
+  comb.set_debug_level(dbg);
   
   switch(action) {
     case T_BUNDLE: 
-      comb.bundle(dbg); break;
+      comb.bundle(); break;
     case T_START:
-      comb.start(dbg); break;
+      comb.start(); break;
     case T_STOP:
-      comb.stop(dbg); break;
+      comb.stop(); break;
     case T_MOUNT:
-      comb.mount(dbg); break;
+      comb.mount(); break;
     case T_UNMOUNT:
-      comb.unmount(dbg); break;
+      comb.unmount(); break;
     case T_CLEANUP:
-      comb.cleanup(dbg); break;
+      comb.cleanup(); break;
     case T_EMPTY:
     case T_UNKNOWN:
     break;
