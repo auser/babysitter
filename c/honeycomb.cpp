@@ -38,7 +38,9 @@
 std::string Honeycomb::map_char_to_value(std::string f_name) {
   if (f_name == "APP_NAME") return m_name;
   else if (f_name == "BEE_SHA") return m_sha;
+  else if (f_name == "ROOT_DIR") return m_root_dir;
   else if (f_name == "STORAGE_DIR") return m_storage_dir;
+  else if (f_name == "RUN_DIR") return m_run_dir;
   else
     return NULL;
 }
@@ -94,6 +96,7 @@ int Honeycomb::build_env_vars() {
   
   std::string usr_p   (to_string(m_user, 10));
   std::string group_p (to_string(m_group, 10));
+  std::string port_p (to_string(m_port, 10));
   char size_buf[BUF_SIZE]; memset(size_buf, 0, BUF_SIZE); sprintf(size_buf, "%d", (int)(m_size / 1024));
   std::string size_p  (size_buf);
   // free(size_buf);
@@ -106,8 +109,8 @@ int Honeycomb::build_env_vars() {
   envs->insert("BEE_SIZE=" + size_p);
 
   envs->insert("APP_NAME=" + m_name);
-  envs->insert("BEE_PORT=" + m_port);
   envs->insert("SCM_URL=" + m_scm_url);
+  envs->insert("BEE_PORT=" + port_p);
   envs->insert("BEE_IMAGE=" + m_image);
   envs->insert("WORKING_DIR=" + m_working_dir);
 
@@ -152,7 +155,6 @@ int Honeycomb::build_env_vars() {
   
   total_len = total_len * sizeof(char);
   
-  printf("total_len: %d\t\n", total_len);
   if ( (m_cenv = (const char**) malloc( total_len )) == NULL ) {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
     exit(-1);
@@ -372,12 +374,15 @@ int Honeycomb::bundle() {
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
+  m_working_dir = replace_vars_with_value(m_working_dir);
   debug(m_debug_level, 3, "Making sure the working directory: '%s' exists\n", m_working_dir.c_str());
+  
   ensure_exists(m_working_dir);
   
   temp_drop();
   
   // Change into the working directory
+  debug(m_debug_level, 4, "Dropping into directory: %s\n", m_working_dir.c_str());
   if (chdir(m_working_dir.c_str())) {
     perror("chdir:");
     return -1;
@@ -386,14 +391,16 @@ int Honeycomb::bundle() {
   // Clone the app in the directory if there is an scm_url
   // Get the clone command
   if (m_scm_url != "") {
-    DEBUG_MSG("Cloning from %s\n", m_scm_url.c_str());
+    debug(m_debug_level, 2, "Cloning from %s\n", m_scm_url.c_str());
     std::string clone_command ("git clone --depth 0 %s home/app");
+    
     if (m_honeycomb_config->clone_command != NULL) clone_command = m_honeycomb_config->clone_command;
     char str_clone_command[256];
     // The str_clone_command looks like:
     //  /usr/bin/git clone --depth 0 [git_url] [m_working_dir]/home/app
     snprintf(str_clone_command, 256, clone_command.c_str(), m_scm_url.c_str());
     // Do the cloning
+    debug(m_debug_level, 3, "Cloning with command %s\n", clone_command.c_str());
     // Do not like me some system(3)
     int argc = 0;
     const char* argv[] = { NULL };
@@ -405,6 +412,11 @@ int Honeycomb::bundle() {
     strtok(str_clone_command, " \r\t\n");
 
     while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
+    
+    char buf[60];
+    memset(buf, 0, 60);
+    getwd(buf);
+    printf("We are in '%s' dir\n", buf);
     
     run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, true);
     
@@ -444,7 +456,7 @@ int Honeycomb::start()
   exec_hook("start", BEFORE, p);
   // Run command
   //--- Make sure the directory exists
-  ensure_exists(m_run_dir);
+  ensure_exists(m_run_dir = replace_vars_with_value(m_run_dir));
   
   temp_drop();
   
@@ -457,7 +469,7 @@ int Honeycomb::start()
   if ((p != NULL) && (p->command != NULL)) {
     debug(m_debug_level, 1, "Running client code: %s\n", p->command);
     // Run the user's command
-    comb_exec(p->command, false);
+    comb_exec(p->command, true);
   } else {
     //Default action
     printf("Running default action for bundle\n");
@@ -645,7 +657,7 @@ void Honeycomb::init() {
     } else m_group = random_uid();
     
     //--- root_directory
-    if (m_honeycomb_config->root_dir != NULL) m_root_dir = m_honeycomb_config->root_dir;
+    if (m_honeycomb_config->root_dir != NULL) set_root_dir(m_honeycomb_config->root_dir);
     //--- storage_dir
     if (m_honeycomb_config->storage_dir != NULL) m_storage_dir = m_honeycomb_config->storage_dir;
     //--- run_dir

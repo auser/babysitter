@@ -128,7 +128,7 @@ hook:
 // Attributes
 attr:
   RESERVED ':' line              {
-    debug(DEBUG_LEVEL, 4, "Found reserved: %d\n", $1);
+    debug(DEBUG_LEVEL, 4, "Found reserved: %d : %s\n", $1, $3);
     add_attribute(config, $1, $3);
     free($3);
   }

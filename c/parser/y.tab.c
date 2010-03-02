@@ -1485,7 +1485,7 @@ yyreduce:
   case 17:
 #line 130 "honeycomb.y"
     {
-    debug(DEBUG_LEVEL, 4, "Found reserved: %d\n", (yyvsp[(1) - (3)].atype));
+    debug(DEBUG_LEVEL, 4, "Found reserved: %d : %s\n", (yyvsp[(1) - (3)].atype), (yyvsp[(3) - (3)].stype));
     add_attribute(config, (yyvsp[(1) - (3)].atype), (yyvsp[(3) - (3)].stype));
     free((yyvsp[(3) - (3)].stype));
   }

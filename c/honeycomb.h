@@ -221,9 +221,11 @@ public:
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_root_dir(std::string dir) {
     m_root_dir = dir;
-    m_run_dir = m_root_dir + "/run";
-    m_storage_dir = m_root_dir + "/storage";
-    m_working_dir = m_root_dir + "/working";
+    printf("set_root_dir(%s)\n", m_root_dir.c_str());
+    m_run_dir     = dir + "/run";
+    m_storage_dir = dir + "/storage";
+    m_working_dir = dir + "/working";
+    // printf("\tm_working_dir: %s\t m_run_dir: %s\tm_storage_dir: %s\n", m_working_dir.c_str(), m_run_dir.c_str(), m_storage_dir.c_str());
   }
   void set_run_dir(std::string d) {m_run_dir = d;}
   void set_storage_dir(std::string d) {m_storage_dir = d;}

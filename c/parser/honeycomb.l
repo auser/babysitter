@@ -111,7 +111,6 @@ ANYTHING  (.*)
   /* everything else */
 {COMMENT}{ANYTHING}{NL} {debug(DEBUG_LEVEL, 4, "%4d\tIgnoring comment: %s", yylineno++, yytext);} /* ignore comments */  
 
-
 {STRING}({WHITESPACE}?({STRING}))*  {
   debug(DEBUG_LEVEL, 3, "returning STRING: '%s'\n", yytext);
   yylval.stype = strdup(yytext);

@@ -1055,7 +1055,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 115 "honeycomb.l"
+#line 114 "honeycomb.l"
 {
   debug(DEBUG_LEVEL, 3, "returning STRING: '%s'\n", yytext);
   yylval.stype = strdup(yytext);
@@ -1064,7 +1064,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 121 "honeycomb.l"
+#line 120 "honeycomb.l"
 ECHO;
 	YY_BREAK
 #line 1071 "lex.yy.c"
@@ -2032,7 +2032,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 121 "honeycomb.l"
+#line 120 "honeycomb.l"
 
 
 
