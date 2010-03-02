@@ -466,23 +466,8 @@ int Honeycomb::start()
     return -1;
   }
   
-  pid_t pid;
   
-  if ((pid = fork()) == -1) {
-    perror("fork");
-    return -1;
-  }
-  if (pid == 0) {
-    
-    if ((p != NULL) && (p->command != NULL)) {
-      debug(m_debug_level, 1, "Running client code: %s\n", p->command);
-      // Run the user's command
-      comb_exec(p->command, true);
-    } else {
-      //Default action
-      printf("Running default action for bundle\n");
-    }
-  }
+  pid_t pid = start_child(p->command, m_run_dir);
   
   restore_perms();
   
@@ -520,7 +505,7 @@ int Honeycomb::set_rlimit(const int res, const rlim_t limit) {
 
 /*---------------------------- UTILS ------------------------------------*/
 
-pid_t Honeycomb::start_child(std::string cmd) 
+pid_t Honeycomb::start_child(std::string cmd, std::string cd)
 {
   pid_t pid = fork();
 
@@ -529,28 +514,19 @@ pid_t Honeycomb::start_child(std::string cmd)
       return -1;
     case 0: {
       // I am the child
-      if (user != INT_MAX && setresuid(user, user, user) < 0) {
-        err.write("Cannot set effective user to %d", user);
-        perror(err.c_str());
-        return EXIT_FAILURE;
+      perm_drop();
+      
+      debug(m_debug_level, 4, "Dropping into directory: %s\n", cd.c_str());
+      if (chdir(cd.c_str())) {
+        perror("chdir:");
+        return -1;
       }
-      const char* const argv[] = { getenv("SHELL"), "-c", cmd, (char*)NULL };
-      if (cd != NULL && cd[0] != '\0' && chdir(cd) < 0) {
-        err.write("Cannot chdir to '%s'", cd);
-        perror(err.c_str());
-        return EXIT_FAILURE;
-      }
-      if (execve((const char*)argv[0], (char* const*)argv, env) < 0) {
-        err.write("Cannot execute '%s'", cd);
-        perror(err.c_str());
-        return EXIT_FAILURE;
-      }
+      comb_exec(cmd, true);
     }
     default:
       // I am the parent
-      if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
-        err.write("Cannot set priority of pid %d to %d", pid, nice);
-        perror(err.c_str());
+      if (m_nice != INT_MAX && setpriority(PRIO_PROCESS, pid, m_nice) < 0) {
+        perror("priority setting");
       }
     return pid;
   }

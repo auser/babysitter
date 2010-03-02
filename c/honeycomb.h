@@ -269,6 +269,7 @@ private:
   std::string replace_vars_with_value(std::string original);
   std::string map_char_to_value(std::string f_name);
   string_set *string_set_from_lines_in_file(std::string filepath);
+  pid_t start_child(std::string cmd, std::string cd);
 };
 
 /**
