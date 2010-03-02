@@ -32,7 +32,7 @@ extern "C" {
   int add_phase(honeycomb_config *c, phase *p);
   int add_attribute(honeycomb_config *c, attr_type t, char *value);
   phase *find_or_create_phase(honeycomb_config *c, phase_type t);
-  phase *find_phase(honeycomb_config *c, phase_type t);
+  phase *find_phase(honeycomb_config *c, phase_type t, int dlvl);
   int modify_phase(honeycomb_config *c, phase *p);
   phase* new_phase(phase_type t);
   void free_config(honeycomb_config *c);
@@ -61,7 +61,7 @@ honeycomb_config* a_new_honeycomb_config_object(void);
 int add_phase(honeycomb_config *c, phase *p);
 int add_attribute(honeycomb_config *c, attr_type t, char *value);
 phase *find_or_create_phase(honeycomb_config *c, phase_type t);
-phase *find_phase(honeycomb_config *c, phase_type t);
+phase *find_phase(honeycomb_config *c, phase_type t, int dlvl);
 phase* new_phase(phase_type t);
 int modify_phase(honeycomb_config *c, phase *p);
 void free_config(honeycomb_config *c);

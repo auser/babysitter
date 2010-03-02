@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <regex.h>
 #include <libgen.h>
+#include <signal.h>
 // System
 #include <sys/types.h>
 #include <pwd.h>
@@ -25,6 +26,7 @@
 // Erlang interface
 // #include "ei++.h"
 
+#include "macros.h"
 #include "honeycomb_config.h"
 #include "honeycomb.h"
 #include "hc_support.h"
@@ -175,7 +177,8 @@ int Honeycomb::build_env_vars() {
 #define MAX_ARGS 64
 #endif
 // Run a hook on the system
-int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
+int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, bool should_wait = false)
+{
   setup_defaults(); // Setup default environments
   build_env_vars();
   
@@ -215,21 +218,21 @@ int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
     close(fd);
     
     // Modify the command to match call the filename
-    std::string sFile (filename);
+    m_script_file = filename;
     
-		if (chown(sFile.c_str(), m_user, m_group) != 0) {
+		if (chown(m_script_file.c_str(), m_user, m_group) != 0) {
 #ifdef DEBUG
-     fprintf(stderr, "Could not change owner of '%s' to %d\n", sFile.c_str(), m_user);
+     fprintf(stderr, "Could not change owner of '%s' to %d\n", m_script_file.c_str(), m_user);
 #endif
 		}
 
     // Make it executable
-    if (chmod(sFile.c_str(), 040700) != 0) {
-      fprintf(stderr, "Could not change permissions to '%s' %o\n", sFile.c_str(), 040750);
+    if (chmod(m_script_file.c_str(), 040700) != 0) {
+      fprintf(stderr, "Could not change permissions to '%s' %o\n", m_script_file.c_str(), 040750);
     }
     
     // Run in a new process
-    argv[0] = sFile.c_str();
+    argv[0] = m_script_file.c_str();
     argv[1] = NULL;    
   } else {
     
@@ -253,20 +256,26 @@ int Honeycomb::comb_exec(std::string cmd, bool should_wait = true) {
     printf("argv[0] = %s\n", argv[0]);
   }
   
-  printf("Running... %s\n", argv[0]);
+  debug(m_debug_level, 3, "Running... %s\n", argv[0]);
   // Run in a new process
-  run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, should_wait);
+  pid_t p = run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, cd, should_wait);
   
-  if (running_script) unlink(filename);
-  return 0;
+  // if (running_script) unlink(m_script_file.c_str()); // Clean up after ourselves
+  
+  return p;
 }
 
 // Execute a hook
-void Honeycomb::exec_hook(std::string action, int stage, phase *p) {
+void Honeycomb::exec_hook(std::string action, int stage, phase *p, std::string cd = "")
+{
   if (stage == BEFORE) {
-    if (p->before) comb_exec(p->before); //printf("Run before hook for %s: %s\n", action.c_str(), p->before);
+    debug(m_debug_level, 4, "Running before hook for '%s'\n", action.c_str());
+    if (p->before) comb_exec(p->before, cd); //printf("Run before hook for %s: %s\n", action.c_str(), p->before);
+    debug(m_debug_level, 4, "Before hook for '%s' has completed\n", action.c_str());
   } else if (stage == AFTER) {
-    if (p->after) comb_exec(p->after); //printf("Run after hook for %s %s\n", action.c_str(), p->after);
+    debug(m_debug_level, 4, "Running after hook for '%s'\n", action.c_str());
+    if (p->after) comb_exec(p->after, cd); //printf("Run after hook for %s %s\n", action.c_str(), p->after);
+    debug(m_debug_level, 4, "After hook for '%s' has completed\n", action.c_str());
   } else {
     printf("Unknown hook for: %s %d\n", action.c_str(), stage);
   }
@@ -335,27 +344,75 @@ void Honeycomb::setup_internals()
   // m_storage_dir = m_storage_dir + "/" + usr_postfix;
 }
 
-int Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, bool should_wait) {
-  int status;
-  pid_t pid;
-  
-  // Run in a new process
-  if ((pid = fork()) == -1) {
-    perror("fork");
-    return -1;
-  }
-  if (pid == 0) {
-    // we are in the child process
+pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd = "", bool should_wait = false)
+{
+  if (should_wait) {
+    
+    int status;
+    pid_t pid;
+    sigset_t child_sigs, original_sigs;
+
+    // Block all signals until we are done
+    sigfillset(&child_sigs);
+    sigprocmask(SIG_BLOCK, &child_sigs, &original_sigs);
+
+    // Let's fork into the child process and return into a new process if it succeeds
+    // Otherwise, error out
+    pid = fork();
+    switch (pid) {
+      case -1: 
+        sigprocmask(SIG_SETMASK, &original_sigs, NULL);
+        SYS_ERROR(-1, "Unknown error in spawn_child_process\n");
+      case 0: {
+
+        setsid(); // Become the master of my own domain
+        
+        // I am the child
+        perm_drop();
+        // Set resource limits (eventually)
+        // Set resource limits
+
+        if (cd != "") {
+          debug(m_debug_level, 4, "Dropping into directory: %s\n", cd.c_str());
+          if (chdir(cd.c_str())) {
+            perror("chdir");
+            return -1;
+          }
+        }
+        // Reset signal handlers
+        sigprocmask(SIG_SETMASK, &original_sigs, NULL);
+        
+        if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
+          fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
+          return -1;
+        }
+      }
+      default:
+        // I am the parent
+        if (m_nice != INT_MAX && setpriority(PRIO_PROCESS, pid, m_nice) < 0) {
+          perror("priority setting");
+        }
+    }
+
+    while (wait(&status) != pid); // We don't want to continue until the child process has ended
+    assert(0 == status);
+    
+    printf("Pid has ended... YO!\n");
+    // if (should_wait) {
+    //   while (wait(&status) != pid); // We don't want to continue until the child process has ended
+    //   assert(0 == status);
+    // } else {
+    //   // Wait for the pid to get ANY signal, so we know it's up and can continue along
+    // }
+    debug(m_debug_level, 3, "Pid of new process: %d\n", (int)pid);
+    return pid;
+  } else {
     if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
       fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
       return -1;
     }
+    return 0;
   }
-
-  while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
-  assert(0 == status);
-  
-  return 0;
 }
 
 //---
@@ -364,8 +421,10 @@ int Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, bool s
 
 int Honeycomb::bundle() {
   setup_internals();
+  temp_drop();
+  
   debug(m_debug_level, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
-  phase *p = find_phase(m_honeycomb_config, T_BUNDLE);
+  phase *p = find_phase(m_honeycomb_config, T_BUNDLE, m_debug_level);
   
   debug(m_debug_level, 3, "Found the phase for the bundling action: %p\n", p);
   
@@ -378,8 +437,6 @@ int Honeycomb::bundle() {
   debug(m_debug_level, 3, "Making sure the working directory: '%s' exists\n", m_working_dir.c_str());
   
   ensure_exists(m_working_dir);
-  
-  temp_drop();
   
   // Change into the working directory
   debug(m_debug_level, 4, "Dropping into directory: %s\n", m_working_dir.c_str());
@@ -418,7 +475,7 @@ int Honeycomb::bundle() {
     getwd(buf);
     printf("We are in '%s' dir\n", buf);
     
-    run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, true);
+    run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, m_working_dir, true);
     
     std::string git_root_dir = m_working_dir + "/home/app";
     m_sha = parse_sha_from_git_directory(git_root_dir);
@@ -428,7 +485,7 @@ int Honeycomb::bundle() {
   if ((p != NULL) && (p->command != NULL)) {
     debug(m_debug_level, 1, "Running client code: %s\n", p->command);
     // Run the user's command
-    comb_exec(p->command);
+    comb_exec(p->command, m_working_dir);
   } else {
     //Default action
     printf("Running default action for bundle\n");
@@ -446,14 +503,9 @@ int Honeycomb::bundle() {
 int Honeycomb::start() 
 {
   setup_internals();
-  debug(m_debug_level, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
-  phase *p = find_phase(m_honeycomb_config, T_START);
-  
-  debug(m_debug_level, 3, "Found the phase for the bundling action: %p\n", p);
-  
-  debug(m_debug_level, 3, "Running before hook for bundling\n");
-  
+  phase *p = find_phase(m_honeycomb_config, T_START, m_debug_level);
   exec_hook("start", BEFORE, p);
+  
   // Run command
   //--- Make sure the directory exists
   ensure_exists(m_run_dir = replace_vars_with_value(m_run_dir));
@@ -466,8 +518,9 @@ int Honeycomb::start()
     return -1;
   }
   
-  
-  pid_t pid = start_child(p->command, m_run_dir);
+  pid_t pid = comb_exec(p->command, m_run_dir, true);
+  printf("pid of new child process: %d\n", pid);
+  Bee bee(*this, pid);
   
   restore_perms();
   
@@ -504,34 +557,6 @@ int Honeycomb::set_rlimit(const int res, const rlim_t limit) {
 }
 
 /*---------------------------- UTILS ------------------------------------*/
-
-pid_t Honeycomb::start_child(std::string cmd, std::string cd)
-{
-  pid_t pid = fork();
-
-  switch (pid) {
-    case -1: 
-      return -1;
-    case 0: {
-      // I am the child
-      perm_drop();
-      
-      debug(m_debug_level, 4, "Dropping into directory: %s\n", cd.c_str());
-      if (chdir(cd.c_str())) {
-        perror("chdir:");
-        return -1;
-      }
-      comb_exec(cmd, true);
-    }
-    default:
-      // I am the parent
-      if (m_nice != INT_MAX && setpriority(PRIO_PROCESS, pid, m_nice) < 0) {
-        perror("priority setting");
-      }
-    return pid;
-  }
-}
-
 const char *DEV_RANDOM = "/dev/urandom";
 uid_t Honeycomb::random_uid() {
   uid_t u;

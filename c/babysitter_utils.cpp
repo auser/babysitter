@@ -12,6 +12,14 @@
 #define BUF_SIZE 1024
 #endif
 
+int babysitter_system_error(int err, const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  fprintf(stderr, "[ERROR] "); vfprintf(stderr, fmt, ap); va_end(ap);
+  return err;
+}
+
 // Parse sha
 // Pass the root directory of the git repos
 const char *parse_sha_from_git_directory(std::string root_directory)
@@ -124,6 +132,7 @@ int mkdir_p(std::string dir, uid_t user, gid_t group, mode_t mode)
   return 0;
 }
 
+// Recursively remove a directory
 int rmdir_p(std::string directory)
 {
   assert( (directory != "") );

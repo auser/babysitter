@@ -81,6 +81,20 @@ typedef struct _mount_ {
   string dest;
 } mount_type;
 
+typedef enum _bee_status_ {
+  BEE_RUNNING,
+  BEE_STOPPED,
+  BEE_KILLED
+} bee_status;
+
+typedef enum _bee_error_type_ {
+  BEE_
+};
+
+typedef struct _bee_wire_error_ {
+  
+} bee_wire_error;
+
 typedef unsigned char byte;
 typedef int   exit_status_t;
 typedef pid_t kill_cmd_pid_t;
@@ -133,8 +147,6 @@ typedef std::map <std::string, honeycomb_config*> ConfigMapT;
  **/
 class Honeycomb {
 private:
-  // ei::StringBuffer<256>   m_tmp;       // Temporary storage
-  // ei::Serializer          m_eis;       // Erlang serializer
   std::string             m_root_dir;     // The root directory to start from
   std::string             m_run_dir;      // The directory to run bees and honeycombs from
   std::string             m_storage_dir;  // The directory to store the sleeping bees
@@ -162,13 +174,13 @@ private:
   gid_t                   m_group;        // run as this group
   const char**            m_cenv;         // The string list of environment variables
   // Internal
+  std::string             m_script_file;  // The script used to launch this honeycomb
   std::string             m_scm_url;      // The url for the scm path (to clone from)
   unsigned int            m_cenv_c;       // The current count of the environment variables
   string_set              m_already_copied;
   honeycomb_config*       m_honeycomb_config; // We'll compute this on the app type
   
   int                     m_debug_level;  // Only for internal usage
-  static func_ptr         m_function_table; // Internal usage
 
 public:
   Honeycomb(std::string app_type, honeycomb_config *c) {
@@ -262,14 +274,13 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  int comb_exec(std::string cmd, bool should_wait); // Run a hook on the system
-  void exec_hook(std::string action, int stage, phase *p);
-  int run_in_fork_and_maybe_wait(char *argv[], char* const* env, bool should_wait);
+  int comb_exec(std::string cmd, std::string cd, bool should_wait);
+  void exec_hook(std::string action, int stage, phase *p, std::string cd);
+  pid_t run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd, bool should_wait);
   void ensure_exists(std::string s);
   std::string replace_vars_with_value(std::string original);
   std::string map_char_to_value(std::string f_name);
   string_set *string_set_from_lines_in_file(std::string filepath);
-  pid_t start_child(std::string cmd, std::string cd);
 };
 
 /**
@@ -278,15 +289,18 @@ private:
 class Bee {
 public:
   pid_t           cmd_pid;        // Pid of the custom kill command
+  Honeycomb       hc;             // Honeycomb
   // ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
   bool            sigterm;        // <true> if sigterm was issued.
   bool            sigkill;        // <true> if sigkill was issued.
+  bee_status      status;         // Status of the bee
 
-  Bee() : cmd_pid(-1), sigterm(false), sigkill(false) {}
+  Bee() : cmd_pid(-1), sigterm(false), sigkill(false), status(BEE_RUNNING) {}
   ~Bee() {}
   
-  Bee(const Honeycomb& hc, pid_t _cmd_pid) {
+  Bee(const Honeycomb& _hc, pid_t _cmd_pid) {
     cmd_pid = _cmd_pid;
+    hc      = _hc;
   }
   
 };

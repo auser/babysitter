@@ -138,18 +138,23 @@ phase* new_phase(phase_type t) {
 }
 
 // Find a phase of type t on the config object
-phase *find_phase(honeycomb_config *c, phase_type t) {
+phase *find_phase(honeycomb_config *c, phase_type t, int dlvl)
+{
   unsigned int i = 0;
   for (i = 0; i < c->num_phases; i++) {
-    if (c->phases[i]->type == t) return c->phases[i];
+    if (c->phases[i]->type == t) {
+      debug(dlvl, 3, "Found the phase for the %s action: %p\n", phase_type_to_string(t), c->phases[i]);
+      return c->phases[i];
+    }
   }
+  debug(dlvl, 3, "Did not find the phase for the %s action\n", phase_type_to_string(t));
   return NULL;
 }
 
 // Find or create a phase on a config object
 phase *find_or_create_phase(honeycomb_config *c, phase_type t) {
   phase *p;
-  if ((p = find_phase(c, t))) return p;
+  if ((p = find_phase(c, t, 0))) return p;
   return new_phase(t);
 }
 
@@ -168,7 +173,7 @@ int modify_phase(honeycomb_config *c, phase *p) {
 // Add a phase to the honeycomb_config
 int add_phase(honeycomb_config *c, phase *p) {
   phase *existing_phase;
-  if ((existing_phase = find_phase(c, p->type))) return modify_phase(c, p);
+  if ((existing_phase = find_phase(c, p->type, 0))) return modify_phase(c, p);
   int n = c->num_phases + 1;
   phase **nphases = (phase **)malloc(sizeof(phase) * n);
   
