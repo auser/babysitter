@@ -55,6 +55,8 @@ int Honeycomb::setup_defaults() {
  * This will replace BASH-like variables with the corresponding function on the Honeycomb
 **/
 std::string Honeycomb::replace_vars_with_value(std::string original) {
+  if (original.find('$') != std::string::npos) return original;
+  
   std::string var_str, working_string, replace_value;
   char working_char;
   unsigned int curr_pos, original_location;

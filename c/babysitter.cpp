@@ -455,7 +455,7 @@ void drop_into_shell() {
           "\n"
         );
       } else if (!strncmp("list", input, 4) || !strncmp("l", input, 1)) {
-        printf("\tPids\nName\tPid\tStatus\n-----------------------\n");
+        printf("Name\tPid\tStatus\n-----------------------\n");
         for(MapChildrenT::iterator it=children.begin(); it != children.end(); it++) 
           printf("%s\t%d\t%s\n", 
             it->second.name(), 
@@ -472,7 +472,10 @@ void drop_into_shell() {
         Honeycomb comb;
         if (parse_the_command_line_into_honeycomb_config(argc, argv, &comb) == 0) {
           printf("Bundling %s\n", comb.name());
-          if (comb.bundle()) fprintf(stderr, "There was an error. Check the comb for any errors\n");
+          if (fork() == 0) {
+            printf("in a fork\n");
+            if (comb.bundle()) fprintf(stderr, "There was an error. Check the comb for any errors\n");
+          }
         }
       } else if (!strncmp("kill", input, 4) || !strncmp("k", input, 1)) {
         printf("Stop a program\n");
