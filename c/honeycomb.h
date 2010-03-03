@@ -108,40 +108,6 @@ typedef std::map <std::string, honeycomb_config*> ConfigMapT;
 /*--------------------------------------------------------------------------*/
  
 /*---------------------------- Class definitions ---------------------------*/
-
-/**
-* Honeycomb config
-* 
-* Format: 
-* # This is a comment
-* bundle.before : executable_script
-* bundle : executable_script
-* bundle.after : executable_script
-* files : 
-* executables : /usr/bin/ruby irb cat
-* directories : /var/lib/gems/1.8
-*
-**/
-// class HoneycombConfig {
-// public:
-//   size_t num_headers;
-//   std::string config_file;
-//   string_set  executables;
-//   string_set  dirs;
-//   string_set  files;
-//   
-//   HoneycombConfig(std::string file) : config_file(file) {
-//     init();
-//   }
-//   HoneycombConfig() : config_file("") {}
-//   ~HoneycombConfig() {}
-// 
-// private:
-//   void init();
-//   void parse();
-//   int parse_honeycomb_config_file();
-// };
-
 /**
  * Honeycomb
  **/
@@ -185,8 +151,7 @@ private:
 public:
   Honeycomb(std::string app_type, honeycomb_config *c) {
     new (this) Honeycomb(app_type);
-    m_honeycomb_config = c;
-    init();
+    set_config(c);
   }
   Honeycomb(std::string app_type) : m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url(""),m_debug_level(0) {
     m_root_dir = "/var/beehive";
@@ -200,7 +165,6 @@ public:
     new (this) Honeycomb("rack");
   }
   ~Honeycomb() { 
-    delete [] m_cenv; 
     m_cenv = NULL;
   }
   
@@ -225,11 +189,15 @@ public:
     
   // Setters
   void set_name(std::string n) { m_name = n; }
+  void set_app_type(std::string t) {m_app_type = t;}
   void set_debug_level(int d) { m_debug_level = d; }
   void set_port(int p) { m_port = p; }
   void set_user(uid_t u) { m_user = u; }
   void set_image(std::string i) { m_image = i; }
-  void set_config(honeycomb_config *c) {m_honeycomb_config = c;}
+  void set_config(honeycomb_config *c) {
+    m_honeycomb_config = c;
+    init();
+  }
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_root_dir(std::string dir) {
     m_root_dir = dir;
@@ -250,8 +218,8 @@ public:
   
   // Actions
   int bundle();
-  int start();
-  int stop();
+  int start(MapChildrenT &child_map); 
+  int stop(MapChildrenT &child_map);
   int mount();
   int unmount();
   int cleanup();

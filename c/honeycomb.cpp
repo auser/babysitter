@@ -347,8 +347,6 @@ void Honeycomb::setup_internals()
 pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd = "", bool should_wait = false)
 {
   if (should_wait) {
-    
-    int status;
     pid_t pid;
     sigset_t child_sigs, original_sigs;
 
@@ -394,8 +392,8 @@ pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std:
         }
     }
 
-    while (wait(&status) != pid); // We don't want to continue until the child process has ended
-    assert(0 == status);
+    // while (wait(&status) != pid); // We don't want to continue until the child process has ended
+    // assert(0 == status);
     
     printf("Pid has ended... YO!\n");
     // if (should_wait) {
@@ -500,7 +498,7 @@ int Honeycomb::bundle() {
   return 0;
 }
 
-int Honeycomb::start() 
+int Honeycomb::start(MapChildrenT &child_map) 
 {
   setup_internals();
   phase *p = find_phase(m_honeycomb_config, T_START, m_debug_level);
@@ -520,14 +518,16 @@ int Honeycomb::start()
   
   pid_t pid = comb_exec(p->command, m_run_dir, true);
   printf("pid of new child process: %d\n", pid);
+  
   Bee bee(*this, pid);
+  child_map[pid] = bee;
   
   restore_perms();
   
   exec_hook("start", AFTER, p);
   return 0;
 }
-int Honeycomb::stop()
+int Honeycomb::stop(MapChildrenT &child_map)
 {
   return 0;
 }

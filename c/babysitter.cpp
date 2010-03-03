@@ -25,7 +25,9 @@
 int alarm_max_time      = 12;
 int to_set_user_id = -1;
 
-std::deque<PidStatusT> exited_children;
+std::deque<PidStatusT>  exited_children;
+MapChildrenT            children;
+
 sigjmp_buf  jbuf;
 bool oktojump   = false;
 bool pipe_valid = true;      // Is the pip still valid?
@@ -234,6 +236,8 @@ void usage(int c, bool detailed = false)
       "\n"
       );
       
+
+  terminated = 1;
   exit(c);
 }
 
@@ -347,6 +351,84 @@ void parse_the_command_line(int argc, char *argv[])
   }
 }
 
+void parse_the_command_line_into_honeycomb_config(int parse_the_cli, int argc, char **argv, Honeycomb *comb)
+{
+  printf("before parse_the_command_line\n");
+  if (parse_the_cli) parse_the_command_line(argc, argv);
+  printf("parse_the_command_line: %i\n", parse_the_cli);
+  
+  ConfigMapT::iterator it;
+  it = known_configs.find(app_type);
+  honeycomb_config *c = it->second;
+  comb->set_config(c);
+  comb->set_app_type(app_type);
+  
+  for(string_set::iterator it=files.begin(); it != files.end(); it++)   comb->add_file(it->c_str());
+  for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++)     comb->add_dir(it->c_str());
+  for(string_set::iterator it=execs.begin(); it != execs.end(); it++)   comb->add_executable(it->c_str());
+  
+  if (name != "")           comb->set_name(name);
+  if (root_dir != "")       comb->set_root_dir(root_dir);
+  if (image != "")          comb->set_image(image);
+  if (to_set_user_id != -1) comb->set_user(to_set_user_id);
+  if (sha != "")            comb->set_sha(sha);
+  if (working_dir != "")    comb->set_working_dir(working_dir);
+  if (scm_url != "")        comb->set_scm_url(scm_url);
+  if (port != -1)           comb->set_port(port);
+  if (storage_dir != "")    comb->set_storage_dir(storage_dir);
+  if (run_dir != "")        comb->set_run_dir(run_dir);
+  
+  comb->set_debug_level(dbg);
+}
+
+void drop_into_shell() {
+  /**
+   * Program loop. 
+   * Daemonizing loop. This waits for signals
+   **/
+  char input[BUF_SIZE];
+  int argc;
+  char **argv;
+  
+  while (!terminated) {
+    sigsetjmp(jbuf, 1); oktojump = 0;
+    
+    printf("babysitter > ");
+    fgets(input, sizeof(input), stdin);
+    if (!strncmp("help", input, 4) || !strncmp("h", input, 1)) {
+      printf("Babysitter program help\n"
+        "---Commands---\n"
+        "h | help             Show this screen\n"
+        "s | start <args>     Start a program\n"
+        "k | kill <args>      Stop a program\n"
+        "l | list <args>      List the programs\n"
+        "q | quit             Quit the daemon\n"
+        "\n"
+      );
+    } else if (!strncmp("list", input, 4) || !strncmp("l", input, 1)) {
+      printf("listing children...\n");
+      for(MapChildrenT::iterator it=children.begin(); it != children.end(); it++) 
+        printf("\t - %d\n", it->first);
+    } else if (!strncmp("start", input, 5) || !strncmp("s", input, 1)) {
+      if (argify((const char*)&input, &argc, &argv) == -1) {
+        fprintf(stderr, "Something went wrong with the input...\n");
+      }
+      
+      printf("argc: %d\n", argc);
+      Honeycomb comb;
+      parse_the_command_line_into_honeycomb_config(1, argc, argv, &comb);
+      
+      printf("Start a new program: %s (%d)\n", input, argc);
+      printf("\t Name: %s (%s)\n", name.c_str(), comb.name());
+    } else if (!strncmp("kill", input, 4) || !strncmp("k", input, 1)) {
+      printf("Stop a program\n");
+    } else if (!strncmp("quit", input, 4) || !strncmp("q", input, 1)) {
+      terminated = 1;
+    } else {
+      printf("Enter a command or type 'h' for help\n");
+    }
+  }
+}
 
 int main (int argc, char *argv[])
 {
@@ -399,16 +481,18 @@ int main (int argc, char *argv[])
   }
   
   // Honeycomb
-  ConfigMapT::iterator it;
   if (known_configs.count(app_type) < 1) {
     fprintf(stderr, "There is no config file set for this application type.\nPlease set the application type properly, or consult the administrator to support the application type: %s\n", app_type);
     usage(1);
   }
   debug(dbg, 2, "\tconfig for %s app found\n", app_type);
   
+  ConfigMapT::iterator it;
   it = known_configs.find(app_type);
   honeycomb_config *c = it->second;
-  Honeycomb comb (app_type, c);
+  Honeycomb comb(app_type, c);
+  
+  // parse_the_command_line_into_honeycomb_config(1, argc, argv, &comb);
   
   for(string_set::iterator it=files.begin(); it != files.end(); it++) comb.add_file(it->c_str());
   for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++) comb.add_dir(it->c_str());
@@ -430,9 +514,10 @@ int main (int argc, char *argv[])
     case T_BUNDLE: 
       comb.bundle(); break;
     case T_START:
-      comb.start(); break;
+      comb.start(children);
+      break;
     case T_STOP:
-      comb.stop(); break;
+      comb.stop(children); break;
     case T_MOUNT:
       comb.mount(); break;
     case T_UNMOUNT:
@@ -444,8 +529,14 @@ int main (int argc, char *argv[])
     break;
   }
   
+  setup_defaults();
+  struct sigaction sact, sterm;
+  setup_signal_handlers(sact, sterm);
+  
+  drop_into_shell();
+  
   for(ConfigMapT::iterator it=known_configs.begin(), end=known_configs.end(); it != end; ++it) {
-    debug(dbg, 4, "Freeing: %s\n", ((std::string) it->first).c_str());
+    debug(dbg, 4, "Freeing %s config file\n", ((std::string) it->first).c_str());
     free_config((honeycomb_config *) it->second);
   }
   
