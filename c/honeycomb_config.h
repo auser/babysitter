@@ -43,7 +43,7 @@ typedef enum _attr_type_ {
   T_SKEL_DIR,
   T_RUN_DIR,
   T_CLONE_CMD,
-  T_HIVE_DIR,
+  T_STORAGE_DIR,
   T_ROOT_DIR
 } attr_type;
 

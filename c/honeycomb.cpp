@@ -38,13 +38,17 @@
 #define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
 std::string Honeycomb::map_char_to_value(std::string f_name) {
-  if (f_name == "APP_NAME") return m_name;
-  else if (f_name == "BEE_SHA") return m_sha;
-  else if (f_name == "ROOT_DIR") return m_root_dir;
-  else if (f_name == "STORAGE_DIR") return m_storage_dir;
-  else if (f_name == "RUN_DIR") return m_run_dir;
-  else
-    return NULL;
+  if (f_name == "APP_NAME" && m_name != "") return m_name;
+  else if (f_name == "BEE_SHA" && m_sha != "") return m_sha;
+  else if (f_name == "ROOT_DIR" && m_root_dir != "") return m_root_dir;
+  else if (f_name == "STORAGE_DIR" && m_storage_dir != "") return m_storage_dir;
+  else if (f_name == "RUN_DIR" && m_run_dir != "") return m_run_dir;
+  else if (f_name == "APP_TYPE" && m_app_type != "") return m_app_type;
+  else if (f_name == "SKEL_DIR" && m_skel_dir != "") return m_skel_dir;
+  else {
+    std::string dollar_sign("$");
+    return dollar_sign + f_name;
+  }
 }
 
 int Honeycomb::setup_defaults() {
@@ -55,8 +59,9 @@ int Honeycomb::setup_defaults() {
  * This will replace BASH-like variables with the corresponding function on the Honeycomb
 **/
 std::string Honeycomb::replace_vars_with_value(std::string original) {
-  if (original.find('$') != std::string::npos) return original;
+  if (original.find('$') == std::string::npos) return original;
   
+  debug(m_debug_level, 4, "Replacing %s variables\n", original.c_str());
   std::string var_str, working_string, replace_value;
   char working_char;
   unsigned int curr_pos, original_location;
@@ -83,6 +88,7 @@ std::string Honeycomb::replace_vars_with_value(std::string original) {
       working_string.push_back(original[curr_pos++]);
   }
   
+  debug(m_debug_level, 4, "Replaced %s => %s\n", original.c_str(), working_string.c_str());
   return working_string;
 }
 
@@ -98,6 +104,7 @@ int Honeycomb::build_env_vars() {
     if (period != std::string::npos) extension = m_image.substr(period+1, m_image.length());
   }
   
+  // TODO: Fix overflow
   std::string usr_p   (to_string(m_user, 10));
   std::string group_p (to_string(m_group, 10));
   std::string port_p (to_string(m_port, 10));
@@ -254,8 +261,6 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, int should_wait
     
     while (argc++ < MAX_ARGS) 
       if (! (argv[argc] = strtok(NULL, " \t\n"))) break;
-    
-    printf("argv[0] = %s\n", argv[0]);
   }
   
   debug(m_debug_level, 3, "Running... %s\n", argv[0]);
@@ -343,6 +348,12 @@ void Honeycomb::setup_internals()
   std::string usr_postfix = m_name + "/" + usr_p;
   
   m_working_dir = m_working_dir + "/" + usr_postfix;
+  
+  m_run_dir = replace_vars_with_value(m_run_dir);
+  m_storage_dir = replace_vars_with_value(m_storage_dir);
+  m_working_dir = replace_vars_with_value(m_working_dir);
+  m_skel_dir = replace_vars_with_value(m_skel_dir);
+  m_image = replace_vars_with_value(m_image);
 }
 
 pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd = "", int should_wait = 0)
@@ -419,13 +430,10 @@ int Honeycomb::bundle() {
   
   exec_hook("bundle", BEFORE, p);
   // Run command
-  //--- Make sure the directory exists
-  m_working_dir = replace_vars_with_value(m_working_dir);
-  m_storage_dir = replace_vars_with_value(m_storage_dir);
-  
+  //--- Make sure the directory exists  
   debug(m_debug_level, 3, "Making sure the working directory: '%s' exists\n", m_working_dir.c_str());
-  
   ensure_exists(m_working_dir);
+  debug(m_debug_level, 3, "Making sure the storage directory: '%s' exists\n", m_storage_dir.c_str());
   ensure_exists(m_storage_dir);
   
   // Change into the working directory
@@ -463,11 +471,10 @@ int Honeycomb::bundle() {
     char buf[60];
     memset(buf, 0, 60);
     getwd(buf);
-    printf("We are in '%s' dir\n", buf);
+    debug(m_debug_level, 4, "Operating in '%s' dir\n", buf);
     
     run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, m_working_dir, 1);
     
-    printf("after run_in_fork_and_maybe_wait\n");
     std::string git_root_dir = m_working_dir + "/home/app";
     m_sha = parse_sha_from_git_directory(git_root_dir);
     m_size = dir_size_r(m_working_dir.c_str());
@@ -512,8 +519,8 @@ int Honeycomb::start(MapChildrenT &child_map)
     return -1;
   }
   
-  pid_t pid = comb_exec(p->command, m_run_dir, 1);
-  printf("pid of new child process: %d\n", pid);
+  pid_t pid = comb_exec(p->command, m_run_dir, 0);
+  debug(m_debug_level, 1, "pid of new child process: %d\n", pid);
   
   Bee bee(*this, pid);
   child_map[pid] = bee;
@@ -688,26 +695,26 @@ void Honeycomb::init() {
       struct passwd *pw = getpwnam(m_honeycomb_config->user);
       if (pw == NULL) {
         fprintf(stderr, "Error: invalid user %s : %s\n", m_honeycomb_config->user, ::strerror(errno));
-        m_user = geteuid();
-      } else m_user = pw->pw_uid;
-    } else m_user = random_uid();
+        set_user(geteuid());
+      } else set_user(pw->pw_uid);
+    } else set_user(random_uid());
     
     //--- group
     if (m_honeycomb_config->group != NULL) {
       struct group *grp = getgrnam(m_honeycomb_config->group);
       if (grp == NULL) {
         fprintf(stderr, "Error: invalid group %s : %s\n", m_honeycomb_config->group, ::strerror(errno));
-        m_group = getgid();
+        set_group(getgid());
       }
-      else m_group = grp->gr_gid;
-    } else m_group = random_uid();
+      else set_group(grp->gr_gid);
+    } else set_group(random_uid());
     
     //--- root_directory
     if (m_honeycomb_config->root_dir != NULL) set_root_dir(m_honeycomb_config->root_dir);
     //--- storage_dir
-    if (m_honeycomb_config->storage_dir != NULL) m_storage_dir = m_honeycomb_config->storage_dir;
+    if (m_honeycomb_config->storage_dir != NULL) set_storage_dir(m_honeycomb_config->storage_dir);
     //--- run_dir
-    if (m_honeycomb_config->run_dir != NULL) m_run_dir = m_honeycomb_config->run_dir;
+    if (m_honeycomb_config->run_dir != NULL) set_run_dir(m_honeycomb_config->run_dir);
     
     //--- executables
     m_executables.insert("/bin/ls");
@@ -736,15 +743,15 @@ void Honeycomb::init() {
     }
         
     //--- image
-    if (m_honeycomb_config->image != NULL) m_image = m_honeycomb_config->image;
+    if (m_honeycomb_config->image != NULL) set_image(m_honeycomb_config->image);
     //--- skel directory
-    if (m_honeycomb_config->skel_dir != NULL) m_skel_dir = m_honeycomb_config->skel_dir;    
+    if (m_honeycomb_config->skel_dir != NULL) set_skel_dir(m_honeycomb_config->skel_dir);
     
     //--- confinement_mode
     m_mode = S_IRWXU | S_IRGRP | S_IROTH; // Not sure if this should be dynamic-able, yet.
     
     //--- We need a name!
-    if (m_name == "") m_name = to_string(random_uid(), 10);
+    if (m_name == "") m_name = to_string(random_uid(), 10);    
   }
 }
 

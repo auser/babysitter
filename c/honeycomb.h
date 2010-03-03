@@ -192,22 +192,24 @@ public:
   void set_debug_level(int d) { m_debug_level = d; }
   void set_port(int p) { m_port = p; }
   void set_user(uid_t u) { m_user = u; }
-  void set_image(std::string i) { m_image = i; }
+  void set_group(gid_t g) { m_group = g; }
   void set_config(honeycomb_config *c) {
     m_honeycomb_config = c;
     init();
   }
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_root_dir(std::string dir) {
-    m_root_dir = dir;
+    m_root_dir = replace_vars_with_value(dir);
     m_run_dir     = dir + "/run";
     m_storage_dir = dir + "/storage";
     m_working_dir = dir + "/working";
   }
   void set_run_dir(std::string d) {m_run_dir = d;}
-  void set_storage_dir(std::string d) {m_storage_dir = d;}
+  void set_storage_dir(std::string d) { m_storage_dir = d; }
+  void set_working_dir(std::string dir) { m_working_dir = dir; }
+  void set_image(std::string i) { m_image = i; }
+  void set_skel_dir(std::string i) { m_skel_dir = i; }
   
-  void set_working_dir(std::string dir) {m_working_dir = dir;}
   void set_sha(std::string sha) { m_sha = sha; }
   void add_file(std::string file) { m_files.insert(file); }
   void add_dir(std::string dir) { m_dirs.insert(dir); }

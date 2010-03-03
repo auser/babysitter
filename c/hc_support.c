@@ -143,11 +143,10 @@ phase *find_phase(honeycomb_config *c, phase_type t, int dlvl)
   unsigned int i = 0;
   for (i = 0; i < c->num_phases; i++) {
     if (c->phases[i]->type == t) {
-      debug(dlvl, 3, "Found the phase for the %s action: %p\n", phase_type_to_string(t), c->phases[i]);
+      debug(dlvl, 3, "Found phase\n");
       return c->phases[i];
     }
   }
-  debug(dlvl, 3, "Did not find the phase for the %s action\n", phase_type_to_string(t));
   return NULL;
 }
 
@@ -238,7 +237,7 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value) {
     case T_IMAGE:
       c->image = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->image, 0, strlen(value)); memcpy(c->image, value, strlen(value)); break;
-    case T_HIVE_DIR:
+    case T_STORAGE_DIR:
       c->storage_dir = (char *)malloc(sizeof(char *) * strlen(value));
       memset(c->storage_dir, 0, strlen(value)); memcpy(c->storage_dir, value, strlen(value)); break;
     case T_SKEL_DIR:

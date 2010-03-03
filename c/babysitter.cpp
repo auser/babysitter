@@ -472,10 +472,7 @@ void drop_into_shell() {
         Honeycomb comb;
         if (parse_the_command_line_into_honeycomb_config(argc, argv, &comb) == 0) {
           printf("Bundling %s\n", comb.name());
-          if (fork() == 0) {
-            printf("in a fork\n");
-            if (comb.bundle()) fprintf(stderr, "There was an error. Check the comb for any errors\n");
-          }
+          if (comb.bundle()) fprintf(stderr, "There was an error. Check the comb for any errors\n");
         }
       } else if (!strncmp("kill", input, 4) || !strncmp("k", input, 1)) {
         printf("Stop a program\n");
@@ -486,6 +483,7 @@ void drop_into_shell() {
       }
     }
   }
+  exit(0);
 }
 
 int main (int argc, char *argv[])
