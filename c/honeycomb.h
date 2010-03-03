@@ -130,7 +130,6 @@ private:
   string_set              m_executables;  // Executables to be bundled in the honeycomb
   string_set              m_dirs;         // Directories to be included in the app
   string_set              m_files;        // Extra directories to be included in the honeycomb
-  std::list<std::string>  m_env;          // A list of environment variables to use when starting
   int                     m_port;         // The port to run
     // Resource sets
     rlim_t                m_nofiles;      // Number of files
@@ -153,7 +152,7 @@ public:
     new (this) Honeycomb(app_type);
     set_config(c);
   }
-  Honeycomb(std::string app_type) : m_mount(NULL),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url(""),m_debug_level(0) {
+  Honeycomb(std::string app_type) : m_mount(NULL),m_port(80),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url(""),m_debug_level(0) {
     m_root_dir = "/var/beehive";
     m_run_dir = m_root_dir + "/run";
     m_storage_dir = m_root_dir + "/storage";
@@ -201,11 +200,9 @@ public:
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_root_dir(std::string dir) {
     m_root_dir = dir;
-    printf("set_root_dir(%s)\n", m_root_dir.c_str());
     m_run_dir     = dir + "/run";
     m_storage_dir = dir + "/storage";
     m_working_dir = dir + "/working";
-    // printf("\tm_working_dir: %s\t m_run_dir: %s\tm_storage_dir: %s\n", m_working_dir.c_str(), m_run_dir.c_str(), m_storage_dir.c_str());
   }
   void set_run_dir(std::string d) {m_run_dir = d;}
   void set_storage_dir(std::string d) {m_storage_dir = d;}
@@ -242,9 +239,9 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  int comb_exec(std::string cmd, std::string cd, bool should_wait);
+  int comb_exec(std::string cmd, std::string cd, int should_wait);
   void exec_hook(std::string action, int stage, phase *p, std::string cd);
-  pid_t run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd, bool should_wait);
+  pid_t run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd, int should_wait);
   void ensure_exists(std::string s);
   std::string replace_vars_with_value(std::string original);
   std::string map_char_to_value(std::string f_name);
@@ -257,20 +254,36 @@ private:
 class Bee {
 public:
   pid_t           cmd_pid;        // Pid of the custom kill command
-  Honeycomb       hc;             // Honeycomb
+  Honeycomb       m_hc;             // Honeycomb
   // ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
   bool            sigterm;        // <true> if sigterm was issued.
   bool            sigkill;        // <true> if sigkill was issued.
-  bee_status      status;         // Status of the bee
+  bee_status      m_status;         // Status of the bee
 
-  Bee() : cmd_pid(-1), sigterm(false), sigkill(false), status(BEE_RUNNING) {}
+  Bee() : cmd_pid(-1), sigterm(false), sigkill(false), m_status(BEE_RUNNING) {}
   ~Bee() {}
   
   Bee(const Honeycomb& _hc, pid_t _cmd_pid) {
+    new(this) Bee();
     cmd_pid = _cmd_pid;
-    hc      = _hc;
+    m_hc    = _hc;
   }
   
+  // Accessors
+  const char*   name()    const { return m_hc.name(); }
+  const char*   status()  const {
+    switch(m_status) {
+      case BEE_RUNNING:
+      return "running";
+      break;
+      default:
+      return "unknown";
+      break;
+    }
+  }
+  
+  // Setters
+  void set_status(bee_status s) {m_status = s;}
 };
 
 /*--------------------------------------------------------------------------*/

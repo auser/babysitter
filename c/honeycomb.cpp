@@ -143,7 +143,7 @@ int Honeycomb::build_env_vars() {
     templen = strlen(working_str.c_str());
     if ((default_env_vars[i] = (char *) malloc(sizeof(char *) * templen)) == NULL ) {
       fprintf(stderr, "Could not malloc memory for env vars: %s\n", ::strerror(errno));
-      exit(-1);
+      return -1;
     }
     memset(default_env_vars[i], 0, templen);
     strncpy(default_env_vars[i], working_str.c_str(), (int)templen);
@@ -159,7 +159,7 @@ int Honeycomb::build_env_vars() {
   
   if ( (m_cenv = (const char**) malloc( total_len )) == NULL ) {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
-    exit(-1);
+    return -1;
   }
     
   memset(m_cenv, 0, total_len );
@@ -177,7 +177,7 @@ int Honeycomb::build_env_vars() {
 #define MAX_ARGS 64
 #endif
 // Run a hook on the system
-int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, bool should_wait = false)
+int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, int should_wait = 0)
 {
   setup_defaults(); // Setup default environments
   build_env_vars();
@@ -341,76 +341,62 @@ void Honeycomb::setup_internals()
   std::string usr_postfix = m_name + "/" + usr_p;
   
   m_working_dir = m_working_dir + "/" + usr_postfix;
-  // m_storage_dir = m_storage_dir + "/" + usr_postfix;
 }
 
-pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd = "", bool should_wait = false)
+pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd = "", int should_wait = 0)
 {
-  if (should_wait) {
-    pid_t pid;
-    sigset_t child_sigs, original_sigs;
+  int status;
+  pid_t pid;
+  sigset_t child_sigs, original_sigs;
+  
+  // Block all signals until we are done
+  sigfillset(&child_sigs);
+  sigprocmask(SIG_BLOCK, &child_sigs, &original_sigs);
+  
+  // Let's fork into the child process and return into a new process if it succeeds
+  // Otherwise, error out
+  pid = fork();
+  switch (pid) {
+    case -1: 
+      sigprocmask(SIG_SETMASK, &original_sigs, NULL);
+      SYS_ERROR(-1, "Unknown error in spawn_child_process\n");
+    case 0: {
 
-    // Block all signals until we are done
-    sigfillset(&child_sigs);
-    sigprocmask(SIG_BLOCK, &child_sigs, &original_sigs);
+      setsid(); // Become the master of my own domain
+      
+      // I am the child
+      perm_drop();
+      // Set resource limits (eventually)
 
-    // Let's fork into the child process and return into a new process if it succeeds
-    // Otherwise, error out
-    pid = fork();
-    switch (pid) {
-      case -1: 
-        sigprocmask(SIG_SETMASK, &original_sigs, NULL);
-        SYS_ERROR(-1, "Unknown error in spawn_child_process\n");
-      case 0: {
-
-        setsid(); // Become the master of my own domain
-        
-        // I am the child
-        perm_drop();
-        // Set resource limits (eventually)
-        // Set resource limits
-
-        if (cd != "") {
-          debug(m_debug_level, 4, "Dropping into directory: %s\n", cd.c_str());
-          if (chdir(cd.c_str())) {
-            perror("chdir");
-            return -1;
-          }
-        }
-        // Reset signal handlers
-        sigprocmask(SIG_SETMASK, &original_sigs, NULL);
-        
-        if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
-          fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
+      if (cd != "") {
+        debug(m_debug_level, 4, "Dropping into directory: %s\n", cd.c_str());
+        if (chdir(cd.c_str())) {
+          perror("chdir");
           return -1;
         }
       }
-      default:
-        // I am the parent
-        if (m_nice != INT_MAX && setpriority(PRIO_PROCESS, pid, m_nice) < 0) {
-          perror("priority setting");
-        }
+      // Reset signal handlers
+      sigprocmask(SIG_SETMASK, &original_sigs, NULL);
+      
+      if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
+        fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
+        return -1;
+      }
     }
-
-    // while (wait(&status) != pid); // We don't want to continue until the child process has ended
-    // assert(0 == status);
-    
-    printf("Pid has ended... YO!\n");
-    // if (should_wait) {
-    //   while (wait(&status) != pid); // We don't want to continue until the child process has ended
-    //   assert(0 == status);
-    // } else {
-    //   // Wait for the pid to get ANY signal, so we know it's up and can continue along
-    // }
-    debug(m_debug_level, 3, "Pid of new process: %d\n", (int)pid);
-    return pid;
-  } else {
-    if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
-      fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
-      return -1;
-    }
-    return 0;
+    default:
+      // I am the parent
+      if (m_nice != INT_MAX && setpriority(PRIO_PROCESS, pid, m_nice) < 0) {
+        perror("priority setting");
+      }
   }
+  
+  if (should_wait) {
+    while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+    assert(0 == status);
+  }
+
+  debug(m_debug_level, 3, "Pid of new process: %d\n", (int)pid);
+  return pid;
 }
 
 //---
@@ -418,6 +404,7 @@ pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std:
 //---
 
 int Honeycomb::bundle() {
+  if (!valid()) return -1;
   setup_internals();
   temp_drop();
   
@@ -432,9 +419,12 @@ int Honeycomb::bundle() {
   // Run command
   //--- Make sure the directory exists
   m_working_dir = replace_vars_with_value(m_working_dir);
+  m_storage_dir = replace_vars_with_value(m_storage_dir);
+  
   debug(m_debug_level, 3, "Making sure the working directory: '%s' exists\n", m_working_dir.c_str());
   
   ensure_exists(m_working_dir);
+  ensure_exists(m_storage_dir);
   
   // Change into the working directory
   debug(m_debug_level, 4, "Dropping into directory: %s\n", m_working_dir.c_str());
@@ -473,8 +463,9 @@ int Honeycomb::bundle() {
     getwd(buf);
     printf("We are in '%s' dir\n", buf);
     
-    run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, m_working_dir, true);
+    run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, m_working_dir, 1);
     
+    printf("after run_in_fork_and_maybe_wait\n");
     std::string git_root_dir = m_working_dir + "/home/app";
     m_sha = parse_sha_from_git_directory(git_root_dir);
     m_size = dir_size_r(m_working_dir.c_str());
@@ -483,7 +474,7 @@ int Honeycomb::bundle() {
   if ((p != NULL) && (p->command != NULL)) {
     debug(m_debug_level, 1, "Running client code: %s\n", p->command);
     // Run the user's command
-    comb_exec(p->command, m_working_dir);
+    comb_exec(p->command, m_working_dir, 1);
   } else {
     //Default action
     printf("Running default action for bundle\n");
@@ -500,6 +491,9 @@ int Honeycomb::bundle() {
 
 int Honeycomb::start(MapChildrenT &child_map) 
 {
+  debug(m_debug_level, 1, "Trying to start comb: %s\n", name());
+  if (!valid()) return -1;
+  
   setup_internals();
   phase *p = find_phase(m_honeycomb_config, T_START, m_debug_level);
   exec_hook("start", BEFORE, p);
@@ -516,7 +510,7 @@ int Honeycomb::start(MapChildrenT &child_map)
     return -1;
   }
   
-  pid_t pid = comb_exec(p->command, m_run_dir, true);
+  pid_t pid = comb_exec(p->command, m_run_dir, 1);
   printf("pid of new child process: %d\n", pid);
   
   Bee bee(*this, pid);
@@ -529,18 +523,22 @@ int Honeycomb::start(MapChildrenT &child_map)
 }
 int Honeycomb::stop(MapChildrenT &child_map)
 {
+  if (!valid()) return -1;
   return 0;
 }
 int Honeycomb::mount()
 {
+  if (!valid()) return -1;
   return 0;
 }
 int Honeycomb::unmount()
 {
+  if (!valid()) return -1;
   return 0;
 }
 int Honeycomb::cleanup()
 {
+  if (!valid()) return -1;
   return 0;
 }
 void Honeycomb::set_rlimits() {
@@ -750,5 +748,7 @@ void Honeycomb::init() {
 
 int Honeycomb::valid() {
   // Run validations on the honeycomb here
-  return 0;
+  if ((m_name == ""))
+    return 0;
+  return -1;
 }
