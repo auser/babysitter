@@ -191,6 +191,8 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, int should_wait
   setup_defaults(); // Setup default environments
   build_env_vars();
   
+  cmd = replace_vars_with_value(cmd); // Replace shell variables in the command
+  
   const std::string shell = getenv("SHELL");  
   const std::string shell_args = "-c";
   const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str(), NULL };
@@ -265,7 +267,18 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, int should_wait
   
   debug(m_debug_level, 3, "Running... %s\n", argv[0]);
   // Run in a new process
-  pid_t p = run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, cd, should_wait);
+  pid_t p = run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, cd, should_wait, running_script);
+  pid_t chldpid;
+  int stat = 0;
+  do {
+     chldpid = waitpid(p, &stat, WNOHANG);
+     if (chldpid > 0) {
+        if (WIFEXITED(stat)) {
+           printf("Children PID=%d, had a %s death\n", chldpid,
+                   (WEXITSTATUS(stat)==0)?"nice normal":"awful");
+        }
+     }      
+  } while (chldpid > 0);
   
   // if (running_script) unlink(m_script_file.c_str()); // Clean up after ourselves
   
@@ -356,11 +369,12 @@ void Honeycomb::setup_internals()
   m_image = replace_vars_with_value(m_image);
 }
 
-pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd = "", int should_wait = 0)
+pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd = "", int should_wait = 0, int running_script = 0)
 {
   int status;
   pid_t pid;
   sigset_t child_sigs, original_sigs;
+  int return_code = 0;
   
   // Block all signals until we are done
   sigfillset(&child_sigs);
@@ -385,28 +399,34 @@ pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std:
         debug(m_debug_level, 4, "Dropping into directory: %s\n", cd.c_str());
         if (chdir(cd.c_str())) {
           perror("chdir");
-          return -1;
+          return_code = -1;
         }
       }
       // Reset signal handlers
       sigprocmask(SIG_SETMASK, &original_sigs, NULL);
       
       if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
+        printf("UH OH!\n");
         fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));
-        return -1;
-      }
+        if (running_script) {
+          debug(m_debug_level, 2, "Running script... removing: %s\n", argv[0]);
+          unlink(argv[0]);
+        }
+        return_code = -1;
+      }      
+      exit(return_code);
+      break;
     }
     default:
       // I am the parent
       if (m_nice != INT_MAX && setpriority(PRIO_PROCESS, pid, m_nice) < 0) {
         perror("priority setting");
       }
+      printf("\tIn the parent...\n");
   }
   
-  if (should_wait) {
+  if (should_wait)
     while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
-    assert(0 == status);
-  }
 
   debug(m_debug_level, 3, "Pid of new process: %d\n", (int)pid);
   return pid;
@@ -421,23 +441,15 @@ int Honeycomb::bundle() {
   setup_internals();
   temp_drop();
   
-  debug(m_debug_level, 3, "Finding the bundle phase in our config (%p)\n", m_honeycomb_config);
   phase *p = find_phase(m_honeycomb_config, T_BUNDLE, m_debug_level);
-  
-  debug(m_debug_level, 3, "Found the phase for the bundling action: %p\n", p);
-  
-  debug(m_debug_level, 3, "Running before hook for bundling\n");
-  
+    
   exec_hook("bundle", BEFORE, p);
   // Run command
   //--- Make sure the directory exists  
-  debug(m_debug_level, 3, "Making sure the working directory: '%s' exists\n", m_working_dir.c_str());
   ensure_exists(m_working_dir);
-  debug(m_debug_level, 3, "Making sure the storage directory: '%s' exists\n", m_storage_dir.c_str());
   ensure_exists(m_storage_dir);
   
   // Change into the working directory
-  debug(m_debug_level, 4, "Dropping into directory: %s\n", m_working_dir.c_str());
   if (chdir(m_working_dir.c_str())) {
     perror("chdir:");
     return -1;
@@ -473,7 +485,7 @@ int Honeycomb::bundle() {
     getwd(buf);
     debug(m_debug_level, 4, "Operating in '%s' dir\n", buf);
     
-    run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, m_working_dir, 1);
+    run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, m_working_dir, 1, 0);
     
     std::string git_root_dir = m_working_dir + "/home/app";
     m_sha = parse_sha_from_git_directory(git_root_dir);
@@ -509,7 +521,7 @@ int Honeycomb::start(MapChildrenT &child_map)
   
   // Run command
   //--- Make sure the directory exists
-  ensure_exists(m_run_dir = replace_vars_with_value(m_run_dir));
+  ensure_exists(m_run_dir);
   
   temp_drop();
   
@@ -530,9 +542,49 @@ int Honeycomb::start(MapChildrenT &child_map)
   exec_hook("start", AFTER, p);
   return 0;
 }
-int Honeycomb::stop(MapChildrenT &child_map)
+int Honeycomb::stop(Bee bee, MapChildrenT &child_map)
 {
   if (!valid()) return -1;
+  
+  debug(m_debug_level, 1, "Trying to stop comb: %s\n", name());
+  if (!valid()) return -1;
+  
+  setup_internals();
+  phase *p = find_phase(m_honeycomb_config, T_STOP, m_debug_level);
+  exec_hook("stop", BEFORE, p);
+  
+  // Run command
+  //--- Make sure the directory exists
+  ensure_exists(m_run_dir);
+  
+  temp_drop();
+  
+  // Change into the working directory
+  if (chdir(m_run_dir.c_str())) {
+    perror("chdir:");
+    return -1;
+  }
+  
+  if ((p != NULL) && (p->command != NULL)) {
+    debug(m_debug_level, 1, "Running client code: %s\n", p->command);
+    // Run the user's command
+    comb_exec(p->command, m_run_dir, 1);
+  } else {
+    //Default action
+    printf("Running default action for stop\n");
+    if (bee.stop()) {
+      fprintf(stderr, "There was a problem stopping the process...\n");
+      return -1;
+    }
+    // Erase? Or update status...
+    // For now, update status
+    // if (it != child_map.end()) child_map.erase(it);
+  }
+  
+  restore_perms();
+  
+  exec_hook("stop", AFTER, p);
+  
   return 0;
 }
 int Honeycomb::mount()
@@ -583,9 +635,7 @@ uid_t Honeycomb::random_uid() {
   return(-1);
 }
 
-std::string Honeycomb::find_binary(const std::string& file) {
-  // assert(geteuid() != 0 && getegid() != 0); // We can't be root to run this.
-  
+std::string Honeycomb::find_binary(const std::string& file) {  
   if (file == "") return "";
   
   if (abs_path(file)) return file;
@@ -760,4 +810,10 @@ int Honeycomb::valid() {
   if ((m_name == ""))
     return 0;
   return -1;
+}
+
+// BEE
+int Bee::stop() {
+  printf("Calling stop on the bee\n");
+  return 0;
 }

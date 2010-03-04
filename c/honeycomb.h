@@ -218,7 +218,7 @@ public:
   // Actions
   int bundle();
   int start(MapChildrenT &child_map); 
-  int stop(MapChildrenT &child_map);
+  int stop(Bee bee, MapChildrenT &child_map);
   int mount();
   int unmount();
   int cleanup();
@@ -243,7 +243,7 @@ private:
   // Building
   int comb_exec(std::string cmd, std::string cd, int should_wait);
   void exec_hook(std::string action, int stage, phase *p, std::string cd);
-  pid_t run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd, int should_wait);
+  pid_t run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd, int should_wait, int running_script);
   void ensure_exists(std::string s);
   std::string replace_vars_with_value(std::string original);
   std::string map_char_to_value(std::string f_name);
@@ -255,24 +255,25 @@ private:
  **/
 class Bee {
 public:
-  pid_t           cmd_pid;        // Pid of the custom kill command
+  pid_t           m_pid;        // Pid of the custom kill command
   Honeycomb       m_hc;             // Honeycomb
-  // ei::TimeVal     deadline;       // Time when the <cmd_pid> is supposed to be killed using SIGTERM.
+  // ei::TimeVal     deadline;       // Time when the <m_pid> is supposed to be killed using SIGTERM.
   bool            sigterm;        // <true> if sigterm was issued.
   bool            sigkill;        // <true> if sigkill was issued.
   bee_status      m_status;         // Status of the bee
 
-  Bee() : cmd_pid(-1), sigterm(false), sigkill(false), m_status(BEE_RUNNING) {}
+  Bee() : m_pid(-1), sigterm(false), sigkill(false), m_status(BEE_RUNNING) {}
   ~Bee() {}
   
-  Bee(const Honeycomb& _hc, pid_t _cmd_pid) {
+  Bee(const Honeycomb& _hc, pid_t _m_pid) {
     new(this) Bee();
-    cmd_pid = _cmd_pid;
+    m_pid = _m_pid;
     m_hc    = _hc;
   }
   
   // Accessors
   const char*   name()    const { return m_hc.name(); }
+  Honeycomb     honeycomb() const { return m_hc; }
   const char*   status()  const {
     switch(m_status) {
       case BEE_RUNNING:
@@ -286,6 +287,9 @@ public:
   
   // Setters
   void set_status(bee_status s) {m_status = s;}
+  
+public:
+  int stop();
 };
 
 /*--------------------------------------------------------------------------*/

@@ -433,11 +433,13 @@ void drop_into_shell() {
   char input[BUF_SIZE];
   int argc;
   char **argv;
+  Honeycomb comb;
+  Bee bee;
   
   while (!terminated) {
     sigsetjmp(jbuf, 1); oktojump = 0;
     
-    printf("babysitter > ");
+    printf("babysitter> ");
     fgets(input, sizeof(input), stdin);
     
     if (argify((const char*)&input, &argc, &argv) == -1) {
@@ -455,35 +457,50 @@ void drop_into_shell() {
           "\n"
         );
       } else if (!strncmp("list", input, 4) || !strncmp("l", input, 1)) {
-        printf("Name\tPid\tStatus\n-----------------------\n");
+        printf("Pid\tName\tStatus\n-----------------------\n");
         for(MapChildrenT::iterator it=children.begin(); it != children.end(); it++) 
-          printf("%s\t%d\t%s\n", 
-            it->second.name(), 
+          printf("%d\t%s\t%s\n",
             it->first, 
+            it->second.name(), 
             it->second.status()
           );
       } else if (!strncmp("start", input, 5) || !strncmp("s", input, 1)) {      
-        Honeycomb comb;
         if (parse_the_command_line_into_honeycomb_config(argc, argv, &comb) == 0) {
           printf("Starting %s\n", comb.name());
           if (comb.start(children)) fprintf(stderr, "There was an error. Check the comb for any errors\n");
         }
       } else if (!strncmp("bundle", input, 4) || !strncmp("b", input, 1)) {
-        Honeycomb comb;
         if (parse_the_command_line_into_honeycomb_config(argc, argv, &comb) == 0) {
           printf("Bundling %s\n", comb.name());
           if (comb.bundle()) fprintf(stderr, "There was an error. Check the comb for any errors\n");
         }
+      } else if (!strncmp("reload", input, 6) || !strncmp("r", input, 1)) {
+        printf("Reloading configs...\n");
+        parse_config_dir(config_file_dir, known_configs);
       } else if (!strncmp("kill", input, 4) || !strncmp("k", input, 1)) {
-        printf("Stop a program\n");
+        if (argc < 1) {
+          fprintf(stderr, "A pid is required\n");
+        } else {
+          pid_t pid = atoi(argv[1]);
+          MapChildrenT::iterator it;
+          if ((it = children.find(pid)) == children.end()) {
+            fprintf(stderr, "Cannot kill pid '%d' not managed by babysitter\n", (int)pid);
+          } else {
+            bee = it->second;
+            comb = bee.honeycomb();
+            // Found pid, try to stop it
+            if (comb.stop(bee, children)) fprintf(stderr, "There was an error. Check the comb for any errors\n");
+          }
+        }
       } else if (!strncmp("quit", input, 4) || !strncmp("q", input, 1)) {
         terminated = 1;
+        exit(0);
       } else {
         printf("Enter a command or type 'h' for help\n");
       }
     }
   }
-  exit(0);
+  exit(1);
 }
 
 int main (int argc, char *argv[])
@@ -502,7 +519,9 @@ int main (int argc, char *argv[])
       comb.start(children);
       break;
     case T_STOP:
-      comb.stop(children); break;
+      printf("TODO: Put command-line based stop back in...\n");
+      break;
+      // comb.stop(children); break;
     case T_MOUNT:
       comb.mount(); break;
     case T_UNMOUNT:

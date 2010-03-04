@@ -22,7 +22,7 @@ KEYWORDS      (bundle|start|stop|mount|unmount|cleanup)
 COMMENT     #
 NL        \n
 WHITESPACE  [ \t\r]
-STRING  ([a-zA-Z0-9()@\$<>'`"\/.,_-~]+)
+STRING  ([a-zA-Z0-9()@\$<>'`"\/\.,_\-~]+)
 
 ANYTHING  (.*)
 
