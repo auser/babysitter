@@ -241,9 +241,9 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  int comb_exec(std::string cmd, std::string cd, int should_wait);
+  int comb_exec(std::string cmd, std::string cd);
   void exec_hook(std::string action, int stage, phase *p, std::string cd);
-  pid_t run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd, int should_wait, int running_script);
+  pid_t run_in_fork_and_wait(char *argv[], char* const* env, std::string cd, int running_script);
   void ensure_exists(std::string s);
   std::string replace_vars_with_value(std::string original);
   std::string map_char_to_value(std::string f_name);

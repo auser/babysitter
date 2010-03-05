@@ -2,6 +2,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string>
 
 #include <sys/types.h>  // for kill() command
 #include <signal.h>     // for kill() command
@@ -100,20 +101,20 @@ int CombProcess::setup_signal_handlers()
 /**
 * Start the process
 **/
-int CombProcess::monitored_start(int argc, char const *argv[], char **envp)
+pid_t CombProcess::monitored_start(int argc, char const *argv[], char **envp)
 {
   set_input(argc, argv);
   set_env(envp);
   return monitored_start();
 }
-int CombProcess::monitored_start(int argc, char const *argv[], char **envp, pid_t p_pid)
+pid_t CombProcess::monitored_start(int argc, char const *argv[], char **envp, pid_t p_pid)
 {
   set_input(argc, argv);
   set_env(envp);
   return monitored_start(p_pid);
 }
 
-int CombProcess::monitored_start()
+pid_t CombProcess::monitored_start()
 {
   pid_t pid = getpid(); // get the CombProcess ID of procautostart
   debug(m_dbg, 2, "Parent process: %d\n", (int) pid);
@@ -121,7 +122,7 @@ int CombProcess::monitored_start()
 }
 
 // Entry point
-int CombProcess::monitored_start(pid_t p_pid)
+pid_t CombProcess::monitored_start(pid_t p_pid)
 {
   struct timespec *req;
   m_parent_pid = p_pid;
@@ -135,14 +136,14 @@ int CombProcess::monitored_start(pid_t p_pid)
   memset(gbl_pidfile, 0, sizeof(char) * strlen(m_pidfile)); 
   strncpy(gbl_pidfile, m_pidfile, strlen(m_pidfile));
   
-  
   mkdir_p(dirname(m_pidfile));
   
-  // detach from the main process
-  if (fork())  // 0 returned in child process
-    exit(0); // non-zero child PID
-  
   m_process_pid = start_process(p_pid);
+  // detach from the main process if 0 returned in child process
+  if (fork()) {
+    return m_process_pid;
+    // exit(0); // non-zero child PID
+  }
   
   if (m_process_pid < 0) {
     FATAL_ERROR(stderr, "Failed to start the process\n");

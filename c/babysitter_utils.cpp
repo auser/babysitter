@@ -132,6 +132,30 @@ int mkdir_p(std::string dir, uid_t user, gid_t group, mode_t mode)
   return 0;
 }
 
+int mkdir_p(std::string dir)
+{
+  if (mkdir(dir.c_str(), S_IRWXG | S_IRWXO | S_IRWXU) < 0) {
+    if (errno == ENOENT) {
+      size_t slash = dir.rfind('/');
+      if (slash != std::string::npos) {
+ 	      std::string prefix = dir.substr(0, slash);
+ 	      
+ 	      if (mkdir_p(prefix)) {
+          fprintf(stderr, "Could not create the directory prefix: %s: %s\n", prefix.c_str(), ::strerror(errno));
+          return -1;
+ 	      }
+ 	       
+        if (mkdir(dir.c_str(), S_IRWXG | S_IRWXO | S_IRWXU)) {
+          fprintf(stderr, "Could not create the directory: %s: %s\n", dir.c_str(), ::strerror(errno));
+          return -1;
+        }
+      }
+    }
+  }
+  return 0;
+}
+
+
 // Recursively remove a directory
 int rmdir_p(std::string directory)
 {

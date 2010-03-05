@@ -2,6 +2,7 @@
 #include <string>   // STL string
 
 #include "babysitter_utils.h"
+#include "hc_support.h"
 
 /*** Defines ***/
 #ifndef PID_ROOT
@@ -68,12 +69,12 @@ public:
   }
   ~CombProcess() {
     debug(m_dbg, 2, "freeing CombProcess: %p\n", this);
-    unlink(m_pidfile);
-    free(m_pidfile);
-    free(m_name);
-    free(m_argv);
-    free(m_cd);
-    free(m_cenv);
+    if (m_pidfile[0] != (char)'\0') {
+      unlink(m_pidfile);
+    }
+    if (m_name != NULL) free(m_name);
+    if (m_argv != NULL) free(m_argv);
+    if (m_cenv != NULL) free(m_cenv);
   }
   
   void set_callback(callback_t f)   {m_callback = f;}
@@ -119,10 +120,10 @@ public:
     for (int j = 0; j < i; j++) debug(m_dbg, 2, "m_argv[%d] = %s\n", j, m_argv[j]);
   }
   
-  int monitored_start();
-  int monitored_start(pid_t p_pid);
-  int monitored_start(int i, char const *argv[], char **envp);
-  int monitored_start(int i, char const *argv[], char **envp, pid_t p_pid);
+  pid_t monitored_start();
+  pid_t monitored_start(pid_t p_pid);
+  pid_t monitored_start(int i, char const *argv[], char **envp);
+  pid_t monitored_start(int i, char const *argv[], char **envp, pid_t p_pid);
   
 private:
   int start_process(pid_t parent_pid);

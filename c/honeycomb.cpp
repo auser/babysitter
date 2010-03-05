@@ -30,6 +30,7 @@
 #include "honeycomb_config.h"
 #include "honeycomb.h"
 #include "hc_support.h"
+#include "comb_process.h"
 #include "babysitter_utils.h"
 
 /*---------------------------- Implementation ------------------------------*/
@@ -186,7 +187,7 @@ int Honeycomb::build_env_vars() {
 #define MAX_ARGS 64
 #endif
 // Run a hook on the system
-int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, int should_wait = 0)
+int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
 {
   setup_defaults(); // Setup default environments
   build_env_vars();
@@ -277,7 +278,7 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, int should_wait
   
   debug(m_debug_level, 3, "Running... %s\n", argv[0]);
   // Run in a new process
-  pid_t p = run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, cd, should_wait, running_script);
+  pid_t p = run_in_fork_and_wait((char **)argv, (char * const*) m_cenv, cd, running_script);
   // pid_t chldpid;
   // int stat = 0;
   // do {
@@ -379,7 +380,7 @@ void Honeycomb::setup_internals()
   m_image = replace_vars_with_value(m_image);
 }
 
-pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std::string cd = "", int should_wait = 0, int running_script = 0)
+pid_t Honeycomb::run_in_fork_and_wait(char *argv[], char* const* env, std::string cd = "", int running_script = 0)
 {
   int status;
   pid_t pid;
@@ -435,8 +436,7 @@ pid_t Honeycomb::run_in_fork_and_maybe_wait(char *argv[], char* const* env, std:
       printf("\tIn the parent...\n");
   }
   
-  if (should_wait)
-    while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
+  while (wait(&status) != pid) ; // We don't want to continue until the child process has ended
 
   debug(m_debug_level, 3, "Pid of new process: %d\n", (int)pid);
   return pid;
@@ -495,7 +495,7 @@ int Honeycomb::bundle() {
     getwd(buf);
     debug(m_debug_level, 4, "Operating in '%s' dir\n", buf);
     
-    run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, m_working_dir, 1, 0);
+    run_in_fork_and_wait((char **)argv, (char * const*) m_cenv, m_working_dir, 0);
     
     std::string git_root_dir = m_working_dir + "/home/app";
     m_sha = parse_sha_from_git_directory(git_root_dir);
@@ -505,7 +505,7 @@ int Honeycomb::bundle() {
   if ((p != NULL) && (p->command != NULL)) {
     debug(m_debug_level, 1, "Running client code: %s\n", p->command);
     // Run the user's command
-    comb_exec(p->command, m_working_dir, 1);
+    comb_exec(p->command, m_working_dir);
   } else {
     //Default action
     printf("Running default action for bundle\n");
@@ -541,8 +541,18 @@ int Honeycomb::start(MapChildrenT &child_map)
     return -1;
   }
   
-  pid_t pid = comb_exec(p->command, m_run_dir, 0);
-  debug(m_debug_level, 1, "pid of new child process: %d\n", pid);
+  // pid_t pid = comb_exec(p->command, m_run_dir);
+  CombProcess process(m_debug_level);
+  
+  process.set_cd(m_run_dir.c_str());
+  process.set_secs(0);
+  process.set_micro(2);
+  
+  int argc;
+  char **argv;
+  argify((const char*)&p->command, &argc, &argv); // Do some error checking
+  
+  pid_t pid = process.monitored_start(argc, (const char**)argv, (char **) m_cenv);
   
   Bee bee(*this, pid);
   child_map[pid] = bee;
@@ -578,7 +588,7 @@ int Honeycomb::stop(Bee bee, MapChildrenT &child_map)
   if ((p != NULL) && (p->command != NULL)) {
     debug(m_debug_level, 1, "Running client code: %s\n", p->command);
     // Run the user's command
-    comb_exec(p->command, m_run_dir, 1);
+    comb_exec(p->command, m_run_dir);
   } else {
     //Default action
     printf("Running default action for stop\n");

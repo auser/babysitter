@@ -84,68 +84,68 @@ void setup_signal_handlers(struct sigaction sact, struct sigaction sterm)
   exited_children.resize(SIGCHLD_MAX_SIZE);
 }
 
-// We've received a signal to process
-void gotsignal(int sig) 
-{
-  if (oktojump) siglongjmp(jbuf, 1);
-  switch (sig) {
-    case SIGTERM:
-    case SIGINT:
-      terminated = 1;
-      break;
-    case SIGPIPE:
-      terminated = 1;
-      pipe_valid = false;
-      break;
-  }
-}
-
-/**
- * Got a signal from a child
- **/
-void gotsigchild(int signal, siginfo_t* si, void* context) {
-  // If someone used kill() to send SIGCHLD ignore the event
-  if (si->si_code == SI_USER || signal != SIGCHLD) return;
-  
-  debug(dbg, 1, "Process %d exited (sig=%d)\r\n", si->si_pid, signal);
-  process_child_signal(si->si_pid);
-  if (oktojump) siglongjmp(jbuf, 1);
-}
-
-/**
- * We received a signal for the child pid process
- * Wait for the pid to exit if it hasn't only if the and it's an interrupt process
- * make sure the process get the pid and signal to it
- **/
-int process_child_signal(pid_t pid)
-{
-  // If we have less exited_children then allowed
-  if (exited_children.size() < exited_children.max_size()) {
-    int status;
-    pid_t ret;
-    
-    while ((ret = waitpid(pid, &status, WNOHANG)) < 0 && errno == EINTR);
-    
-    // Check for the return on the child process
-    if (ret < 0 && errno == ECHILD) {
-      int status = ECHILD;
-      if (kill(pid, 0) == 0) // process likely forked and is alive
-        status = 0;
-      if (status != 0)
-        exited_children.push_back(std::make_pair(pid <= 0 ? ret : pid, status));
-    } else if (pid <= 0)
-      exited_children.push_back(std::make_pair(ret, status));
-    else if (ret == pid)
-      exited_children.push_back(std::make_pair(pid, status));
-    else
-      return -1;
-    return 1;
-  } else {
-    // else - defer calling waitpid() for later
-    signaled = true;
-    return 0;
-  }
-}   
+// // We've received a signal to process
+// void gotsignal(int sig) 
+// {
+//   if (oktojump) siglongjmp(jbuf, 1);
+//   switch (sig) {
+//     case SIGTERM:
+//     case SIGINT:
+//       terminated = 1;
+//       break;
+//     case SIGPIPE:
+//       terminated = 1;
+//       pipe_valid = false;
+//       break;
+//   }
+// }
+// 
+// /**
+//  * Got a signal from a child
+//  **/
+// void gotsigchild(int signal, siginfo_t* si, void* context) {
+//   // If someone used kill() to send SIGCHLD ignore the event
+//   if (si->si_code == SI_USER || signal != SIGCHLD) return;
+//   
+//   debug(dbg, 1, "Process %d exited (sig=%d)\r\n", si->si_pid, signal);
+//   process_child_signal(si->si_pid);
+//   if (oktojump) siglongjmp(jbuf, 1);
+// }
+// 
+// /**
+//  * We received a signal for the child pid process
+//  * Wait for the pid to exit if it hasn't only if the and it's an interrupt process
+//  * make sure the process get the pid and signal to it
+//  **/
+// int process_child_signal(pid_t pid)
+// {
+//   // If we have less exited_children then allowed
+//   if (exited_children.size() < exited_children.max_size()) {
+//     int status;
+//     pid_t ret;
+//     
+//     while ((ret = waitpid(pid, &status, WNOHANG)) < 0 && errno == EINTR);
+//     
+//     // Check for the return on the child process
+//     if (ret < 0 && errno == ECHILD) {
+//       int status = ECHILD;
+//       if (kill(pid, 0) == 0) // process likely forked and is alive
+//         status = 0;
+//       if (status != 0)
+//         exited_children.push_back(std::make_pair(pid <= 0 ? ret : pid, status));
+//     } else if (pid <= 0)
+//       exited_children.push_back(std::make_pair(ret, status));
+//     else if (ret == pid)
+//       exited_children.push_back(std::make_pair(pid, status));
+//     else
+//       return -1;
+//     return 1;
+//   } else {
+//     // else - defer calling waitpid() for later
+//     signaled = true;
+//     return 0;
+//   }
+// }   
 
 /**
  * Check for the pending messages, so we don't miss any
