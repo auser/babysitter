@@ -35,14 +35,14 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 
 INTERMEDIATES = babysitter_utils.o honeycomb.o hc_support.o honeycomb_config.o
 #$(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) config_parser babysitter babysitter_daemon
+OUTPUTFILES := $(INTERMEDIATES) babysitter babysitter_daemon
 #OUTPUTFILES := config_parser honeycomb eipp babysitter 
 
 DEFS = -DHAVE_CONFIG_H
  
 ERLDIR = @ERLDIR@
  
-all: prepare honeycomb $(OUTPUTFILES)
+all: prepare $(OUTPUTFILES)
 
 prepare:
 	mkdir -p $(EXECUTABLE_DIR)
@@ -75,16 +75,16 @@ eipp:
 config_parser:
 	@(cd ./parser;$(MAKE)) # make the config parser
 
-honeycomb: config_parser honeycomb.cpp honeycomb.h
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
+# honeycomb: config_parser honeycomb.o
+# 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
+# 
+# honeycomb_config.o: honeycomb
+# 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb_config.cpp
 
-honeycomb_config.o: honeycomb
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb_config.cpp
-
-babysitter_daemon: $(INTERMEDIATES)
+babysitter_daemon: config_parser $(INTERMEDIATES)
 	$(CC) $(CFLAGS) @ELF_CFLAGS@ -o $(EXECUTABLE_DIR)/babysitter_daemon babysitter_daemon.cpp $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS) $(INC_LIBS)
 
-babysitter: babysitter_utils.o honeycomb.o honeycomb_config.o config_parser
+babysitter: config_parser babysitter_utils.o honeycomb.o honeycomb_config.o
 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter babysitter.cpp $(INTERMEDIATES) $(PARSER_LIBS)
 
 clean:
