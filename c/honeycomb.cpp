@@ -244,7 +244,12 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, int should_wait
     
     // Run in a new process
     argv[0] = m_script_file.c_str();
-    argv[1] = NULL;    
+    argv[1] = NULL;
+    
+    int i = 0;
+    // PRINT OUT ARGS
+    printf("Running a script...\n");
+    for (i = 0; i < 2; i++) printf("\targv[%d] = %s\n", i, argv[i]);
   } else {
     
     // First, we have to construct the command
@@ -263,22 +268,27 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, int should_wait
     
     while (argc++ < MAX_ARGS) 
       if (! (argv[argc] = strtok(NULL, " \t\n"))) break;
+      
+    int i = 0;
+    // PRINT OUT ARGS
+    printf("not running a script...\n");
+    for (i = 0; i < argc; i++) printf("\targv[%d] = %s\n", argc, argv[argc]);
   }
   
   debug(m_debug_level, 3, "Running... %s\n", argv[0]);
   // Run in a new process
   pid_t p = run_in_fork_and_maybe_wait((char **)argv, (char * const*) m_cenv, cd, should_wait, running_script);
-  pid_t chldpid;
-  int stat = 0;
-  do {
-     chldpid = waitpid(p, &stat, WNOHANG);
-     if (chldpid > 0) {
-        if (WIFEXITED(stat)) {
-           printf("Children PID=%d, had a %s death\n", chldpid,
-                   (WEXITSTATUS(stat)==0)?"nice normal":"awful");
-        }
-     }      
-  } while (chldpid > 0);
+  // pid_t chldpid;
+  // int stat = 0;
+  // do {
+  //    chldpid = waitpid(p, &stat, WNOHANG);
+  //    if (chldpid > 0) {
+  //       if (WIFEXITED(stat)) {
+  //          printf("Children PID=%d, had a %s death\n", chldpid,
+  //                  (WEXITSTATUS(stat)==0)?"nice normal":"awful");
+  //       }
+  //    }      
+  // } while (chldpid > 0);
   
   // if (running_script) unlink(m_script_file.c_str()); // Clean up after ourselves
   
@@ -656,7 +666,7 @@ std::string Honeycomb::find_binary(const std::string& file) {
   
   if (!abs_path(file)) {
     fprintf(stderr, "Could not find the executable %s in the $PATH\n", file.c_str());
-    return NULL;
+    return file;
   }
   if (0 == access(file.c_str(), X_OK)) return file;
   
