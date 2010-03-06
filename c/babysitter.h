@@ -40,7 +40,7 @@ extern bool signaled;     // indicates that SIGCHLD was signaled
 // Functions
 //---
 void  setup_defaults();
-void  setup_signal_handlers(struct sigaction sact, struct sigaction sterm);
+void  setup_signal_handlers();
 void  gotsigchild(int signal, siginfo_t* si, void* context);
 void  gotsignal(int sig);
 int   process_child_signal(pid_t pid);

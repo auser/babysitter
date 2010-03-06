@@ -4,6 +4,9 @@
 #include "babysitter_utils.h"
 #include "hc_support.h"
 
+#ifndef COMB_PROCESS_H
+#define COMB_PROCESS_H
+
 /*** Defines ***/
 #ifndef PID_ROOT
 #define PID_ROOT "/tmp/beehive/pid"
@@ -131,3 +134,5 @@ private:
   int safe_fork(pid_t parent_pid);  
   int write_to_pidfile();
 };
+
+#endif

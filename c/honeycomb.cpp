@@ -36,6 +36,8 @@
 /*---------------------------- Implementation ------------------------------*/
 
 // using namespace ei;
+extern void process_died_callback(int _p);
+
 #define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
 std::string Honeycomb::map_char_to_value(std::string f_name) {
@@ -187,7 +189,7 @@ int Honeycomb::build_env_vars() {
 #define MAX_ARGS 64
 #endif
 // Run a hook on the system
-int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
+int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL, CombProcess* process = NULL)
 {
   setup_defaults(); // Setup default environments
   build_env_vars();
@@ -197,6 +199,7 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
   const std::string shell = getenv("SHELL");  
   const std::string shell_args = "-c";
   const char* argv[] = { shell.c_str(), shell_args.c_str(), cmd.c_str(), NULL };
+  int argc = 3;
   bool running_script = false;
   char filename[40];
   
@@ -254,7 +257,6 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
   } else {
     
     // First, we have to construct the command
-    int argc = 0;
     char str_cmd[BUF_SIZE];
     memset(str_cmd, 0, BUF_SIZE); // Clear it
     
@@ -273,12 +275,25 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
     int i = 0;
     // PRINT OUT ARGS
     printf("not running a script...\n");
-    for (i = 0; i < argc; i++) printf("\targv[%d] = %s\n", argc, argv[argc]);
+    for (i = 0; i < argc; i++) printf("\targv[%d] = %s\n", i, argv[i]);
   }
   
+  for (int i = 0; i < argc; i++) printf("\targv[%d] = %s\n", i, argv[i]);
+  
   debug(m_debug_level, 3, "Running... %s\n", argv[0]);
-  // Run in a new process
-  pid_t p = run_in_fork_and_wait((char **)argv, (char * const*) m_cenv, cd, running_script);
+  pid_t p_pid;
+  if ((CombProcess *)process == NULL) {
+    p_pid = run_in_fork_and_wait((char **)argv, (char * const*) m_cenv, cd, running_script);
+  } else {
+    printf("%s argc: %d\n", argv[0], (int)argc);
+    for (int i = 0; i < argc; i++)
+      printf("argv[%d] = %s\n", i, argv[i]);
+
+    printf("------");
+    p_pid = process->monitored_start(argc, (const char**)argv, (char **) m_cenv);
+    printf(" process->monitored_start() -> %d\n", (int)p_pid);
+    
+  }
   // pid_t chldpid;
   // int stat = 0;
   // do {
@@ -291,9 +306,7 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
   //    }      
   // } while (chldpid > 0);
   
-  // if (running_script) unlink(m_script_file.c_str()); // Clean up after ourselves
-  
-  return p;
+  return p_pid;
 }
 
 // Execute a hook
@@ -398,10 +411,7 @@ pid_t Honeycomb::run_in_fork_and_wait(char *argv[], char* const* env, std::strin
     case -1: 
       sigprocmask(SIG_SETMASK, &original_sigs, NULL);
       SYS_ERROR(-1, "Unknown error in spawn_child_process\n");
-    case 0: {
-
-      setsid(); // Become the master of my own domain
-      
+    case 0: {      
       // I am the child
       perm_drop();
       // Set resource limits (eventually)
@@ -542,20 +552,20 @@ int Honeycomb::start(MapChildrenT &child_map)
   }
   
   // pid_t pid = comb_exec(p->command, m_run_dir);
-  CombProcess process(m_debug_level);
+  CombProcess *process = new CombProcess;
   
-  process.set_cd(m_run_dir.c_str());
-  process.set_secs(0);
-  process.set_micro(2);
+  if (process_died_callback != NULL)
+    process->set_callback(process_died_callback);
+  process->set_debug(m_debug_level);
+  process->set_cd(m_run_dir.c_str());
+  process->set_secs(0);
+  process->set_micro(2);
   
-  int argc;
-  char **argv;
-  argify((const char*)&p->command, &argc, &argv); // Do some error checking
-  
-  pid_t pid = process.monitored_start(argc, (const char**)argv, (char **) m_cenv);
-  
+  pid_t pid = comb_exec(p->command, m_run_dir, process);
   Bee bee(*this, pid);
   child_map[pid] = bee;
+  
+  printf("Stored pid: %d into child_map\n", (int)pid);
   
   restore_perms();
   

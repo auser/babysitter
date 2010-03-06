@@ -28,13 +28,13 @@ int to_set_user_id = -1;
 std::deque<PidStatusT>  exited_children;
 MapChildrenT            children;
 
+pid_t gbl_babysitter_pid;   // Parent pid
 sigjmp_buf  jbuf;
-bool oktojump   = false;
-bool pipe_valid = true;      // Is the pip still valid?
-int  terminated = 0;         // indicates that we got a SIGINT / SIGTERM event
-long int dbg     = 0;        // Debug flag
-bool signaled   = false;     // indicates that SIGCHLD was signaled
-
+bool pipe_valid = true;     // Is the pip still valid?
+int  terminated = 0;        // indicates that we got a SIGINT / SIGTERM event
+long int dbg     = 0;       // Debug flag
+bool signaled   = false;    // indicates that SIGCHLD was signaled
+struct sigaction sact, sterm;
 
 // Configs
 std::string config_file_dir;                // The directory containing configs
@@ -60,10 +60,58 @@ void version(FILE *fp)
   fprintf(fp, "babysitter version %1f\n", BABYSITTER_VERSION);
 }
 
+void print_children()
+{
+  printf("Pid\tName\tStatus\n-----------------------\n");
+  for(MapChildrenT::iterator it=children.begin(); it != children.end(); it++) 
+    printf("%d\t%s\t%s\n",
+      it->first, 
+      it->second.name(), 
+      it->second.status()
+    );
+}
+
+
+int change_process_status(pid_t pid, bee_status status)
+{
+  // print_children();
+  printf("change_process_status-----------\n");
+  for(MapChildrenT::iterator it=children.begin(); it != children.end(); it++) printf("\t%d\n", it->first);
+    
+  MapChildrenT::iterator it;
+  if ((it = children.find(pid)) == children.end()) {
+    fprintf(stderr, "Cannot change pid status '%d' not managed by babysitter\n", (int)pid);
+    return -1;
+  } else {
+    Bee bee = it->second;
+    bee.set_status(status);
+    return 0;
+  }
+}
+
+void process_died_callback(pid_t p)
+{
+  printf("process died... sad: %d in pid %d\n", (int)p, (int)getpid());
+  change_process_status(p, BEE_STOPPED);
+  // kill(gbl_babysitter_pid, SIGUSR1);
+}
+
+void got_child_signal(int signal, siginfo_t* si, void* context)
+{
+  switch(signal) {
+    case SIGCHLD:
+    break;
+    default:
+    printf("got_child_signal (%d): %d for %d\n", (int)signal, (int)getpid(), (int)si->si_pid);
+    change_process_status(si->si_pid, BEE_STOPPED);
+    break;
+  }
+}
+
 /**
  * Setup the signal handlers for *this* process
  **/
-void setup_signal_handlers(struct sigaction sact, struct sigaction sterm)
+void setup_signal_handlers()
 {
   sterm.sa_handler = gotsignal;
   sigemptyset(&sterm.sa_mask);
@@ -73,9 +121,9 @@ void setup_signal_handlers(struct sigaction sact, struct sigaction sterm)
   sigaction(SIGTERM, &sterm, NULL);
   sigaction(SIGHUP,  &sterm, NULL);
   sigaction(SIGPIPE, &sterm, NULL);
-
+  
   sact.sa_handler = NULL;
-  sact.sa_sigaction = gotsigchild;
+  sact.sa_sigaction = got_child_signal;
   sigemptyset(&sact.sa_mask);
   sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
   sigaction(SIGCHLD, &sact, NULL);
@@ -436,9 +484,10 @@ void drop_into_shell() {
   Honeycomb comb;
   Bee bee;
   
-  while (!terminated) {
-    sigsetjmp(jbuf, 1); oktojump = 0;
-    
+  gbl_babysitter_pid = getpid();
+  printf("gbl_babysitter_pid: %d\n", (int)gbl_babysitter_pid);
+  
+  while (!terminated) {    
     printf("babysitter> ");
     fgets(input, sizeof(input), stdin);
     
@@ -457,17 +506,12 @@ void drop_into_shell() {
           "\n"
         );
       } else if (!strncmp("list", input, 4) || !strncmp("l", input, 1)) {
-        printf("Pid\tName\tStatus\n-----------------------\n");
-        for(MapChildrenT::iterator it=children.begin(); it != children.end(); it++) 
-          printf("%d\t%s\t%s\n",
-            it->first, 
-            it->second.name(), 
-            it->second.status()
-          );
+        print_children();
       } else if (!strncmp("start", input, 5) || !strncmp("s", input, 1)) {      
         if (parse_the_command_line_into_honeycomb_config(argc, argv, &comb) == 0) {
           printf("Starting %s\n", comb.name());
           if (comb.start(children)) fprintf(stderr, "There was an error. Check the comb for any errors\n");
+          print_children();
         }
       } else if (!strncmp("bundle", input, 4) || !strncmp("b", input, 1)) {
         if (parse_the_command_line_into_honeycomb_config(argc, argv, &comb) == 0) {
@@ -531,8 +575,7 @@ int main (int argc, char *argv[])
     case T_EMPTY:
     case T_UNKNOWN:
       setup_defaults();
-      struct sigaction sact, sterm;
-      setup_signal_handlers(sact, sterm);
+      setup_signal_handlers();
 
       drop_into_shell();
     break;

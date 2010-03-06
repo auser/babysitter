@@ -38,6 +38,7 @@ using std::string;
 
 // Erlang interface
 #include "hc_support.h"
+#include "comb_process.h"
 
 /*---------------------------- Defines ------------------------------------*/
 
@@ -241,7 +242,7 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  int comb_exec(std::string cmd, std::string cd);
+  int comb_exec(std::string cmd, std::string cd, CombProcess* process);
   void exec_hook(std::string action, int stage, phase *p, std::string cd);
   pid_t run_in_fork_and_wait(char *argv[], char* const* env, std::string cd, int running_script);
   void ensure_exists(std::string s);
