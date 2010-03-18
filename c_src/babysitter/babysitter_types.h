@@ -9,6 +9,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <deque>
 
 #include "command_info.h"
@@ -22,6 +23,7 @@ typedef std::map <pid_t, CmdInfo>           MapChildrenT;
 typedef std::pair<KillCmdPidT, pid_t>       KillPidStatusT;
 typedef std::map <KillCmdPidT, pid_t>       MapKillPidT;
 typedef std::deque<PidStatusT>              PidStatusDequeT;
+typedef std::set<std::string> string_set;
 
 #endif
 
