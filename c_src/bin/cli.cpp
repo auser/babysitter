@@ -11,7 +11,6 @@
 /* Readline */
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <readline/tilde.h>
 
 #include "string_utils.h"
 #include "process_manager.h"

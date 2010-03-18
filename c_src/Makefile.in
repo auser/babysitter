@@ -9,26 +9,28 @@ bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
-INCLUDE+=-I ./parser -I$(top_srcdir)/build/readline/include -I./utils -I./erl -I./babysitter
+
 CPPFLAGS+=$(INCLUDE)
 CFLAGS = $(CPPFLAGS) @CFLAGS@
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = $(top_srcdir)/c/parser/y.tab.o $(top_srcdir)/c/parser/lex.yy.o
-INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -lfl
-EXECUTABLE_DIR = $(top_srcdir)/priv/bin
+INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -lfl -L$(top_srcdir)/build/readline/lib -lstdc++ -lm -lreadline -lhistory
+EXECUTABLE_DIR = $(top_srcdir)/priv
+
+INCLUDE+=-I $(srcdir)/parser -I $(srcdir)/build/readline/include -I $(srcdir)/utils -I $(srcdir)/erl -I $(srcdir)/babysitter
 
 ifeq ($(shell uname),Linux)
 	ARCH=linux
 	LDFLAGS=$(LDFLAGS_COMMON) -shared
 else
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON) -dynamic -bundle -undefined suppress -flat_namespace
+	LDFLAGS=$(LDFLAGS_COMMON) -dynamic -undefined suppress -flat_namespace
 endif
 
 # Defines
 CC = g++
 CPPFLAGS = @CPPFLAGS@
-LIBS = @LIBS@
+LIBS = @LIBS@ $(INC_LIBS)
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
 UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
@@ -43,6 +45,8 @@ CXX=g++
 MAKEMAKE=mm
 MYCFLAGS=-DGNU_READLINE -DDEBUG_PRT -g3
 
+CFLAGS+=$(MYCFLAGS) $(OS_DEFINES)
+
 SRCS=$(wildcard utils/*.cpp) $(wildcard erl/*.cpp) $(wildcard babysitter/*.cpp)
 #// babysitter_utils.cpp comb_process.cpp bee.o test.cpp
 OBJS=$(patsubst %.cpp, %.o, $(SRCS))
@@ -52,12 +56,6 @@ EXES=$(patsubst bin/%.cpp.o, %.o, $(wildcard bin/*.cpp))
 # For generating makefile dependencies..
 SHELL=/bin/sh
 
-CFLAGS+=$(MYCFLAGS) $(OS_DEFINES)
-ALLLDFLAGS= $(LDFLAGS)
-
-COMMONLIBS=-Lbuild/readline/lib/ -lstdc++ -lm -lreadline -lhistory
-LIBS=$(COMMONLIBS)
-
 all: $(MAKEMAKE) config_parser $(OBJS) $(EXES)
 
 $(MAKEMAKE):
@@ -65,15 +63,11 @@ $(MAKEMAKE):
 	$(CXX) -M  $(INCLUDE) $(CPPFLAGS) $(SRCS) > $(MAKEMAKE)
 
 $(EXES): $(OBJS) clean_bins
-	@echo $(OBJS)
 	@echo "Creating a executable $(subst ,,$(subst .cpp,,$@))"
-	$(CXX) -c -o $*.o $(INCLUDE) $(CPPFLAGS) -I./src $@
+	$(CXX) -o $(EXECUTABLE_DIR)/$(subst src/,,$(subst .cpp,,$@)) $(INCLUDE) $(CPPFLAGS) $(LDFLAGS) $(OBJS) $(LIBS) $@
 
 clean_bins:
 	@(rm -rf $(top_srcdir)/priv/bin/*)
-	
-bin/*.cpp.o: $(EXES)
-	$(CXX) -o $@ $(subst .cpp,.o,$@) $(OBJS) $(ALLLDFLAGS) $(LIBS)
 
 .cpp.o: $(SRCS) $(HDR)
 	$(CXX) -c -o $*.o $(INCLUDE) $(CPPFLAGS) $*.cpp

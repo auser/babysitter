@@ -9,9 +9,9 @@
 
 #ifdef __cplusplus
 
-extern FILE *yyin;
+FILE *yyin;
 char *current_parsed_file;
-extern int yylineno;
+int yylineno;
 
 int yywrap() {
   return 1;

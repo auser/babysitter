@@ -83,7 +83,6 @@ void gotsigchild(int signal, siginfo_t* si, void* context)
 pid_t start_child(int command_argc, const char** command_argv, const char *cd, const char** env, int user, int nice)
 {
   pid_t pid = fork();
-
   switch (pid) {
   case -1: 
     return -1;

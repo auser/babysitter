@@ -4,13 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
+
+#ifdef __cplusplus
+
 #include <string>
 #include <map>
 #include <deque>
 
 #include "command_info.h"
-
-#ifdef __cplusplus
 
 // Types
 typedef int                                 ExitStatusT;

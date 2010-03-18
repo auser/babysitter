@@ -11,11 +11,6 @@
 #include <deque>
 #include <pwd.h>        /* getpwdid */
 
-/* Readline */
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <readline/tilde.h>
-
 #include "babysitter_types.h"
 #include "babysitter_utils.h"
 #include "fs.h"
