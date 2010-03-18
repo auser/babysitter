@@ -15,8 +15,11 @@
 #include "process_manager.h"
 
 // globals
-long int dbg     = 0;       // Debug flag
+extern int dbg;       // Debug flag
 ei::Serializer eis(/* packet header size */ 2);
+std::string config_file_dir;                // The directory containing configs
+int alarm_max_time      = 12;
+int to_set_user_id = -1;
 
 // Required methods
 int send_ok(int transId, pid_t pid) {
@@ -88,7 +91,7 @@ int main (int argc, char const *argv[])
   const char* env[] = { "PLATFORM_HOST=beehive", NULL };
   int env_c = 1;
   
-  parse_the_command_line(argc, argv);
+  parse_the_command_line(argc, (char **)argv);
   printf("in erlang main\n");
   return 0;
 }
