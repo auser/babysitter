@@ -79,7 +79,7 @@ config_parser:
 	@(cd ./parser;$(MAKE)) # make the config parser
 
 clean:
-	rm -rf *.o *.o $(OBJS) $(MAKEMAKE) test/*.o run_tests
+	rm -rf *.o *.o $(OBJS) $(MAKEMAKE) test/*.o run_tests c_src/*/*.o
 
 clean_deps:
 	rm -rf  build/*
