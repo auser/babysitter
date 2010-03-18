@@ -66,6 +66,8 @@ echo "- Running autoconf"
 autoconf
 echo "- Configuring"
 ./configure
+echo "- Making"
+make
 
 # cleanup
 rm -rf build/*.tar.gz

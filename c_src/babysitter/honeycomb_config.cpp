@@ -6,15 +6,21 @@
 
 #include "honeycomb_config.h"
 #include "hc_support.h"
+#include "print_utils.h"
 
 #ifdef __cplusplus
+extern "C" {
+#endif
 
-FILE *yyin;
+extern FILE *yyin;
 char *current_parsed_file;
-int yylineno;
+extern int yylineno;
 
 int yywrap() {
   return 1;
+}
+
+#ifdef __cplusplus
 }
 
 honeycomb_config *parse_config_file(std::string conf_file) {  

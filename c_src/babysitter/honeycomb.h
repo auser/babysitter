@@ -1,7 +1,3 @@
-#ifndef BUF_SIZE
-#define BUF_SIZE 2048
-#endif
-
 #ifndef HONEYCOMB_H
 #define HONEYCOMB_H
 

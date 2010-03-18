@@ -5,6 +5,8 @@
 #include "hc_support.h"
 #include "honeycomb.h"
 #include "honeycomb_config.h"
+#include "print_utils.h"
+#include "babysitter_types.h"
 
 /**
 * turn a phase_type into a string

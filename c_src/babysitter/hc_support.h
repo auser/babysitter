@@ -1,3 +1,6 @@
+#ifndef HC_SUPPORT_H
+#define HC_SUPPORT_H
+
 #ifndef DEBUG_LEVEL
 #define DEBUG_LEVEL 0
 #endif
@@ -10,10 +13,8 @@
 #define YYPARSE_PARAM config
 #endif
 
+#include "hc_support.h"
 #include "honeycomb_config.h"
-
-#ifndef HC_SUPPORT_H
-#define HC_SUPPORT_H
 
 #ifdef __cplusplus
 extern "C" {

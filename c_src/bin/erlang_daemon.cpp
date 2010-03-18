@@ -37,8 +37,8 @@ int main (int argc, char const *argv[])
 {
   setup_process_manager_defaults();
   
-  const char* env[] = { "PLATFORM_HOST=beehive", NULL };
-  int env_c = 1;
+  // const char* env[] = { "PLATFORM_HOST=beehive", NULL };
+  // int env_c = 1;
   
   if (parse_the_command_line(argc, (char **)argv)) return 0;
   

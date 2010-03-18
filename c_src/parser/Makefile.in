@@ -1,7 +1,7 @@
 # Defines
 OUT=test
 LIB_SOURCE=honeycomb.l honeycomb.y
-LIB_OBJ=y.tab.o lex.yy.o ../babysitter/hc_support.o
+LIB_OBJ=y.tab.o lex.yy.o ../babysitter/hc_support.o ../babysitter/honeycomb_config.o
 CC=cc
 GCC=g++
 CPPFLAGS=-g -O2 -Wall -I ./ -I ../babysitter -I ../utils
@@ -13,9 +13,12 @@ all: honeycomb.c y.tab.h $(LIB_OBJ)
 
 clean:
 	rm -rf *.o y.tab.h *.dSYM
-
+	
 lex:
 	lex honeycomb.l
+
+.c.o: $(SRCS) $(HDR)
+	$(CC) -c -o $*.o $(CPPFLAGS) $*.c
 
 y.tab.h: lex honeycomb.y 
 	yacc $(YACCFLAGS) honeycomb.y
