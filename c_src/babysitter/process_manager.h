@@ -16,22 +16,12 @@
 #include <readline/history.h>
 #include <readline/tilde.h>
 
+#include "babysitter_types.h"
 #include "babysitter_utils.h"
 #include "fs.h"
 #include "time_utils.h"
 #include "printing_utils.h"
-
 #include "command_info.h"
-
-// Types
-typedef int                                 ExitStatusT;
-typedef pid_t                               KillCmdPidT;
-typedef std::pair<pid_t, ExitStatusT>       PidStatusT;
-typedef std::pair<pid_t, CmdInfo>           PidInfoT;
-typedef std::map <pid_t, CmdInfo>           MapChildrenT;
-typedef std::pair<KillCmdPidT, pid_t>       KillPidStatusT;
-typedef std::map <KillCmdPidT, pid_t>       MapKillPidT;
-typedef std::deque<PidStatusT>              PidStatusDequeT;
 
 // Signals
 int process_child_signal(pid_t pid);

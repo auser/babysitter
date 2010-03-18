@@ -13,10 +13,22 @@
 
 #include "string_utils.h"
 #include "process_manager.h"
+#include "honeycomb.h"
 
 // globals
+extern MapChildrenT children;              // Map containing all managed processes started by this port program.
+extern MapKillPidT  transient_pids;        // Map of pids of custom kill commands.
 long int dbg     = 0;       // Debug flag
 ei::Serializer eis(/* packet header size */ 2);
+
+fd_set readfds;
+struct sigaction sact, sterm;
+int to_set_user_id = 0;
+
+// Configs
+std::string config_file_dir;
+extern FILE *yyin;
+ConfigMapT   known_configs;         // Map containing all the known application configurations (in /etc/beehive/apps, unless otherwise specified)
 
 // Required methods
 int send_ok(int transId, pid_t pid) {
@@ -45,7 +57,7 @@ void usage() {
 
 int parse_the_command_line(int argc, char* argv[]) {
   /**
-  * Command line processing
+  * Command line processing (TODO: Move this into a function)
   **/
   char c;
   while (-1 != (c = getopt(argc, argv, "a:DChn"))) {
@@ -85,10 +97,18 @@ int main (int argc, char const *argv[])
 {
   setup_defaults();
   
+  if (parse_the_command_line(argc, argv)) {
+    return -1;
+  }
+  
+  parse_config_dir(config_file_dir, known_configs); // Parse the config
+  
+  const int maxfd = eis.read_handle()+1;
+  
+  
   const char* env[] = { "PLATFORM_HOST=beehive", NULL };
   int env_c = 1;
   
-  parse_the_command_line(argc, argv);
   printf("in erlang main\n");
   return 0;
 }

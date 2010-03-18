@@ -6,7 +6,6 @@
 
 #include "honeycomb_config.h"
 #include "hc_support.h"
-#include "babysitter.h"
 
 #ifdef __cplusplus
 

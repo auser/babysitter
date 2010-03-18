@@ -30,7 +30,7 @@
 #include "honeycomb_config.h"
 #include "honeycomb.h"
 #include "hc_support.h"
-#include "comb_process.h"
+#include "fs.h"
 #include "babysitter_utils.h"
 
 /*---------------------------- Implementation ------------------------------*/
@@ -530,7 +530,7 @@ int Honeycomb::bundle() {
   return 0;
 }
 
-int Honeycomb::start(MapChildrenT &child_map) 
+int Honeycomb::start(MapChildrenT &children) 
 {
   debug(m_debug_level, 1, "Trying to start comb: %s\n", name());
   if (!valid()) return -1;
@@ -563,16 +563,16 @@ int Honeycomb::start(MapChildrenT &child_map)
   
   pid_t pid = comb_exec(p->command, m_run_dir, process);
   Bee bee(*this, pid);
-  child_map[pid] = bee;
+  children[pid] = bee;
   
-  printf("Stored pid: %d into child_map\n", (int)pid);
+  printf("Stored pid: %d into children\n", (int)pid);
   
   restore_perms();
   
   exec_hook("start", AFTER, p);
   return 0;
 }
-int Honeycomb::stop(Bee bee, MapChildrenT &child_map)
+int Honeycomb::stop(Bee bee, MapChildrenT &children)
 {
   if (!valid()) return -1;
   
@@ -608,7 +608,7 @@ int Honeycomb::stop(Bee bee, MapChildrenT &child_map)
     }
     // Erase? Or update status...
     // For now, update status
-    // if (it != child_map.end()) child_map.erase(it);
+    // if (it != children.end()) children.erase(it);
   }
   
   restore_perms();

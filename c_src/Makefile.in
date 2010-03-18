@@ -9,7 +9,9 @@ bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
-CFLAGS = $(CPPFLAGS) @CFLAGS@ -I ./parser
+INCLUDE+=-I ./parser -I$(top_srcdir)/build/readline/include -I./utils -I./erl -I./babysitter
+CPPFLAGS+=$(INCLUDE)
+CFLAGS = $(CPPFLAGS) @CFLAGS@
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = $(top_srcdir)/c/parser/y.tab.o $(top_srcdir)/c/parser/lex.yy.o
 INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -lfl
@@ -38,41 +40,40 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 CC=gcc
 CXX=g++
 
-MAKEMAKE=c_src/mm
-MYCFLAGS=-DGNU_READLINE -DDEBUG_PRT -g3 -Wall -I./build/readline/include -I./c_src/utils -I./c_src/erl
+MAKEMAKE=mm
+MYCFLAGS=-DGNU_READLINE -DDEBUG_PRT -g3
 
-SRCS=$(wildcard c_src/*.cpp) $(wildcard c_src/utils/*.cpp) $(wildcard c_src/erl/*.cpp)
+SRCS=$(wildcard utils/*.cpp) $(wildcard erl/*.cpp) $(wildcard babysitter/*.cpp)
 #// babysitter_utils.cpp comb_process.cpp bee.o test.cpp
 OBJS=$(patsubst %.cpp, %.o, $(SRCS))
 #//babysitter_utils.o comb_process.o bee.o test.o
-EXES=$(patsubst c_src/bin/%.cpp.o, %.o, $(wildcard c_src/bin/*.cpp))
+EXES=$(patsubst bin/%.cpp.o, %.o, $(wildcard bin/*.cpp))
 
 # For generating makefile dependencies..
 SHELL=/bin/sh
 
-CPPFLAGS=$(MYCFLAGS) $(OS_DEFINES)
-CFLAGS=$(MYCFLAGS) $(OS_DEFINES)
-
+CFLAGS+=$(MYCFLAGS) $(OS_DEFINES)
 ALLLDFLAGS= $(LDFLAGS)
 
 COMMONLIBS=-Lbuild/readline/lib/ -lstdc++ -lm -lreadline -lhistory
 LIBS=$(COMMONLIBS)
 
-all: $(MAKEMAKE) config_parser $(EXES)
+all: $(MAKEMAKE) config_parser $(OBJS) $(EXES)
 
 $(MAKEMAKE):
 	@(rm -f $(MAKEMAKE))
 	$(CXX) -M  $(INCLUDE) $(CPPFLAGS) $(SRCS) > $(MAKEMAKE)
 
 $(EXES): $(OBJS) clean_bins
-	@echo "Creating a executable $(subst c_src/,,$(subst .cpp,,$@))"
+	@echo $(OBJS)
+	@echo "Creating a executable $(subst ,,$(subst .cpp,,$@))"
 	$(CXX) -c -o $*.o $(INCLUDE) $(CPPFLAGS) -I./src $@
 
 clean_bins:
-	@(rm -rf bin/*)
+	@(rm -rf $(top_srcdir)/priv/bin/*)
 	
 bin/*.cpp.o: $(EXES)
-	$(CXX) -o $(subst c_src/,,$(subst .cpp,,$@)) $(subst .cpp,.o,$@) $(OBJS) $(ALLLDFLAGS) $(LIBS)
+	$(CXX) -o $@ $(subst .cpp,.o,$@) $(OBJS) $(ALLLDFLAGS) $(LIBS)
 
 .cpp.o: $(SRCS) $(HDR)
 	$(CXX) -c -o $*.o $(INCLUDE) $(CPPFLAGS) $*.cpp
@@ -84,7 +85,7 @@ config_parser:
 	@(cd ./parser;$(MAKE)) # make the config parser
 
 clean:
-	rm -rf *.o c_src/*.o $(EXE) $(MAKEMAKE) test/*.o run_tests
+	rm -rf *.o *.o $(OBJS) $(MAKEMAKE) test/*.o run_tests
 
 clean_deps:
 	rm -rf  build/*

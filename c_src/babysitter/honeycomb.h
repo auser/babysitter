@@ -37,8 +37,9 @@
 using std::string;
 
 // Erlang interface
-#include "hc_support.h"
 #include "comb_process.h"
+#include "hc_support.h"
+#include "babysitter_types.h"
 
 /*---------------------------- Defines ------------------------------------*/
 
@@ -68,7 +69,6 @@ typedef void(*func_ptr)();
 typedef enum {UNKNOWN, FAILURE} failure_type_t;
 
 class Honeycomb;
-class Bee;
 
 // TODO: Implement multiple mounts for bees
 typedef enum _mount_types_ {
@@ -81,30 +81,6 @@ typedef struct _mount_ {
   string src;
   string dest;
 } mount_type;
-
-typedef enum _bee_status_ {
-  BEE_RUNNING,
-  BEE_STOPPED,
-  BEE_KILLED
-} bee_status;
-
-typedef enum _bee_error_type_ {
-  BEE_
-};
-
-typedef struct _bee_wire_error_ {
-  
-} bee_wire_error;
-
-typedef unsigned char byte;
-typedef int   exit_status_t;
-typedef pid_t kill_cmd_pid_t;
-typedef std::pair<pid_t, exit_status_t>     PidStatusT;
-typedef std::pair<pid_t, Bee>         PidInfoT;
-typedef std::map <pid_t, Bee>         MapChildrenT;
-typedef std::pair<kill_cmd_pid_t, pid_t>    KillPidStatusT;
-typedef std::map <kill_cmd_pid_t, pid_t>    MapKillPidT;
-typedef std::map <std::string, honeycomb_config*> ConfigMapT;
 
 /*--------------------------------------------------------------------------*/
  
@@ -218,8 +194,8 @@ public:
   
   // Actions
   int bundle();
-  int start(MapChildrenT &child_map); 
-  int stop(Bee bee, MapChildrenT &child_map);
+  int start(MapChildrenT &children); 
+  int stop(Bee bee, MapChildrenT &children);
   int mount();
   int unmount();
   int cleanup();

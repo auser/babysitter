@@ -576,7 +576,7 @@ PACKAGE_VERSION='0.1'
 PACKAGE_STRING='babysitter 0.1'
 PACKAGE_BUGREPORT=''
 
-ac_unique_file="c_src/babysitter.cpp"
+ac_unique_file="c_src/bin/cli.cpp"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>

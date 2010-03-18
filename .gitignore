@@ -7,7 +7,8 @@ ebin/*.boot
 ebin/*.rel
 ebin/*.script
 priv/*.so
-c/*.o
+c_src/*.o
+*.o
 config.log
 config.status
 c/test_suite
@@ -15,3 +16,6 @@ c/test_suite
 .DS_Store
 priv/
 VERSION
+build/
+Makefile
+c_src/parser/y.tab.h

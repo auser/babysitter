@@ -1,10 +1,10 @@
 # Defines
 OUT=test
 LIB_SOURCE=honeycomb.l honeycomb.y
-LIB_OBJ=y.tab.o lex.yy.o ../hc_support.o
+LIB_OBJ=y.tab.o lex.yy.o ../babysitter/hc_support.o
 CC=cc
 GCC=g++
-CPPFLAGS=-g -O2 -Wall -I ./ -I ../
+CPPFLAGS=-g -O2 -Wall -I ./ -I ../babysitter
 YACCFLAGS=-d
 
 default: all

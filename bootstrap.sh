@@ -45,7 +45,7 @@ else
   fi
 fi
 
-if [ -f "build/readline/lib/readline.a" ]; then
+if [ -f "build/readline/lib/libreadline.a" ]; then
     echo "readline built"
 else
   pushd build
@@ -62,8 +62,9 @@ else
 fi
 
 # Run autoconf
+echo "- Running autoconf"
 autoconf
-
+echo "- Configuring"
 ./configure
 
 # cleanup

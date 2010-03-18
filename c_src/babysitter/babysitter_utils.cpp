@@ -22,19 +22,6 @@ int babysitter_system_error(int err, const char *fmt, ...)
   return err;
 }
 
-// Debug
-int debug(const long int cur_level, int level, const char *fmt, ...)
-{
-  int r;
-  va_list ap;
-  if (cur_level < level) return 0;
-	va_start(ap, fmt);
-  fprintf(stderr, "[debug %d] ", level);
-	r = vfprintf(stderr, fmt, ap);
-	va_end(ap);
-	return r;
-}
-
 // Parse sha
 // Pass the root directory of the git repos
 const char *parse_sha_from_git_directory(std::string root_directory)
