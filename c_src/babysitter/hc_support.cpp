@@ -8,6 +8,7 @@
 #include "print_utils.h"
 #include "babysitter_types.h"
 
+#ifdef __cpluplus
 /**
 * turn a phase_type into a string
 * FOR DEBUGGING
@@ -269,3 +270,5 @@ void free_phase(phase *p) {
   if (p->command) free(p->command);
   if (p->after) free(p->after);
 }
+
+#endif

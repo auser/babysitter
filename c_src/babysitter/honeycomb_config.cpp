@@ -10,7 +10,11 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+  extern FILE *yyin;
+  char *current_parsed_file;
+  extern int yylineno;
+}
+#else
 
 extern FILE *yyin;
 char *current_parsed_file;
@@ -20,8 +24,9 @@ int yywrap() {
   return 1;
 }
 
+#endif
+
 #ifdef __cplusplus
-}
 
 honeycomb_config *parse_config_file(std::string conf_file) {  
   const char *filename = conf_file.c_str();

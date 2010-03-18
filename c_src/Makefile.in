@@ -47,7 +47,7 @@ MYCFLAGS=-DGNU_READLINE -DDEBUG_PRT -g3
 
 CFLAGS+=$(MYCFLAGS) $(OS_DEFINES)
 
-SRCS=$(wildcard utils/*.cpp) $(wildcard erl/*.cpp) $(wildcard babysitter/*.cpp) babysitter/hc_support.c
+SRCS=$(wildcard utils/*.cpp) $(wildcard erl/*.cpp) $(wildcard babysitter/*.cpp)
 OBJS=$(patsubst %.cpp, %.o, $(patsubst %.c, %.o, $(SRCS)))
 EXES=$(patsubst bin/%.cpp.o, %.o, $(wildcard bin/*.cpp))
 

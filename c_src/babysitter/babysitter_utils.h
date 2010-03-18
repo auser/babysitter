@@ -5,6 +5,7 @@
 #include <string>
 
 #include "honeycomb.h"
+#include "honeycomb_config.h"
 
 //---
 // Functions
