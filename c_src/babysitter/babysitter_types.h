@@ -5,6 +5,10 @@
 #include <string.h>
 #include <signal.h>
 
+#ifndef BUF_SIZE
+#define BUF_SIZE 1024
+#endif
+
 #ifdef __cplusplus
 
 #include <string>

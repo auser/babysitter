@@ -377,7 +377,7 @@ int check_children(int& isTerminated)
   return 0;
 }
 
-void setup_defaults()
+void setup_process_manager_defaults()
 {	
   run_as_user = getuid();
   process_pid = (int)getpid();

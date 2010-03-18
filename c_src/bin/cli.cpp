@@ -14,12 +14,19 @@
 
 #include "string_utils.h"
 #include "process_manager.h"
+#include "babysitter_types.h"
+#include "babysitter_utils.h"
+#include "hc_support.h"
 
 // Globals
 extern MapChildrenT children;
 extern PidStatusDequeT exited_children;
 extern int run_as_user;
 extern bool signaled;
+extern int dbg;       // Debug flag
+
+extern std::string config_file_dir;
+extern ConfigMapT  known_configs;
 
 #ifndef PROMPT_STR
 #define PROMPT_STR "bs$ "
@@ -62,9 +69,21 @@ void print_help()
   );
 }
 
+/**
+* Setup defaults for the program. These can be overriden after the
+* command-line is parsed. This way we don't have variables we expect to be non-NULL 
+* being NULL at runtime.
+**/
+void setup_defaults() {
+  setup_process_manager_defaults();
+  config_file_dir = "/etc/beehive/configs";
+}
+
 int main (int argc, const char *argv[])
 {
   setup_defaults();
+  
+  if (parse_the_command_line(argc, (char **)argv)) return 0;
   
   const char* env[] = { "PLATFORM_HOST=beehive", NULL };
   int env_c = 1;

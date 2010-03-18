@@ -41,6 +41,6 @@ void check_pending();
 int check_children(int& isTerminated);
 
 // Other
-void setup_defaults();
+void setup_process_manager_defaults();
 
 #endif
