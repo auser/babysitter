@@ -14,6 +14,8 @@
 #include "string_utils.h"
 #include "process_manager.h"
 #include "honeycomb_config.h"
+#include "printing_utils.h"
+#include "hc_support.h"
 
 #ifndef BUF_SIZE
 #define BUF_SIZE 1024
@@ -244,6 +246,6 @@ int main (int argc, char const *argv[])
   
   parse_the_command_line(argc, (char **)argv);
   
-  printf("in erlang main\n");
+  debug(dbg, 1, "in erlang main\n");
   return 0;
 }

@@ -13,8 +13,8 @@ all:
 	(cd c_src;$(MAKE))
 	(cd erl;$(MAKE); $(MAKE) boot)
 
-babysitter:
-	(cd c_src;$(MAKE) babysitter)
+c:
+	(cd c_src;$(MAKE))
 
 clean:
 	(cd c_src;$(MAKE) clean)

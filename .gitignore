@@ -1,7 +1,7 @@
 autom4te.cache/*
-c/Makefile
+c_src/Makefile
 erl/Makefile
-test/c/Makefile
+test/c_src/Makefile
 ebin/*.beam
 ebin/*.boot
 ebin/*.rel
@@ -11,7 +11,6 @@ c_src/*.o
 *.o
 config.log
 config.status
-c/test_suite
 .deps
 .DS_Store
 priv/
@@ -19,3 +18,4 @@ VERSION
 build/
 Makefile
 c_src/parser/y.tab.h
+c_src/mm

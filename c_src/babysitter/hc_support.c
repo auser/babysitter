@@ -6,19 +6,6 @@
 #include "honeycomb.h"
 #include "honeycomb_config.h"
 
-// Debug
-int debug(const long int cur_level, int level, char *fmt, ...)
-{
-  int r;
-  va_list ap;
-  if (cur_level < level) return 0;
-	va_start(ap, fmt);
-  fprintf(stderr, "[debug %d] ", level);
-	r = vfprintf(stderr, fmt, ap);
-	va_end(ap);
-	return r;
-}
-
 /**
 * turn a phase_type into a string
 * FOR DEBUGGING

@@ -22,7 +22,6 @@ extern "C" {
   int yylex(void);  
   int yywrap();
   
-  int debug(const long int cur_level, int level, const char *fmt, ...);
   char *phase_type_to_string(phase_type t);
   char *attribute_type_to_string(attr_type t);
 
@@ -51,7 +50,6 @@ extern int yyparse(void *);
 extern int yywrap(void);
 int yyerror(const char *str);
 
-int debug(const long int cur_level, int level, char *fmt, ...);
 char *phase_type_to_string(phase_type t);
 char *attribute_type_to_string(attr_type t);
 
