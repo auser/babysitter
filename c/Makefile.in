@@ -33,68 +33,60 @@ UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 
-INTERMEDIATES = babysitter_utils.o honeycomb.o hc_support.o honeycomb_config.o comb_process.o
-#$(patsubst %.cpp, %.o, $(wildcard *.cpp))
-OUTPUTFILES := $(INTERMEDIATES) babysitter babysitter_daemon
-#OUTPUTFILES := config_parser honeycomb eipp babysitter 
+.SUFFIXES: .pc .cpp .c .o
 
-DEFS = -DHAVE_CONFIG_H
- 
-ERLDIR = @ERLDIR@
- 
-all: prepare $(OUTPUTFILES)
+CC=gcc
+CXX=g++
 
-prepare:
-	mkdir -p $(EXECUTABLE_DIR)
+MAKEMAKE=c_src/mm
+MYCFLAGS=-DGNU_READLINE -DDEBUG_PRT -g3 -Wall -I./build/readline/include -I./c_src/utils -I./c_src/erl
 
-debug:
-	$(MAKE) DEBUG=-DDEBUG
- 
-.SUFFIXES: .o .cpp .h
-  
-test_suite: suite.o $(TEST_OBJECTS) $(UNDER_TEST)
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -lcheck -o $@ $^ @LIBEI@	
- 
-test: test_suite
-	$(MAKE) TEST=-DTEST
-	./test_suite
- 
-test-dbg: test_suite
-	$(MAKE) TEST=-DTEST
-	gdb test_suite
- 
-test_%.o: test_%.c %.o
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
+SRCS=$(wildcard c_src/*.cpp) $(wildcard c_src/utils/*.cpp) $(wildcard c_src/erl/*.cpp)
+#// babysitter_utils.cpp comb_process.cpp bee.o test.cpp
+OBJS=$(patsubst %.cpp, %.o, $(SRCS))
+#//babysitter_utils.o comb_process.o bee.o test.o
+EXES=$(patsubst c_src/bin/%.cpp.o, %.o, $(wildcard c_src/bin/*.cpp))
 
-.cpp.o:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c $<
+# For generating makefile dependencies..
+SHELL=/bin/sh
 
-eipp:
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c ei++.cpp
+CPPFLAGS=$(MYCFLAGS) $(OS_DEFINES)
+CFLAGS=$(MYCFLAGS) $(OS_DEFINES)
+
+ALLLDFLAGS= $(LDFLAGS)
+
+COMMONLIBS=-Lbuild/readline/lib/ -lstdc++ -lm -lreadline -lhistory
+LIBS=$(COMMONLIBS)
+
+all: $(MAKEMAKE) config_parser $(EXES)
+
+$(MAKEMAKE):
+	@(rm -f $(MAKEMAKE))
+	$(CXX) -M  $(INCLUDE) $(CPPFLAGS) $(SRCS) > $(MAKEMAKE)
+
+$(EXES): $(OBJS) clean_bins
+	@echo "Creating a executable $(subst c_src/,,$(subst .cpp,,$@))"
+	$(CXX) -c -o $*.o $(INCLUDE) $(CPPFLAGS) -I./src $@
+
+clean_bins:
+	@(rm -rf bin/*)
+	
+bin/*.cpp.o: $(EXES)
+	$(CXX) -o $(subst c_src/,,$(subst .cpp,,$@)) $(subst .cpp,.o,$@) $(OBJS) $(ALLLDFLAGS) $(LIBS)
+
+.cpp.o: $(SRCS) $(HDR)
+	$(CXX) -c -o $*.o $(INCLUDE) $(CPPFLAGS) $*.cpp
+
+.c.o: $(SRCS) $(HDR)
+	$(CC) -c $(INCLUDE) $(CFLAGS) $*.c
 
 config_parser:
 	@(cd ./parser;$(MAKE)) # make the config parser
 
-# honeycomb: config_parser honeycomb.o
-# 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb.cpp
-# 
-# honeycomb_config.o: honeycomb
-# 	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -c honeycomb_config.cpp
-
-babysitter_daemon: config_parser $(INTERMEDIATES)
-	$(CC) $(CFLAGS) @ELF_CFLAGS@ -o $(EXECUTABLE_DIR)/babysitter_daemon babysitter_daemon.cpp $(INTERMEDIATES) $(PARSER_LIBS) $(LDFLAGS) $(INC_LIBS)
-
-babysitter: config_parser $(INTERMEDIATES) babysitter_utils.o honeycomb.o honeycomb_config.o
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) -o $(EXECUTABLE_DIR)/babysitter babysitter.cpp $(INTERMEDIATES) $(PARSER_LIBS)
-
 clean:
-	rm -rf *.o *.a $(OUTPUTFILES) $(EXECUTABLE_DIR)/*
-	cd ./parser; $(MAKE) clean
- 
-install:
-	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv
-	cp -r $(EXECUTABLE_DIR)/* $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/
- 
-package:
-	install -d $(top_srcdir)/.pkgtmp/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv
-	cp -r $(EXECUTABLE_DIR)/* $(top_srcdir)/../.pkgtmp/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/priv
+	rm -rf *.o c_src/*.o $(EXE) $(MAKEMAKE) test/*.o run_tests
+
+clean_deps:
+	rm -rf  build/*
+
+include Tests.makefile
