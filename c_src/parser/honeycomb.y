@@ -4,7 +4,7 @@
 
 #include "honeycomb_config.h"
 #include "hc_support.h"
-#include "printing_utils.h"
+#include "print_utils.h"
 
 extern int yylineno;
 extern char *current_parsed_file;

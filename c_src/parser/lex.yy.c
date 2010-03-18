@@ -582,7 +582,7 @@ char *yytext;
 #include <string.h>
 
 #include "honeycomb_config.h"
-#include "printing_utils.h"
+#include "print_utils.h"
 #include "hc_support.h"
 #include "y.tab.h"
 

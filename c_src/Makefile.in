@@ -10,7 +10,7 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 
-CPPFLAGS+=$(INCLUDE)
+CPPFLAGS+=$(INCLUDE) -O2 -g
 CFLAGS = $(CPPFLAGS) @CFLAGS@
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = $(top_srcdir)/c/parser/y.tab.o $(top_srcdir)/c/parser/lex.yy.o

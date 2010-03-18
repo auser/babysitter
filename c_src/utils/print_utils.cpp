@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "printing_utils.h"
+#include "print_utils.h"
 
 void fperror(const char *s,...)
 {
@@ -24,7 +24,7 @@ void fperror_and_die(int exit_code, const char *s, ...)
 }
 
 // Debug
-int debug(const long int cur_level, int level, char *fmt, ...)
+int debug(const long int cur_level, int level, const char *fmt, ...)
 {
   int r;
   va_list ap;
