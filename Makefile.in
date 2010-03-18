@@ -10,27 +10,25 @@ endif
  
 all:
 	(echo @PACKAGE_VERSION@ > VERSION)	
-	(cd c;$(MAKE))
+	(cd c_src;$(MAKE))
 	(cd erl;$(MAKE); $(MAKE) boot)
 
 babysitter:
-	(cd c;$(MAKE) babysitter)
+	(cd c_src;$(MAKE) babysitter)
 
 clean:
-	(cd c;$(MAKE) clean)
+	(cd c_src;$(MAKE) clean)
 	(cd erl;$(MAKE) clean)
  
 test:
-	(cd c; $(MAKE) test)
+	(cd c_src; $(MAKE) test)
 	(cd erl; $(MAKE) test)
  
 install: all
-	(cd c; $(MAKE) install)
+	(cd c_src; $(MAKE) install)
 	(cd erl; $(MAKE) install)
  
 debug:
-	(cd c;$(MAKE) debug)
+	(cd c_src;$(MAKE) debug)
 	(cd erl;$(MAKE) debug)
 	
-test_deploy: clean
-	@(rsync -va --exclude=.git --exclude=*.o . vm:~/bs)

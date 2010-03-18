@@ -5,7 +5,7 @@
 AC_PREREQ([2.00])
 AC_INIT(babysitter, 0.1)
 # AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AC_CONFIG_SRCDIR([c/babysitter.cpp])
+AC_CONFIG_SRCDIR([c_src/babysitter.cpp])
 
 # Checks for programs.
 AC_PROG_CC
@@ -100,4 +100,4 @@ AC_TYPE_UID_T
 AC_CHECK_FUNCS([gettimeofday memset alarm atexit mkdir regcomp select strchr strdup strerror sigtimedwait])
 AC_CHECK_FUNCS([setresgid getresgid])
 
-AC_OUTPUT([c/Makefile c/parser/Makefile erl/Makefile test/c/Makefile Makefile])
+AC_OUTPUT([c_src/Makefile c_src/parser/Makefile erl/Makefile test/c_src/Makefile Makefile])

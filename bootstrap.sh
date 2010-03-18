@@ -61,5 +61,10 @@ else
   popd
 fi
 
+# Run autoconf
+autoconf
+
+./configure
+
 # cleanup
 rm -rf build/*.tar.gz

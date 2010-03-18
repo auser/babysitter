@@ -576,7 +576,7 @@ PACKAGE_VERSION='0.1'
 PACKAGE_STRING='babysitter 0.1'
 PACKAGE_BUGREPORT=''
 
-ac_unique_file="c/babysitter.cpp"
+ac_unique_file="c_src/babysitter.cpp"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -7153,7 +7153,7 @@ fi
 done
 
 
-ac_config_files="$ac_config_files c/Makefile c/parser/Makefile erl/Makefile test/c/Makefile Makefile"
+ac_config_files="$ac_config_files c_src/Makefile c_src/parser/Makefile erl/Makefile test/c_src/Makefile Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7722,10 +7722,10 @@ cat >>$CONFIG_STATUS <<\_ACEOF
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "c/Makefile") CONFIG_FILES="$CONFIG_FILES c/Makefile" ;;
-    "c/parser/Makefile") CONFIG_FILES="$CONFIG_FILES c/parser/Makefile" ;;
+    "c_src/Makefile") CONFIG_FILES="$CONFIG_FILES c_src/Makefile" ;;
+    "c_src/parser/Makefile") CONFIG_FILES="$CONFIG_FILES c_src/parser/Makefile" ;;
     "erl/Makefile") CONFIG_FILES="$CONFIG_FILES erl/Makefile" ;;
-    "test/c/Makefile") CONFIG_FILES="$CONFIG_FILES test/c/Makefile" ;;
+    "test/c_src/Makefile") CONFIG_FILES="$CONFIG_FILES test/c_src/Makefile" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
