@@ -13,7 +13,7 @@
 -export ([
   spawn_new/2,
   stop_process/1,
-  isolate_command/0
+  erlang_daemon_command/0
 ]).
 
 -export([start_link/0, stop/0]).
@@ -25,7 +25,7 @@
 % only for tests
 -export ([
   build_exec_opts/2,
-  build_isolate_command/1
+  build_erlang_daemon_command/1
 ]).
 
 -record(state, {}).
@@ -40,9 +40,9 @@ spawn_new(Options, From) ->
 stop_process(Arg) ->
   handle_stop_process(Arg).
 
-isolate_command() ->
+erlang_daemon_command() ->
   Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
-  filename:join([Dir, "priv", "bin", "isolate"]).
+  filename:join([Dir, "priv", "bin", "erlang_daemon"]).
   
 %%--------------------------------------------------------------------
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
@@ -136,7 +136,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 handle_spawn_new(Opts) ->
-  RealCommand = build_isolate_command(Opts),
+  RealCommand = build_erlang_daemon_command(Opts),
   ExecOpts = build_exec_opts(Opts, []),
   io:format("RealCommand: ~p and opts: ~p~n", [RealCommand, ExecOpts]),
   exec:run_link(RealCommand, ExecOpts).
@@ -144,7 +144,7 @@ handle_spawn_new(Opts) ->
 handle_stop_process(Pid) when is_pid(Pid) ->
   babysitter_process:stop(Pid).
 
-build_isolate_command(Opts) ->
+build_erlang_daemon_command(Opts) ->
   Vars    = fetch_value(vars, Opts),
   DefinedCommand = fetch_value(start_command, Opts),
   Command = string_utils:template_command_string(DefinedCommand, Vars),

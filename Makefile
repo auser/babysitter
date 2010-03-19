@@ -13,6 +13,9 @@ all:
 	(cd c_src;$(MAKE))
 	(cd erl;$(MAKE); $(MAKE) boot)
 
+erl:
+	(cd erl;$(MAKE); $(MAKE) boot)
+
 c:
 	(cd c_src;$(MAKE))
 

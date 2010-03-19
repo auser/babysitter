@@ -18,11 +18,13 @@
 #include "print_utils.h"
 #include "command_info.h"
 
+#define SIGCHLD_MAX_SIZE 4096
+
 // Signals
-int process_child_signal(pid_t pid);
-void pending_signals(int sig);
-void gotsignal(int signal);
-void gotsigchild(int signal, siginfo_t* si, void* context);
+int pm_process_child_signal(pid_t pid);
+void pm_pending_signals(int sig);
+void pm_gotsignal(int signal);
+void pm_gotsigchild(int signal, siginfo_t* si, void* context);
 void setup_signal_handlers();
 
 // Returns

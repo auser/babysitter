@@ -66,13 +66,13 @@ void pending_signals(int sig)
   alarm(0);
 }
 
-void gotsignal(int signal)
+void pm_gotsignal(int signal)
 {
   if (signal == SIGTERM || signal == SIGINT || signal == SIGPIPE)
     terminated = 1;
 }
 
-void gotsigchild(int signal, siginfo_t* si, void* context)
+void pm_gotsigchild(int signal, siginfo_t* si, void* context)
 {
     // If someone used kill() to send SIGCHLD ignore the event
     if (signal != SIGCHLD) return;
@@ -272,7 +272,7 @@ void terminate_all()
 
 void setup_signal_handlers()
 {
-  sterm.sa_handler = gotsignal;
+  sterm.sa_handler = pm_gotsignal;
   sigemptyset(&sterm.sa_mask);
   sigaddset(&sterm.sa_mask, SIGCHLD);
   sterm.sa_flags = 0;
@@ -282,7 +282,7 @@ void setup_signal_handlers()
   sigaction(SIGPIPE, &sterm, NULL);
   
   sact.sa_handler = NULL;
-  sact.sa_sigaction = gotsigchild;
+  sact.sa_sigaction = pm_gotsigchild;
   sigemptyset(&sact.sa_mask);
   sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
   sigaction(SIGCHLD, &sact, NULL);
@@ -308,10 +308,10 @@ void check_pending()
     setitimer(ITIMER_REAL, &tval, NULL);
     while (((sig = sigwait(&set, &info)) > 0 || errno == EINTR) && !pending_sigalarm_signal )
     switch (sig) {
-      case SIGCHLD:   gotsignal(sig); break;
+      case SIGCHLD:   pm_gotsignal(sig); break;
       case SIGTERM:
       case SIGINT:
-      case SIGHUP:    gotsignal(sig); break;
+      case SIGHUP:    pm_gotsignal(sig); break;
       case SIGALRM:   printf("got SIGALRM\n"); break;
       default:        break;
     }
@@ -382,4 +382,6 @@ void setup_process_manager_defaults()
   run_as_user = getuid();
   process_pid = (int)getpid();
   setup_signal_handlers();
+  exited_children.resize(SIGCHLD_MAX_SIZE);
+  
 }
