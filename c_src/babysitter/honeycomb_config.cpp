@@ -10,21 +10,19 @@
 
 #ifdef __cplusplus
 extern "C" {
+#endif
   extern FILE *yyin;
   char *current_parsed_file;
   extern int yylineno;
+  extern int yydebug;
+#ifdef __cplusplus
 }
-#else
-
-extern FILE *yyin;
-char *current_parsed_file;
-extern int yylineno;
+#endif
 
 int yywrap() {
   return 1;
 }
 
-#endif
 
 #ifdef __cplusplus
 
@@ -55,7 +53,8 @@ honeycomb_config *parse_config_file(std::string conf_file) {
   add_attribute(config, T_FILEPATH, fp);
   free(fp);
 	// parse through the input until there is no more:
-  yyparse ((void *) config);
+  yydebug = 0;
+  yyparse((void *) config);
   
   return config;
 }

@@ -14,7 +14,7 @@ CPPFLAGS+=$(INCLUDE) -O2 -g
 CFLAGS = $(CPPFLAGS) @CFLAGS@
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = $(srcdir)/parser/y.tab.o $(srcdir)/parser/lex.yy.o
-INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -L$(top_srcdir)/build/readline/lib -lreadline -lhistory -lfl -lm
+INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -L$(top_srcdir)/build/readline/lib -lreadline -lhistory -lfl -lm -ll
 EXECUTABLE_DIR = $(top_srcdir)/priv
 
 INCLUDE+=-I $(srcdir)/parser -I $(srcdir)/build/readline/include -I $(srcdir)/utils -I $(srcdir)/erl -I $(srcdir)/babysitter
@@ -23,8 +23,9 @@ ifeq ($(shell uname),Linux)
 	ARCH=linux
 	LDFLAGS=$(LDFLAGS_COMMON) -shared
 else
+	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON) -dynamic -undefined suppress -flat_namespace
+	LDFLAGS=$(LDFLAGS_COMMON)
 endif
 
 # Defines
@@ -62,8 +63,7 @@ $(MAKEMAKE):
 
 $(EXES): $(OBJS) clean_bins
 	@echo "Creating a executable $(subst ,,$(subst .cpp,,$@))"
-	$(CXX) $@ -o $(EXECUTABLE_DIR)/$(subst src/,,$(subst .cpp,,$@)) $(CPPFLAGS) $(OBJS) $(LIBS) $(LDFLAGS)
-	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) $@ -o $(EXECUTABLE_DIR)/$(subst src/,,$(subst .cpp,,$@)) $(INTERMEDIATES) $(PARSER_LIBS)
+	$(CXX) $@ -o $(EXECUTABLE_DIR)/$(subst src/,,$(subst .cpp,,$@)) $(CPPFLAGS) $(PARSER_LIBS) $(OBJS) $(LIBS) $(LDFLAGS)
 
 clean_bins:
 	@(rm -rf $(top_srcdir)/priv/bin/*)
@@ -79,6 +79,7 @@ config_parser: $(patsubst %.cpp, %.o, $(wildcard utils/*.cpp))
 
 clean:
 	rm -rf *.o *.o $(OBJS) $(MAKEMAKE) test/*.o run_tests c_src/*/*.o
+	@(cd parser && $(MAKE) clean)
 
 clean_deps:
 	rm -rf  build/*

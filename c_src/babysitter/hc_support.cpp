@@ -8,7 +8,6 @@
 #include "print_utils.h"
 #include "babysitter_types.h"
 
-#ifdef __cpluplus
 /**
 * turn a phase_type into a string
 * FOR DEBUGGING
@@ -133,7 +132,6 @@ phase *find_phase(honeycomb_config *c, phase_type t, int dlvl)
   unsigned int i = 0;
   for (i = 0; i < c->num_phases; i++) {
     if (c->phases[i]->type == t) {
-      debug(dlvl, 3, "Found phase\n");
       return c->phases[i];
     }
   }
@@ -186,7 +184,8 @@ int add_phase(honeycomb_config *c, phase *p) {
 // Add an attribute to the config
 // To add another, add it here, add it to the type and specify it in the
 // honeycomb_config struct
-int add_attribute(honeycomb_config *c, attr_type t, char *value) {
+int add_attribute(honeycomb_config *c, attr_type t, char *value)
+{
   switch (t) {
     case T_FILEPATH:
       c->filepath = (char *) malloc(sizeof(char*) * strlen(value));
@@ -270,5 +269,3 @@ void free_phase(phase *p) {
   if (p->command) free(p->command);
   if (p->after) free(p->after);
 }
-
-#endif

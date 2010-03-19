@@ -1,11 +1,11 @@
 # Defines
 OUT=test
 LIB_SOURCE=honeycomb.l honeycomb.y
-LIB_OBJ=y.tab.o lex.yy.o ../babysitter/hc_support.o ../babysitter/honeycomb_config.o
+LIB_OBJ=y.tab.o lex.yy.o ../utils/print_utils.o ../babysitter/hc_support.o ../babysitter/honeycomb_config.o
 CC=cc
 GCC=g++
-CPPFLAGS=-g -O2 -Wall -I ./ -I ../babysitter -I ../utils
-YACCFLAGS=-d
+CPPFLAGS=-g -Wall -Werror -O2 -I ./ -I ../babysitter -I ../utils -I libs
+YACCFLAGS=-d -t
 top_srcdir = @top_srcdir@
 srcdir = @srcdir@
 prefix = @prefix@
@@ -17,8 +17,9 @@ default: all
 all: honeycomb.c y.tab.h $(LIB_OBJ)
 
 prereq:
-	$(CC) -c -o hc_support.o $(INCLUDE) $(CFLAGS) ../babysitter/hc_support.cpp
-	$(CC) -c -o honeycomb_config.o $(INCLUDE) $(CFLAGS) ../babysitter/honeycomb_config.cpp
+	@echo "Building the parser"
+	$(GCC) -c -o hc_support.o $(INCLUDE) $(CFLAGS) libs/hc_support.c
+	$(GCC) -c -o honeycomb_config.o $(INCLUDE) $(CFLAGS) libs/honeycomb_config.c
 
 clean:
 	rm -rf *.o y.tab.h *.dSYM

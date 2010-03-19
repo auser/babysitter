@@ -76,10 +76,16 @@ typedef struct _honeycomb_config_ {
   phase **phases;
 } honeycomb_config;
 
+#endif
+
 //---
 // Functions
 //---
 #ifdef __cplusplus
+
+#ifndef HONEYCOMB_CONFIG_CPP_H
+#define HONEYCOMB_CONFIG_CPP_H
+
 // This stuff can only be parsed if we are compiling with c++
 // because we compile in c and c++ while including this file
 // we have to separate out the available functions. This is done for
