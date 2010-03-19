@@ -29,7 +29,7 @@ endif
 
 # Defines
 CC = g++
-CPPFLAGS = @CPPFLAGS@
+CPPFLAGS = @CPPFLAGS@ $(INCLUDE)
 LIBS = @LIBS@ $(INC_LIBS)
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
@@ -62,7 +62,8 @@ $(MAKEMAKE):
 
 $(EXES): $(OBJS) clean_bins
 	@echo "Creating a executable $(subst ,,$(subst .cpp,,$@))"
-	$(CXX) -o $(EXECUTABLE_DIR)/$(subst src/,,$(subst .cpp,,$@)) $(INCLUDE) $(CPPFLAGS) $(OBJS) $(LIBS) $(LDFLAGS) $@
+	$(CXX) $@ -o $(EXECUTABLE_DIR)/$(subst src/,,$(subst .cpp,,$@)) $(CPPFLAGS) $(OBJS) $(LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(DEFS) $(DEBUG) $@ -o $(EXECUTABLE_DIR)/$(subst src/,,$(subst .cpp,,$@)) $(INTERMEDIATES) $(PARSER_LIBS)
 
 clean_bins:
 	@(rm -rf $(top_srcdir)/priv/bin/*)
