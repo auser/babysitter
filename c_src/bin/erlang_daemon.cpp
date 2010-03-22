@@ -35,11 +35,11 @@ int send_ok(int transId, pid_t pid) {
   eis.encodeTupleSize(2);
   eis.encode(transId);
   if (pid < 0)
-      eis.encode(ei::atom_t("ok"));
+    eis.encode(ei::atom_t("ok"));
   else {
-      eis.encodeTupleSize(2);
-      eis.encode(ei::atom_t("ok"));
-      eis.encode(pid);
+    eis.encodeTupleSize(2);
+    eis.encode(ei::atom_t("ok"));
+    eis.encode(pid);
   }
   return eis.write();
 }
