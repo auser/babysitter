@@ -20,7 +20,7 @@ INCLUDE+=-I $(srcdir)/parser -I $(top_srcdir)/build/readline/include -I $(srcdir
 
 ifeq ($(shell uname),Linux)
 	ARCH=linux
-	LDFLAGS=$(LDFLAGS_COMMON) -static
+	LDFLAGS=$(LDFLAGS_COMMON) 
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
