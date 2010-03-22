@@ -76,6 +76,9 @@ int main (int argc, char const *argv[])
   parse_config_dir(config_file_dir, known_configs); // Parse the config
   
   const int maxfd = eis.read_handle()+1;
+
+  // Never use stdin/stdout/stderr
+  eis.set_handles(3, 4);
     
   /**
   * Program loop. 
@@ -84,7 +87,7 @@ int main (int argc, char const *argv[])
   **/
   debug(dbg, 2, "Entering daemon loop\n");
   while (!terminated) {
-    /* Detect "open" for serial pty slave */
+    // Detect "open" for serial pty slave
     FD_ZERO (&readfds);
     FD_SET (eis.read_handle(), &readfds);
     
@@ -136,7 +139,7 @@ int main (int argc, char const *argv[])
 
       switch (cmd) {
         default:
-        printf("got command: %s\n", command.c_str());
+        fprintf(stderr, "got command: %s\n", command.c_str());
         break;
       }
     }      

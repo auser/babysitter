@@ -382,6 +382,5 @@ void setup_process_manager_defaults()
   run_as_user = getuid();
   process_pid = (int)getpid();
   setup_signal_handlers();
-  exited_children.resize(SIGCHLD_MAX_SIZE);
-  
+  exited_children.resize(SIGCHLD_MAX_SIZE); 
 }
