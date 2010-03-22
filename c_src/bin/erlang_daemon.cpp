@@ -31,8 +31,17 @@ extern int terminated;
 
 // Required methods
 int send_ok(int transId, pid_t pid) {
-  printf("send_ok!\n");
-  return 0;
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(transId);
+  if (pid < 0)
+      eis.encode(ei::atom_t("ok"));
+  else {
+      eis.encodeTupleSize(2);
+      eis.encode(ei::atom_t("ok"));
+      eis.encode(pid);
+  }
+  return eis.write();
 }
 int send_pid_status_term(const PidStatusT& stat) {return 0;}
 int send_error_str(int transId, bool asAtom, const char* fmt, ...) {return 0;}
@@ -141,6 +150,7 @@ int main (int argc, char const *argv[])
       switch (cmd) {
         default:
         fprintf(stderr, "got command: %s\n", command.c_str());
+        send_ok(transId);
         break;
       }
     }      
