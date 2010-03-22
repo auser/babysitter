@@ -59,6 +59,8 @@ void setup_erl_daemon_signal_handlers()
 int handle_command_line(char *a, char *b) {
   if (!strncmp(a, "--debug", 7) || !strncmp(a, "-D", 2)) {
     eis.debug(true);
+  } else if (!strncmp(a, "--std", 5)) {
+    eis.set_handles(1, 2);
   }
   return 0;
 }
@@ -70,15 +72,14 @@ int main (int argc, char const *argv[])
   setup_erl_daemon_signal_handlers();
   // const char* env[] = { "PLATFORM_HOST=beehive", NULL };
   // int env_c = 1;
+  // Never use stdin/stdout/stderr
+  eis.set_handles(3, 4);
   if (parse_the_command_line(argc, (char **)argv)) return 0;
   
   debug(dbg, 2, "parsing the config directory: %s\n", config_file_dir.c_str());
   parse_config_dir(config_file_dir, known_configs); // Parse the config
   
   const int maxfd = eis.read_handle()+1;
-
-  // Never use stdin/stdout/stderr
-  eis.set_handles(3, 4);
     
   /**
   * Program loop. 
