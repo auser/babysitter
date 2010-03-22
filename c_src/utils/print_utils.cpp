@@ -10,7 +10,6 @@ void fperror(const char *s,...)
   va_list p;
 
 	va_start(p, s);
-	/* Guard against "<error message>: Success" */
 	vsprintf(buf, s, p);
 	va_end(p);
 }

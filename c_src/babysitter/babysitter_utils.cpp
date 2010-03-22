@@ -15,6 +15,8 @@
 #include "hc_support.h"
 #include "print_utils.h"
 
+// Custom handlers
+extern int handle_command_line(char *, char*);
 // Globals
 extern int dbg;
 int alarm_max_time      = 12;
@@ -182,6 +184,7 @@ int parse_the_command_line(int argc, char *argv[], int c)
   char *opt;
   while (argc > 1) {
     opt = argv[1];
+    handle_command_line(opt, argv[2]);
     // OPTIONS
     if (!strncmp(opt, "--debug", 7) || !strncmp(opt, "-D", 2)) {
       if (argv[2] == NULL) {

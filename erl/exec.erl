@@ -256,19 +256,20 @@ get_opt(debug)           -> {debug, true}.
 %% @private
 %%-----------------------------------------------------------------------
 init([Options]) ->
-    process_flag(trap_exit, true),
-    Args = lists:foldl(
-        fun({debug, true},       Acc) -> [" -debug" | Acc];
-           ({alarm, I},          Acc) -> [" -alarm "++integer_to_list(I) | Acc];
-           ({args, Arg},         Acc) -> [" "++Arg | Acc];
-           ({user, User}, Acc) when User =/= "" -> [" -user "++User | Acc];
-           (_,                   Acc) -> Acc
-        end, [], [get_opt(O) || O <- Options]),
-    io:format("Args: ~p~n", [Args]),
-    Exe   = proplists:get_value(portexe,     Options, default(portexe)), %++ lists:flatten([" -n"|Args]),
-    Users = proplists:get_value(limit_users, Options, default(limit_users)),
-    Debug = proplists:get_value(verbose,     Options, default(verbose)),
-
+  process_flag(trap_exit, true),
+  Args = lists:foldl(
+    fun({debug, true},       Acc) -> [" -D 4" | Acc];
+        ({alarm, I},          Acc) -> [" -alarm "++integer_to_list(I) | Acc];
+        ({args, Arg},         Acc) -> [" "++Arg | Acc];
+        ({user, User}, Acc) when User =/= "" -> [" -user "++User | Acc];
+        (_,                   Acc) -> Acc
+    end, [], [get_opt(O) || O <- Options]),
+  io:format("Args: ~p~n", [Args]),
+  
+  Exe   = proplists:get_value(portexe,     Options, default(portexe)) ++ lists:flatten([" "|Args]),
+  Users = proplists:get_value(limit_users, Options, default(limit_users)),
+  Debug = proplists:get_value(verbose,     Options, default(verbose)),
+    
     try
         debug(Debug, "exec: port program: ~s\n", [Exe]),
         Port = erlang:open_port({spawn, Exe}, [binary, exit_status, {packet, 2}, nouse_stdio, hide]),

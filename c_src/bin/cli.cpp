@@ -41,6 +41,10 @@ int send_pid_status_term(const PidStatusT& stat) {return 0;}
 int send_error_str(int transId, bool asAtom, const char* fmt, ...) {return 0;}
 int send_pid_list(int transId, const MapChildrenT& children) {return 0;}
 
+int handle_command_line(char *a, char *b) {
+  return 0;
+}
+
 void list_processes()
 {
   printf("Pid\tName\tStatus\n-----------------------\n");

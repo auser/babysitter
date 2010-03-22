@@ -56,6 +56,13 @@ void setup_erl_daemon_signal_handlers()
   sigaction(SIGPIPE, &mainact, NULL);
 }
 
+int handle_command_line(char *a, char *b) {
+  if (!strncmp(a, "--debug", 7) || !strncmp(a, "-D", 2)) {
+    eis.debug(true);
+  }
+  return 0;
+}
+
 int main (int argc, char const *argv[])
 {
   fd_set readfds;
@@ -63,14 +70,13 @@ int main (int argc, char const *argv[])
   setup_erl_daemon_signal_handlers();
   // const char* env[] = { "PLATFORM_HOST=beehive", NULL };
   // int env_c = 1;
-  
   if (parse_the_command_line(argc, (char **)argv)) return 0;
   
   debug(dbg, 2, "parsing the config directory: %s\n", config_file_dir.c_str());
   parse_config_dir(config_file_dir, known_configs); // Parse the config
   
   const int maxfd = eis.read_handle()+1;
-  
+    
   /**
   * Program loop. 
   * Daemonizing loop. This waits for signals
@@ -100,18 +106,19 @@ int main (int argc, char const *argv[])
       int  err, arity;
       long transId;
       std::string command;
-
+      
+      err = eis.read();
+      
       // Note that if we were using non-blocking reads, we'd also need to check for errno EWOULDBLOCK.
-      if ((err = eis.read()) < 0) {
+      if (err < 0) {
         terminated = 90-err;
         break;
-      } 
-              
+      }
+      
+      fprintf(stderr, "err: %d\n", err);
+      
       /* Our marshalling spec is that we are expecting a tuple {TransId, {Cmd::atom(), Arg1, Arg2, ...}} */
-      if (eis.decodeTupleSize() != 2 || 
-        (eis.decodeInt(transId)) < 0 || 
-        (arity = eis.decodeTupleSize()) < 1)
-      {
+      if (eis.decodeTupleSize() != 2 || (eis.decodeInt(transId)) < 0 || (arity = eis.decodeTupleSize()) < 1) {
         terminated = 10; break;
       }
       
