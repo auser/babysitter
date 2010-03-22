@@ -18,16 +18,32 @@ invon="${esc}[7m";     invoff="${esc}[27m"
 
 reset="${esc}[0m"
 
+CURRENT_STR=""
+
 function cecho () {
-  message=${1:-$default_msg}   # Defaults to default message.
-  color=${2:-$black}           # Defaults to black, if not specified.
+  message=${1:-$default_msg}    # Defaults to default message.
+  color=${2:-$black}            # Defaults to black, if not specified.
+  newline=${3:-yes}             # Newline?
 
-  echo -e "$color"
-  echo -n "$message"
-  echo -ne "$reset"                      # Reset to normal.
-
+  CURRENT_STR="$color$message$reset"
+  if [ "$newline" == "yes" ]; then
+    echo -e $CURRENT_STR
+    CURRENT_STR=""
+  fi
 }  
 
+function aligned_msg () {
+  answer=${1:-"?"}    # Defaults to default message.
+  color=${2:-$green}
+  printf "%-35s$color%s$reset\n" $CURRENT_STR "$answer"
+  CURRENT_STR=""
+}
+function not_found_msg () {
+  aligned_msg "not found" $red
+}
+function found_msg () {
+  aligned_msg "found" $green
+}
 
 readline_version="6.1"
 readline_tar="readline-${readline_version}.tar.gz"
@@ -47,10 +63,12 @@ if [[ !(-d "./build") ]]; then
     mkdir ./build
 fi
 
+cecho "libcmockery" $blue no
 if [ -f "build/cmockery/lib/libcmockery.a" ]; then
-    cecho "libcmockery built" $green
+  found_msg
 else
-  cecho "Downloading and installing libcmockery" $red
+  not_found_msg
+  cecho "Building libcmockery" $green
   if [ -f "/usr/local/lib/libcmockery.a" ]; then
       mkdir -p `pwd`/build/cmockery/{lib,include}
       cp /usr/local/lib/libcmockery.a "$(pwd)/build/cmockery/lib"
@@ -72,9 +90,11 @@ else
   fi
 fi
 
+cecho "readline..." $blue no
 if [ -f "build/readline/lib/libreadline.a" ]; then
-    cecho "readline built" $green
+  found_msg
 else
+  not_found_msg
   cecho "Downloading and building readline" $red
   pushd build
   prefix=`pwd`/readline
@@ -90,8 +110,10 @@ else
 fi
 
 AUTOCONF_VERSION=2.65
+cecho "autoconf..." $blue no
 if [ -n "$(which autoconf | grep $AUTOCONF_VERSION)" ]; then
-  cecho "- Installing autoconf version $AUTOCONF_VERSION" $red
+  not_found_msg
+  cecho "Downloading and building autoconf $AUTOCONF_VERSION"
   wget http://ftp.gnu.org/gnu/autoconf/autoconf-$AUTOCONF_VERSION.tar.gz
   tar xvzf autoconf-$AUTOCONF_VERSION.tar.gz
   pushd autoconf-$AUTOCONF_VERSION
@@ -101,23 +123,25 @@ if [ -n "$(which autoconf | grep $AUTOCONF_VERSION)" ]; then
   popd
   rm -rf autoconf-$AUTOCONF_VERSION.tar.gz autoconf-$AUTOCONF_VERSION
 else
-  cecho "autoconf installed" $green
+  found_msg
 fi
 
 # Run autoconf
 cecho "Running autoconf..." $green
 autoconf
-cecho "Configuring..." $green
-CONF=$(./configure)
-if [ ! $? ]; then
+cecho "Configuring... " $green
+CONF_OUTPUT=$(./configure)
+if [ "$?" != "0" ]; then
   cecho "Error configuring..." $red
-  echo $CONF
+  echo "$CONF_OUTPUT"
 fi
-cecho "Making..." $green
-MAKE=make
-if [ ! $? ]; then
+cecho "Making... " $green no
+MAKE_OUTPUT=$(make)
+if [ "$?" != "0" ]; then
   cecho "Error making..." $red
-  echo $MAKE
+  echo "$MAKE_OUTPUT"
+else
+  echo "success" $green
 fi
 
 # cleanup
