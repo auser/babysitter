@@ -400,7 +400,6 @@ pid_t Honeycomb::run_in_fork_and_wait(char *argv[], char* const* env, std::strin
       // Reset signal handlers
       sigprocmask(SIG_SETMASK, &original_sigs, NULL);
       
-      // pid_t pid = start_child(command_argc, (const char**)command_argv, cd, (const char**)env, run_as_user, 0);
       if (execve(argv[0], (char* const*)argv, (char* const*)m_cenv) < 0) {
         printf("UH OH!\n");
         fprintf(stderr, "Cannot execute '%s' because '%s'\n", argv[0], ::strerror(errno));

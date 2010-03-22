@@ -6,11 +6,12 @@
 
 void fperror(const char *s,...)
 {
-  char buf[1024];
   va_list p;
 
 	va_start(p, s);
-	vsprintf(buf, s, p);
+  fprintf(stderr, "[ERROR]: ");
+	vfprintf(stderr, s, p);
+  fprintf(stderr, "\n");
 	va_end(p);
 }
 

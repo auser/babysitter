@@ -136,17 +136,6 @@ int handle_command_line(char *a, char *b) {
   return 0;
 }
 
-// pid_t start_child(int command_argc, const char** command_argv, const char *cd, const char** env, int user, int nice)
-pid_t cmd_start(CmdOptions& co)
-{
-  char **command_argv = {0};
-  int command_argc = 0;
-  if ((command_argc = argify(co.cmd(), &command_argv)) < 1) {
-    return -1;
-  }
-  return start_child(command_argc, (const char**)command_argv, co.cd(), (const char**)co.env(), co.user(), co.nice());
-}
-
 int main (int argc, char const *argv[])
 {
   fd_set readfds;
@@ -201,8 +190,6 @@ int main (int argc, char const *argv[])
         break;
       }
       
-      fprintf(stderr, "err: %d\n", err);
-      
       /* Our marshalling spec is that we are expecting a tuple {TransId, {Cmd::atom(), Arg1, Arg2, ...}} */
       if (eis.decodeTupleSize() != 2 || (eis.decodeInt(transId)) < 0 || (arity = eis.decodeTupleSize()) < 1) {
         terminated = 10; break;
@@ -228,7 +215,7 @@ int main (int argc, char const *argv[])
             continue;
           }
         
-          pid_t pid = cmd_start(co);
+          pid_t pid = start_child((const char*)co.cmd(), co.cd(), (const char**)co.env(), co.user(), co.nice());
           CmdInfo ci(co.cmd(), "", pid);
           children[pid] = ci;
           
@@ -242,6 +229,7 @@ int main (int argc, char const *argv[])
         }
         break;
       }
+      eis.reset();
     }      
   }
     

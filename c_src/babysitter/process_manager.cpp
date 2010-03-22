@@ -80,31 +80,22 @@ void pm_gotsigchild(int signal, siginfo_t* si, void* context)
     process_child_signal(si->si_pid);
 }
 
-pid_t start_child(int command_argc, const char** command_argv, const char *cd, const char** env, int user, int nice)
+pid_t start_child(const char* command_argv, const char *cd, const char** env, int user, int nice)
 {
   pid_t pid = fork();
   switch (pid) {
   case -1: 
     return -1;
   case 0: {
-    // In child process
-    // if (user != INT_MAX && setresuid(user, user, user) < 0) {
-    //   fperror("Cannot set effective user to %d", user);
-    //   return EXIT_FAILURE;
-    // }
     setup_signal_handlers();
-    // const char* const argv[] = { getenv("SHELL"), "-c", cmd, (char*)NULL };
+    const char* const argv[] = { getenv("SHELL"), "-c", command_argv, (char*)NULL };
     if (cd != NULL && cd[0] != '\0' && chdir(cd) < 0) {
       fperror("Cannot chdir to '%s'", cd);
       return EXIT_FAILURE;
     }
     
-    printf("running command: %s\n", command_argv[0]);
-    for (int i = 0; i < command_argc; i++)
-      printf("command_argv[%d] = %s\n", i, command_argv[i]);
-    
-    if (execve((const char*)command_argv[0], (char* const*)command_argv, (char* const*) env) < 0) {
-      fperror("Cannot execute %s: %s\n", command_argv[0], strerror(errno));
+    if (execve((const char*)argv[0], (char* const*)argv, (char* const*) env) < 0) {
+      fperror("Cannot execute %s: %s\n", argv[0], strerror(errno));
       exit(-1);
     }
     printf("Child exited!\n");
@@ -115,7 +106,7 @@ pid_t start_child(int command_argc, const char** command_argv, const char *cd, c
     if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
       fperror("Cannot set priority of pid %d to %d", pid, nice);
     }
-    printf("pid: %d\n", pid);
+    fprintf(stderr, " in parent process pid: %d\n", pid);
     return pid;
   }
 }
@@ -138,13 +129,7 @@ int stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
     return 0;
   } else if (strncmp(ci.kill_cmd(), "", 1) != 0) {
    // This is the first attempt to kill this pid and kill command is provided.
-   char **command_argv = {0};
-   int command_argc = 0;
-   if ((command_argc = argify(ci.kill_cmd(), &command_argv)) < 1) {
-     fperror("Uh oh!\n");
-     return 0;
-   }
-   ci.set_kill_cmd_pid(start_child(command_argc, (const char**)command_argv, NULL, NULL, INT_MAX, INT_MAX));
+   ci.set_kill_cmd_pid(start_child((const char*)ci.kill_cmd(), NULL, NULL, INT_MAX, INT_MAX));
    if (ci.kill_cmd_pid() > 0) {
      transient_pids[ci.kill_cmd_pid()] = ci.cmd_pid();
      time_t ci_time = ci.deadline();

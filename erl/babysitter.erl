@@ -42,7 +42,7 @@ stop_process(Arg) ->
 
 erlang_daemon_command() ->
   Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
-  filename:join([Dir, "priv", "bin", "erlang_daemon"]).
+  filename:join([Dir, "priv", "bin", "babysitter_erlang_daemon"]).
   
 %%--------------------------------------------------------------------
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}

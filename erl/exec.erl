@@ -235,8 +235,7 @@ default() ->
 
 default(portexe) -> 
     % Get architecture (e.g. i386-linux)
-    Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
-    filename:join([Dir, "priv", "bin", "erlang_daemon"]);
+    babysitter:erlang_daemon_command();
 default(Option) ->
     proplists:get_value(Option, default()).
 
