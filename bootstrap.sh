@@ -63,7 +63,7 @@ if [[ !(-d "./build") ]]; then
     mkdir ./build
 fi
 
-cecho "libcmockery" $blue no
+cecho "libcmockery..." $blue no
 if [ -f "build/cmockery/lib/libcmockery.a" ]; then
   found_msg
 else
@@ -130,16 +130,14 @@ fi
 cecho "Running autoconf..." $green
 autoconf
 cecho "Configuring... " $green
-CONF_OUTPUT=$(./configure)
+./configure
 if [ "$?" != "0" ]; then
   cecho "Error configuring..." $red
-  echo "$CONF_OUTPUT"
 fi
 cecho "Making... " $green no
-MAKE_OUTPUT=$(make)
+make
 if [ "$?" != "0" ]; then
   cecho "Error making..." $red
-  echo "$MAKE_OUTPUT"
 else
   echo "success" $green
 fi
