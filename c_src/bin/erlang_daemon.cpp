@@ -48,7 +48,7 @@ int send_pid_status_term(const PidStatusT& stat) {
   eis.encodeTupleSize(2);
   eis.encode(0);
   eis.encodeTupleSize(3);
-  eis.encode(atom_t("exit_status"));
+  eis.encode(ei::atom_t("exit_status"));
   eis.encode(stat.first);
   eis.encode(stat.second);
   return eis.write();
@@ -64,8 +64,8 @@ int send_error_str(int transId, bool asAtom, const char* fmt, ...) {
   eis.encodeTupleSize(2);
   eis.encode(transId);
   eis.encodeTupleSize(2);
-  eis.encode(atom_t("error"));
-  (asAtom) ? eis.encode(atom_t(str)) : eis.encode(str);
+  eis.encode(ei::atom_t("error"));
+  (asAtom) ? eis.encode(ei::atom_t(str)) : eis.encode(str);
   return eis.write();
 }
 int send_pid_list(int transId, const MapChildrenT& children) {
