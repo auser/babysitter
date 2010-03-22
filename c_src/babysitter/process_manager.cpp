@@ -134,7 +134,7 @@ int stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
       kill(ci.kill_cmd_pid(), SIGKILL);
       ci.set_sigkill(true);
     }
-    if (notify) send_ok(transId);
+    if (notify) handle_ok(transId);
     return 0;
   } else if (strncmp(ci.kill_cmd(), "", 1) != 0) {
    // This is the first attempt to kill this pid and kill command is provided.
@@ -151,10 +151,10 @@ int stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
      ptm = gmtime( &ci_time  );
      ptm->tm_sec += 1;
      ci.set_deadline(mktime(ptm));
-     if (notify) send_ok(transId);
+     if (notify) handle_ok(transId);
      return 0;
    } else {
-     if (notify) send_error_str(transId, false, "bad kill command - using SIGTERM");
+     if (notify) handle_error_str(transId, false, "bad kill command - using SIGTERM");
      use_kill = true;
      notify = false;
    }
@@ -194,19 +194,19 @@ int kill_child(pid_t pid, int signal, int transId, bool notify)
   int err = kill(pid, signal);
   switch (err) {
     case 0:
-      if (notify) send_ok(transId);
+      if (notify) handle_ok(transId);
       break;
     case EINVAL:
-      if (notify) send_error_str(transId, false, "Invalid signal: %d", signal);
+      if (notify) handle_error_str(transId, false, "Invalid signal: %d", signal);
       break;
     case ESRCH:
-      if (notify) send_error_str(transId, true, "esrch");
+      if (notify) handle_error_str(transId, true, "esrch");
       break;
     case EPERM:
-      if (notify) send_error_str(transId, true, "eperm");
+      if (notify) handle_error_str(transId, true, "eperm");
       break;
     default:
-      if (notify) send_error_str(transId, true, strerror(err));
+      if (notify) handle_error_str(transId, true, strerror(err));
       break;
   }
   return err;
@@ -219,10 +219,10 @@ void stop_child(pid_t pid, int transId, time_t &now)
 
   MapChildrenT::iterator it = children.find(pid);
   if (it == children.end()) {
-    send_error_str(transId, false, "pid not alive");
+    handle_error_str(transId, false, "pid not alive");
     return;
   } else if ((n = kill(pid, 0)) < 0) {
-    send_error_str(transId, false, "pid not alive (err: %d)", n);
+    handle_error_str(transId, false, "pid not alive (err: %d)", n);
     return;
   }
   // stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
@@ -328,7 +328,7 @@ int check_children(int& isTerminated)
       MapChildrenT::iterator i = children.find(it->first);
       MapKillPidT::iterator j;
       if (i != children.end()) {
-        // if (notify && send_pid_status_term(*it) < 0) {
+        // if (notify && handle_pid_status_term(*it) < 0) {
         //   isTerminated = 1;
         //   return -1;
         // }
@@ -369,7 +369,7 @@ int check_children(int& isTerminated)
       if (n > 0) exited_children.push_back(std::make_pair(pid <= 0 ? n : pid, status));
       continue;
     } else if (n < 0 && errno == ESRCH) {
-      // if (notify) send_pid_status_term(std::make_pair(it->first, status));
+      // if (notify) handle_pid_status_term(std::make_pair(it->first, status));
       children.erase(it);
     }
   }

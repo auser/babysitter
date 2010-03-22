@@ -30,6 +30,17 @@ struct sigaction                mainact;
 extern int terminated;
 
 // Required methods
+
+int handle_ok(int transId, pid_t pid) {
+  printf("handle_ok!\n");
+  return 0;
+}
+
+int handle_pid_status_term(const PidStatusT& stat) {return 0;}
+int handle_error_str(int transId, bool asAtom, const char* fmt, ...) {return 0;}
+int handle_pid_list(int transId, const MapChildrenT& children) {return 0;}
+
+// Erlang methods
 int send_ok(int transId, pid_t pid) {
   eis.reset();
   eis.encodeTupleSize(2);
@@ -41,6 +52,22 @@ int send_ok(int transId, pid_t pid) {
     eis.encode(ei::atom_t("ok"));
     eis.encode(pid);
   }
+  return eis.write();
+}
+int send_term(int transId, bool asAtom, const char *term, const char* fmt, ...)
+{
+  char str[MAXATOMLEN];
+  va_list vargs;
+  va_start (vargs, fmt);
+  vsnprintf(str, sizeof(str), fmt, vargs);
+  va_end   (vargs);
+  
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(transId);
+  eis.encodeTupleSize(2);
+  eis.encode(ei::atom_t(term));
+  (asAtom) ? eis.encode(ei::atom_t(str)) : eis.encode(str);
   return eis.write();
 }
 int send_pid_status_term(const PidStatusT& stat) {
@@ -168,8 +195,8 @@ int main (int argc, char const *argv[])
       }
       
       // Available commands from erlang    
-      enum CmdTypeT { BUNDLE, EXECUTE, SHELL, STOP, KILL, LIST } cmd;
-      const char* cmds[] = {"bundle", "run","shell","stop","kill","list"};
+      enum CmdTypeT         { BUNDLE,   EXECUTE,  SHELL,   STOP,   KILL,   LIST } cmd;
+      const char* cmds[] =  { "bundle", "run",   "shell", "stop", "kill", "list"};
 
       // Determine which of the commands was called
       if ((int)(cmd = (CmdTypeT) eis.decodeAtomIndex(cmds, command)) < 0) {
@@ -182,7 +209,7 @@ int main (int argc, char const *argv[])
       switch (cmd) {
         default:
         fprintf(stderr, "got command: %s\n", command.c_str());
-        send_ok(transId);
+        send_ok(transId, 0);
         break;
       }
     }      

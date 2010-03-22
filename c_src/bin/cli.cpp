@@ -32,14 +32,14 @@ extern ConfigMapT  known_configs;
 #define PROMPT_STR "bs$ "
 #endif
 
-int send_ok(int transId, pid_t pid) {
-  printf("send_ok!\n");
+int handle_ok(int transId, pid_t pid) {
+  printf("handle_ok!\n");
   return 0;
 }
 
-int send_pid_status_term(const PidStatusT& stat) {return 0;}
-int send_error_str(int transId, bool asAtom, const char* fmt, ...) {return 0;}
-int send_pid_list(int transId, const MapChildrenT& children) {return 0;}
+int handle_pid_status_term(const PidStatusT& stat) {return 0;}
+int handle_error_str(int transId, bool asAtom, const char* fmt, ...) {return 0;}
+int handle_pid_list(int transId, const MapChildrenT& children) {return 0;}
 
 int handle_command_line(char *a, char *b) {
   return 0;
