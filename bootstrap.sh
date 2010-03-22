@@ -1,7 +1,5 @@
 #!/bin/bash
 CURL=$(which curl)
-PUSHD=$(which pushd)
-POPD=$(which popd)
 
 readline_version="6.1"
 readline_tar="readline-${readline_version}.tar.gz"
@@ -24,6 +22,7 @@ fi
 if [ -f "build/cmockery/lib/libcmockery.a" ]; then
     echo "libcmockery built"
 else
+  echo "Downloading and installing libcmockery"
   if [ -f "/usr/local/lib/libcmockery.a" ]; then
       mkdir -p `pwd`/build/cmockery/{lib,include}
       cp /usr/local/lib/libcmockery.a "$(pwd)/build/cmockery/lib"
@@ -48,6 +47,7 @@ fi
 if [ -f "build/readline/lib/libreadline.a" ]; then
     echo "readline built"
 else
+  echo "Downloading and building readline"
   pushd build
   prefix=`pwd`/readline
   $CURL -o $readline_tar $readline_repos
@@ -62,11 +62,11 @@ else
 fi
 
 AUTOCONF_VERSION=2.65
-echo "- Installing autoconf version $AUTOCONF_VERSION"
-if [ ! "$(which autoconf | grep $AUTOCONF_VERSION)" ]; then
+if [ -n "$(which autoconf | grep $AUTOCONF_VERSION)" ]; then
+  echo "- Installing autoconf version $AUTOCONF_VERSION"
   wget http://ftp.gnu.org/gnu/autoconf/autoconf-$AUTOCONF_VERSION.tar.gz
   tar xvzf autoconf-$AUTOCONF_VERSION.tar.gz
-  cd autoconf-$AUTOCONF_VERSION
+  pushd autoconf-$AUTOCONF_VERSION
   ./configure --prefix=/usr
   make
   sudo make install

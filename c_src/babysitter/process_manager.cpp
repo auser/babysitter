@@ -2,6 +2,7 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/time.h>             // For timeval struct
+#include <sys/wait.h>             // For waitpid
 #include <time.h>                 // For time function
 #include <string>
 #include <map>
