@@ -472,9 +472,10 @@ int Honeycomb::bundle() {
 
     while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
     
-    char buf[60];
-    memset(buf, 0, 60);
-    getwd(buf);
+    int path_max = 120;
+    char buf[path_max];
+    memset(buf, 0, path_max);
+    getcwd(buf, path_max);
     debug(m_debug_level, 4, "Operating in '%s' dir\n", buf);
     
     run_in_fork_and_wait((char **)argv, (char * const*) m_cenv, m_working_dir, 0);
@@ -717,7 +718,7 @@ int Honeycomb::restore_perms() {
 /*------------------------ INTERNAL -------------------------*/
 void Honeycomb::init() {
   // ei::Serializer m_eis(2);
-  m_nofiles = NULL;
+  // m_nofiles = NULL;
   std::stringstream stream;
   std::string token;
   
