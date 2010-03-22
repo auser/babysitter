@@ -1,6 +1,34 @@
 #!/bin/bash
 CURL=$(which curl)
 
+esc=""
+
+black="${esc}[30m";   red="${esc}[31m";    green="${esc}[32m"
+yellow="${esc}[33m"   blue="${esc}[34m";   purple="${esc}[35m"
+cyan="${esc}[36m";    white="${esc}[37m"
+
+blackb="${esc}[40m";   redb="${esc}[41m";    greenb="${esc}[42m"
+yellowb="${esc}[43m"   blueb="${esc}[44m";   purpleb="${esc}[45m"
+cyanb="${esc}[46m";    whiteb="${esc}[47m"
+
+boldon="${esc}[1m";    boldoff="${esc}[22m"
+italicson="${esc}[3m"; italicsoff="${esc}[23m"
+ulon="${esc}[4m";      uloff="${esc}[24m"
+invon="${esc}[7m";     invoff="${esc}[27m"
+
+reset="${esc}[0m"
+
+function cecho () {
+  message=${1:-$default_msg}   # Defaults to default message.
+  color=${2:-$black}           # Defaults to black, if not specified.
+
+  echo -e "$color"
+  echo -n "$message"
+  echo -ne "$reset"                      # Reset to normal.
+
+}  
+
+
 readline_version="6.1"
 readline_tar="readline-${readline_version}.tar.gz"
 readline_repos="ftp://ftp.cwru.edu/pub/bash/${readline_tar}"
@@ -20,9 +48,9 @@ if [[ !(-d "./build") ]]; then
 fi
 
 if [ -f "build/cmockery/lib/libcmockery.a" ]; then
-    echo "libcmockery built"
+    cecho "libcmockery built" $green
 else
-  echo "Downloading and installing libcmockery"
+  cecho "Downloading and installing libcmockery" $red
   if [ -f "/usr/local/lib/libcmockery.a" ]; then
       mkdir -p `pwd`/build/cmockery/{lib,include}
       cp /usr/local/lib/libcmockery.a "$(pwd)/build/cmockery/lib"
@@ -45,9 +73,9 @@ else
 fi
 
 if [ -f "build/readline/lib/libreadline.a" ]; then
-    echo "readline built"
+    cecho "readline built" $green
 else
-  echo "Downloading and building readline"
+  cecho "Downloading and building readline" $red
   pushd build
   prefix=`pwd`/readline
   $CURL -o $readline_tar $readline_repos
@@ -55,7 +83,7 @@ else
   tar -xzf $readline_tar
   mv readline readline-${readline_version}
   pushd readline-${readline_version}
-  ./configure --prefix=$prefix && make && myake install
+  ./configure --prefix=$prefix && make && make install
   popd
   rm -rf readline-${readline_version}
   popd
@@ -63,7 +91,7 @@ fi
 
 AUTOCONF_VERSION=2.65
 if [ -n "$(which autoconf | grep $AUTOCONF_VERSION)" ]; then
-  echo "- Installing autoconf version $AUTOCONF_VERSION"
+  cecho "- Installing autoconf version $AUTOCONF_VERSION" $red
   wget http://ftp.gnu.org/gnu/autoconf/autoconf-$AUTOCONF_VERSION.tar.gz
   tar xvzf autoconf-$AUTOCONF_VERSION.tar.gz
   pushd autoconf-$AUTOCONF_VERSION
@@ -73,16 +101,24 @@ if [ -n "$(which autoconf | grep $AUTOCONF_VERSION)" ]; then
   popd
   rm -rf autoconf-$AUTOCONF_VERSION.tar.gz autoconf-$AUTOCONF_VERSION
 else
-  echo "autoconf installed"
+  cecho "autoconf installed" $green
 fi
 
 # Run autoconf
-echo "- Running autoconf"
+cecho "Running autoconf..." $green
 autoconf
-echo "- Configuring"
-./configure
-echo "- Making"
-make
+cecho "Configuring..." $green
+CONF=$(./configure)
+if [ ! $? ]; then
+  cecho "Error configuring..." $red
+  echo $CONF
+fi
+cecho "Making..." $green
+MAKE=make
+if [ ! $? ]; then
+  cecho "Error making..." $red
+  echo $MAKE
+fi
 
 # cleanup
 rm -rf build/*.tar.gz
