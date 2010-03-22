@@ -43,9 +43,41 @@ int send_ok(int transId, pid_t pid) {
   }
   return eis.write();
 }
-int send_pid_status_term(const PidStatusT& stat) {return 0;}
-int send_error_str(int transId, bool asAtom, const char* fmt, ...) {return 0;}
-int send_pid_list(int transId, const MapChildrenT& children) {return 0;}
+int send_pid_status_term(const PidStatusT& stat) {
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(0);
+  eis.encodeTupleSize(3);
+  eis.encode(atom_t("exit_status"));
+  eis.encode(stat.first);
+  eis.encode(stat.second);
+  return eis.write();
+}
+int send_error_str(int transId, bool asAtom, const char* fmt, ...) {
+  char str[MAXATOMLEN];
+  va_list vargs;
+  va_start (vargs, fmt);
+  vsnprintf(str, sizeof(str), fmt, vargs);
+  va_end   (vargs);
+  
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(transId);
+  eis.encodeTupleSize(2);
+  eis.encode(atom_t("error"));
+  (asAtom) ? eis.encode(atom_t(str)) : eis.encode(str);
+  return eis.write();
+}
+int send_pid_list(int transId, const MapChildrenT& children) {
+  eis.reset();
+  eis.encodeTupleSize(2);
+  eis.encode(transId);
+  eis.encodeListSize(children.size());
+  for(MapChildrenT::const_iterator it=children.begin(), end=children.end(); it != end; ++it)
+      eis.encode(it->first);
+  eis.encodeListEnd();
+  return eis.write();
+}
 
 void erl_d_gotsignal(int signal)
 {
