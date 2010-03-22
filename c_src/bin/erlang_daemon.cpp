@@ -17,6 +17,8 @@
 #include "print_utils.h"
 #include "hc_support.h"
 #include "babysitter_types.h"
+#include "command_options.h"
+#include "command_info.h"
 
 // globals
 extern int dbg;       // Debug flag
@@ -28,6 +30,7 @@ extern PidStatusDequeT exited_children;
 extern bool signaled;
 struct sigaction                mainact;
 extern int terminated;
+std::stringstream     e_error;
 
 // Required methods
 
@@ -133,6 +136,17 @@ int handle_command_line(char *a, char *b) {
   return 0;
 }
 
+// pid_t start_child(int command_argc, const char** command_argv, const char *cd, const char** env, int user, int nice)
+pid_t cmd_start(CmdOptions& co)
+{
+  char **command_argv = {0};
+  int command_argc = 0;
+  if ((command_argc = argify(co.cmd(), &command_argv)) < 1) {
+    return -1;
+  }
+  return start_child(command_argc, (const char**)command_argv, co.cd(), (const char**)co.env(), co.user(), co.nice());
+}
+
 int main (int argc, char const *argv[])
 {
   fd_set readfds;
@@ -182,7 +196,7 @@ int main (int argc, char const *argv[])
       err = eis.read();
       
       // Note that if we were using non-blocking reads, we'd also need to check for errno EWOULDBLOCK.
-      if (err < 0) {
+      if (err < 0 || err == EWOULDBLOCK) {
         terminated = 90-err;
         break;
       }
@@ -195,8 +209,8 @@ int main (int argc, char const *argv[])
       }
       
       // Available commands from erlang    
-      enum CmdTypeT         { BUNDLE,   EXECUTE,  SHELL,   STOP,   KILL,   LIST } cmd;
-      const char* cmds[] =  { "bundle", "run",   "shell", "stop", "kill", "list"};
+      enum CmdTypeT         { BUNDLE,   MOUNT,     RUN,   STOP,   KILL,   LIST,   UNMOUNT,   CLEANUP } cmd;
+      const char* cmds[] =  { "bundle", "mount",  "run", "stop", "kill", "list", "unmount", "cleanup"};
 
       // Determine which of the commands was called
       if ((int)(cmd = (CmdTypeT) eis.decodeAtomIndex(cmds, command)) < 0) {
@@ -205,11 +219,27 @@ int main (int argc, char const *argv[])
           break;
         } else continue;
       }
-
+      
+      CmdOptions co;
       switch (cmd) {
-        default:
-        fprintf(stderr, "got command: %s\n", command.c_str());
-        send_ok(transId, 0);
+        case RUN: {
+          if (arity != 3 || co.ei_decode(eis) < 0) {
+            send_error_str(transId, false, co.strerror());
+            continue;
+          }
+        
+          pid_t pid = cmd_start(co);
+          CmdInfo ci(co.cmd(), "", pid);
+          children[pid] = ci;
+          
+          fprintf(stderr, "Run command %s/%d - %s - %d\n", command.c_str(), arity, co.cmd(), pid);
+          send_ok(transId, pid);
+        }
+        break;
+        default: {
+          fprintf(stderr, "got command: %s\n", command.c_str());
+          send_ok(transId, 0);
+        }
         break;
       }
     }      
