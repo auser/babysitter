@@ -1,6 +1,7 @@
 autom4te.cache/*
 c_src/Makefile
 Makefile
+configure
 erl/Makefile
 test/c_src/Makefile
 ebin/*.beam

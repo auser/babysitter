@@ -55,10 +55,25 @@ else
   tar -xzf $readline_tar
   mv readline readline-${readline_version}
   pushd readline-${readline_version}
-  ./configure --prefix=$prefix && make && make install
+  ./configure --prefix=$prefix && make && myake install
   popd
   rm -rf readline-${readline_version}
   popd
+fi
+
+AUTOCONF_VERSION=2.65
+echo "- Installing autoconf version $AUTOCONF_VERSION"
+if [ ! "$(which autoconf | grep $AUTOCONF_VERSION)" ]; then
+  wget http://ftp.gnu.org/gnu/autoconf/autoconf-$AUTOCONF_VERSION.tar.gz
+  tar xvzf autoconf-$AUTOCONF_VERSION.tar.gz
+  cd autoconf-$AUTOCONF_VERSION
+  ./configure --prefix=/usr
+  make
+  sudo make install
+  popd
+  rm -rf autoconf-$AUTOCONF_VERSION.tar.gz autoconf-$AUTOCONF_VERSION
+else
+  echo "autoconf installed"
 fi
 
 # Run autoconf

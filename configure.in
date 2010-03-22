@@ -10,7 +10,7 @@ AC_CONFIG_SRCDIR([c_src/bin/cli.cpp])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CXX
-AM_PROG_LEX
+AC_PROG_LEX
 AC_PROG_YACC
 # AC_PATH_PROG(ERL, erl)
 # AC_PATH_PROG(ERLC, erlc)
