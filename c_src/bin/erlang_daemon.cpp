@@ -136,6 +136,30 @@ int handle_command_line(char *a, char *b) {
   return 0;
 }
 
+/**
+* Commands
+**/
+int cmd_start(int transId, CmdOptions& co) {
+  pid_t pid = start_child((const char*)co.cmd(), co.cd(), (const char**)co.env(), co.user(), co.nice());
+  if (pid < 0) {
+    fperror("start_child");
+    send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
+    return -1;
+  } else {
+    CmdInfo ci(co.cmd(), co.kill_cmd(), pid);
+    children[pid] = ci;
+    send_ok(transId, pid);
+    return 0;
+  }
+}
+int cmd_bundle(int transId, CmdOptions& co) {return 0;}
+int cmd_mount(int transId, CmdOptions& co) {return 0;}
+int cmd_stop(int transId, CmdOptions& co) {return 0;}
+int cmd_kill(int transId, CmdOptions& co) {return 0;}
+int cmd_list(int transId, CmdOptions& co) {return 0;}
+int cmd_unmount(int transId, CmdOptions& co) {return 0;}
+int cmd_cleanup(int transId, CmdOptions& co) {return 0;}
+
 int main (int argc, char const *argv[])
 {
   fd_set readfds;
@@ -214,13 +238,7 @@ int main (int argc, char const *argv[])
             send_error_str(transId, false, co.strerror());
             continue;
           }
-        
-          pid_t pid = start_child((const char*)co.cmd(), co.cd(), (const char**)co.env(), co.user(), co.nice());
-          CmdInfo ci(co.cmd(), "", pid);
-          children[pid] = ci;
-          
-          fprintf(stderr, "Run command %s/%d - %s - %d\n", command.c_str(), arity, co.cmd(), pid);
-          send_ok(transId, pid);
+          cmd_start(transId, co);
         }
         break;
         default: {
