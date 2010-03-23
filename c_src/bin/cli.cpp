@@ -133,8 +133,8 @@ int main (int argc, const char *argv[])
         // For example: start ./comb_test.sh
         command_argv[command_argc] = 0; // NULL TERMINATE IT
         const char *cd = NULL;
-        // start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
-        pid_t pid = start_child((const char*)commandify(command_argc, (const char**)command_argv), cd, (const char**)env, run_as_user, 0);
+        // pm_start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
+        pid_t pid = pm_start_child((const char*)commandify(command_argc, (const char**)command_argv), cd, (const char**)env, run_as_user, 0);
         //CmdInfo(const char* _cmd, const char* _kill_cmd, pid_t _cmd_pid)
         CmdInfo ci(*command_argv, "", pid);
         children[pid] = ci;
@@ -153,7 +153,7 @@ int main (int argc, const char *argv[])
       } else {
         pid_t kill_pid = atoi(command_argv[1]);
         time_t now = time (NULL);
-        stop_child(kill_pid, 0, now);
+        pm_stop_child(kill_pid, 0, now);
       }
     } else if ( !strncmp(command_argv[0], "env", 3)) {
       if (command_argc < 2) {
@@ -175,6 +175,6 @@ int main (int argc, const char *argv[])
   }
   
   printf("Exiting... killing all processes...\n");
-  terminate_all();
+  pm_terminate_all();
   return 0;
 }

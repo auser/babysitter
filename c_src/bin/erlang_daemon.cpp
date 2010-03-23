@@ -141,9 +141,9 @@ int handle_command_line(char *a, char *b) {
 * Commands
 **/
 int cmd_start(int transId, CmdOptions& co) {
-  pid_t pid = start_child((const char*)co.cmd(), co.cd(), (const char**)co.env(), co.user(), co.nice());
+  pid_t pid = pm_start_child((const char*)co.cmd(), co.cd(), (const char**)co.env(), co.user(), co.nice());
   if (pid < 0) {
-    fperror("start_child");
+    fperror("pm_start_child");
     send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
     return -1;
   } else {
@@ -200,7 +200,7 @@ int main (int argc, char const *argv[])
     int interrupted = (cnt < 0 && errno == EINTR);
       
     if (interrupted || cnt == 0) {
-      if (check_children(terminated) < 0) break;
+      if (pm_check_children(terminated) < 0) break;
     } else if (cnt < 0) {
       perror("select"); 
       exit(9);
@@ -257,7 +257,7 @@ int main (int argc, char const *argv[])
   }
   
   debug(dbg, 2, "Terminating erlang_daemon\n");
-  terminate_all();
+  pm_terminate_all();
   return 0;
 }
 

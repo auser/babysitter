@@ -565,7 +565,7 @@ int Honeycomb::stop(pid_t kill_pid, MapChildrenT &children)
     //Default action
     printf("Running default action for stop\n");
     time_t now = time (NULL);
-    stop_child(kill_pid, 0, now);    
+    pm_stop_child(kill_pid, 0, now);    
   }
   
   restore_perms();

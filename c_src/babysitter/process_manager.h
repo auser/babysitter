@@ -34,14 +34,14 @@ extern int handle_error_str(int transId, bool asAtom, const char* fmt, ...);
 extern int handle_pid_list(int transId, const MapChildrenT& children);
 
 // Management
-pid_t start_child(const char* command_argv, const char *cd, const char** env, int user, int nice);
-int stop_child(CmdInfo& ci, int transId, time_t &now, bool notify = true);
-void stop_child(pid_t pid, int transId, time_t &now);
-int kill_child(pid_t pid, int signal, int transId, bool notify);
-void terminate_all();
-int check_pending_processes();
-int check_children(int& isTerminated);
-int pm_next_loop();
+pid_t pm_start_child(const char* command_argv, const char *cd, const char** env, int user, int nice);
+int   pm_stop_child(CmdInfo& ci, int transId, time_t &now, bool notify = true);
+void  pm_stop_child(pid_t pid, int transId, time_t &now);
+int   pm_kill_child(pid_t pid, int signal, int transId, bool notify);
+void  pm_terminate_all();
+int   pm_check_pending_processes();
+int   pm_check_children(int& isTerminated);
+int   pm_next_loop();
 
 // Other
 void setup_process_manager_defaults();
