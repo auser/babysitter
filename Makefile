@@ -22,7 +22,11 @@ c:
 clean:
 	(cd c_src;$(MAKE) clean)
 	(cd erl;$(MAKE) clean)
- 
+
+deep_clean: clean
+	@(echo "Cleaning babysitter")
+	rm -rf autom4te.cache config.log config.status build
+
 tests: all
 	(cd test; $(MAKE))
  
