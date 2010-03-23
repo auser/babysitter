@@ -111,6 +111,7 @@ int send_pid_list(int transId, const MapChildrenT& children) {
 
 void erl_d_gotsignal(int signal)
 {
+  debug(dbg, 4, "erlang daemon got a signal: %d\n", signal);
   if (signal == SIGTERM || signal == SIGINT || signal == SIGPIPE)
     terminated = 1;
 }
@@ -163,13 +164,14 @@ int cmd_cleanup(int transId, CmdOptions& co) {return 0;}
 int main (int argc, char const *argv[])
 {
   fd_set readfds;
-  setup_process_manager_defaults();
-  setup_erl_daemon_signal_handlers();
+  // setup_erl_daemon_signal_handlers();
   // const char* env[] = { "PLATFORM_HOST=beehive", NULL };
   // int env_c = 1;
   // Never use stdin/stdout/stderr
   eis.set_handles(3, 4);
   if (parse_the_command_line(argc, (char **)argv)) return 0;
+  
+  setup_process_manager_defaults();
   
   debug(dbg, 2, "parsing the config directory: %s\n", config_file_dir.c_str());
   parse_config_dir(config_file_dir, known_configs); // Parse the config
@@ -221,6 +223,7 @@ int main (int argc, char const *argv[])
         terminated = 10; break;
       }
       
+      debug(dbg, 4, "terminated before commands: %d\n", (int) terminated);
       // Available commands from erlang    
       enum CmdTypeT         { BUNDLE,   MOUNT,     RUN,   STOP,   KILL,   LIST,   UNMOUNT,   CLEANUP } cmd;
       const char* cmds[] =  { "bundle", "mount",  "run", "stop", "kill", "list", "unmount", "cleanup"};
@@ -249,10 +252,12 @@ int main (int argc, char const *argv[])
         }
         break;
       }
-    }      
+    }
+    eis.reset();
   }
   
   debug(dbg, 2, "Terminating erlang_daemon\n");
   terminate_all();
   return 0;
 }
+

@@ -9,8 +9,8 @@
 #include <deque>
 
 #include "babysitter_utils.h"
+#include "babysitter_types.h"
 #include "string_utils.h"
-#include "time_utils.h"
 #include "time_utils.h"
 #include "print_utils.h"
 
@@ -32,10 +32,11 @@ bool                            signaled   = false;     // indicates that SIGCHL
 int                             terminated = 0;         // indicates that we got a SIGINT / SIGTERM event
 int                             run_as_user;
 pid_t                           process_pid;
+extern int dbg;
 
 int process_child_signal(pid_t pid)
 {
-  if (exited_children.size() < exited_children.max_size()) {
+  if (exited_children.size() < SIGCHLD_MAX_SIZE) { // exited_children.max_size() ??
     int status;
     pid_t ret;
     while ((ret = waitpid(pid, &status, WNOHANG)) < 0 && errno == EINTR);
@@ -62,17 +63,17 @@ int process_child_signal(pid_t pid)
 
 void pm_gotsignal(int signal)
 {
+  debug(dbg, 4, "Got signal: %d\n", signal);
   if (signal != SIGCHLD)
     if (signal == SIGTERM || signal == SIGINT) terminated = 1;
-  // Clear the alarm
-  alarm(0);
 }
 
 void pm_gotsigchild(int signal, siginfo_t* si, void* context)
 {
     // If someone used kill() to send SIGCHLD ignore the event
     if (signal != SIGCHLD) return;
-
+    
+    debug(dbg, 4, "Got SIGCHLD: %d for %d\n", signal, (int)si->si_pid);
     process_child_signal(si->si_pid);
 }
 
@@ -112,8 +113,8 @@ pid_t start_child(const char* command_argv, const char *cd, const char** env, in
       fperror("Cannot execute %s: %s\n", argv[0], strerror(errno));
       exit(-1);
     }
-    printf("Child exited!\n");
-    exit(0);
+    debug(dbg, 1, "There was an error in execve\n");
+    exit(-1);
   }
   default:
     // In parent process
@@ -126,6 +127,7 @@ pid_t start_child(const char* command_argv, const char *cd, const char** env, in
 
 int stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
 {
+  debug(dbg, 1, "Called stop_child\n");
   bool use_kill = false;
   tm * ptm;
   
@@ -189,6 +191,7 @@ int kill_child(pid_t pid, int signal, int transId, bool notify)
 {
   // We can't use -pid here to kill the whole process group, because our process is
   // the group leader.
+  debug(dbg, 2, "CAlling kill_child on pid: %d\n", (int)pid);
   int err = kill(pid, signal);
   switch (err) {
     case 0:
@@ -300,14 +303,12 @@ int check_pending_processes()
     fperror("Failed to block signals before sigwait\n");
   
   if (sigpending(&sigset) == 0) {
-    if (sigwait(&sigset, &sig) == -1) {
-      fperror("sigwait");
-      return -1;
-    }
-    // if (errno == EINTR) {
-    //   fperror("error with sigwait\n");
-    //   return -1;
-    // }
+    while (errno == EINTR)
+      if (sigwait(&sigset, &sig) == -1) {
+        fperror("sigwait");
+        return -1;
+      }
+    debug(dbg, 4, "%d received signal: %d\n", (int)getpid(), sig);
     pm_gotsignal(sig);
   }
   return 0;
@@ -315,22 +316,23 @@ int check_pending_processes()
 
 int check_children(int& isTerminated)
 {
+  debug(dbg, 4, "check_children isTerminated: %d and signaled: %d\n", (int)isTerminated, signaled);
   do {
     std::deque<PidStatusT>::iterator it;
     while (!isTerminated && (it = exited_children.begin()) != exited_children.end()) {
       MapChildrenT::iterator i = children.find(it->first);
       MapKillPidT::iterator j;
       if (i != children.end()) {
-        // if (notify && handle_pid_status_term(*it) < 0) {
-        //   isTerminated = 1;
-        //   return -1;
-        // }
+        if (handle_pid_status_term(*it) < 0) {
+          isTerminated = 1;
+          return -1;
+        }
         children.erase(i);
       } else if ((j = transient_pids.find(it->first)) != transient_pids.end()) {
-        // the pid is one of the custom 'kill' commands started by us.
+        // the pid is one of the custom 'kill' commands started by babysitter.
         transient_pids.erase(j);
       }
-            
+      
       exited_children.erase(it);
     }
   // Signaled flag indicates that there are more processes signaled SIGCHLD then
@@ -343,12 +345,15 @@ int check_children(int& isTerminated)
     
   time_t now = time (NULL);
   
+  debug(dbg, 4, "Iterating through the children (%d)...\n", children.size());
   for (MapChildrenT::iterator it=children.begin(), end=children.end(); it != end; ++it) {
     int   status = ECHILD;
     pid_t pid = it->first;
+    debug(dbg, 4, "Checking on pid: %d\n", (int)pid);
     int n = kill(pid, 0);
     if (n == 0) { // process is alive
       if (it->second.kill_cmd_pid() > 0 && timediff(now, it->second.deadline()) > 0) {
+        debug(dbg, 2, "Sending SIGTERM to pid: %d\n", pid);
         kill(pid, SIGTERM);
         if ((n = kill(it->second.kill_cmd_pid(), 0)) == 0) kill(it->second.kill_cmd_pid(), SIGKILL);
         
@@ -357,23 +362,27 @@ int check_children(int& isTerminated)
         ptm->tm_sec += 1;
         it->second.set_deadline(mktime(ptm));
       }
-            
-      while ((n = waitpid(pid, &status, WNOHANG)) < 0 && errno == EINTR);
+      
+      debug(dbg, 4, "Waiting for pid: %d as WNOHANG\n", pid);
+      while ((n = waitpid(pid, &status, WNOHANG)) < 0 && errno == EINTR) ;
       if (n > 0) exited_children.push_back(std::make_pair(pid <= 0 ? n : pid, status));
       continue;
     } else if (n < 0 && errno == ESRCH) {
-      // if (notify) handle_pid_status_term(std::make_pair(it->first, status));
+      handle_pid_status_term(std::make_pair(it->first, status));
       children.erase(it);
     }
   }
-
+  debug(dbg, 4, "Done iterating through the children\n");
   return 0;
 }
 
 void setup_process_manager_defaults()
 {	
+  debug(dbg, 1, "Setting up process manager defaults\n");
   run_as_user = getuid();
   process_pid = (int)getpid();
+  exited_children.resize(SIGCHLD_MAX_SIZE);
   setup_signal_handlers();
-  exited_children.resize(SIGCHLD_MAX_SIZE); 
+  debug(dbg, 4, "exited_children (%d) max_size: %d\n", (int)exited_children.size(), (int)exited_children.max_size());
 }
+
