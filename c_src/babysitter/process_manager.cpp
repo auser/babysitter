@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <deque>
+#include <setjmp.h>
 
 #include "babysitter_utils.h"
 #include "babysitter_types.h"
@@ -32,7 +33,25 @@ bool                            signaled   = false;     // indicates that SIGCHL
 int                             terminated = 0;         // indicates that we got a SIGINT / SIGTERM event
 int                             run_as_user;
 pid_t                           process_pid;
-extern int dbg;
+sigjmp_buf                      saved_jump_buf;
+int                             pm_can_jump = 0;
+extern int                      dbg;
+
+/*
+* Set the loop ready for jumping on signal reception, if necessary
+*/
+int pm_next_loop()
+{
+  sigsetjmp(saved_jump_buf, 1); pm_can_jump = 0;
+  
+  while (!terminated && (exited_children.size() > 0 || signaled)) check_children(terminated);
+  check_pending_processes(); // Check for pending signals arrived while we were in the signal handler
+  debug(dbg, 4, "terminated in check_pending_processes... %d\n", (int)terminated);
+  
+  pm_can_jump = 1;
+  if (terminated) return -1;
+  else return 0;
+}
 
 int process_child_signal(pid_t pid)
 {
@@ -66,15 +85,18 @@ void pm_gotsignal(int signal)
   debug(dbg, 4, "Got signal: %d\n", signal);
   if (signal != SIGCHLD)
     if (signal == SIGTERM || signal == SIGINT) terminated = 1;
+  if (pm_can_jump) siglongjmp(saved_jump_buf, 1);
 }
 
 void pm_gotsigchild(int signal, siginfo_t* si, void* context)
 {
-    // If someone used kill() to send SIGCHLD ignore the event
-    if (signal != SIGCHLD) return;
+  // If someone used kill() to send SIGCHLD ignore the event
+  if (signal != SIGCHLD) return;
     
-    debug(dbg, 4, "Got SIGCHLD: %d for %d\n", signal, (int)si->si_pid);
-    process_child_signal(si->si_pid);
+  debug(dbg, 4, "Got SIGCHLD: %d for %d\n", signal, (int)si->si_pid);
+  process_child_signal(si->si_pid);
+    
+  if (pm_can_jump) siglongjmp(saved_jump_buf, 1);
 }
 
 int setup_pm_pending_alarm()

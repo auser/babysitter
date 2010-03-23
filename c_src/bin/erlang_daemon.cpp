@@ -171,6 +171,7 @@ int main (int argc, char const *argv[])
   eis.set_handles(3, 4);
   if (parse_the_command_line(argc, (char **)argv)) return 0;
   
+  setup_erl_daemon_signal_handlers();
   setup_process_manager_defaults();
   
   debug(dbg, 2, "parsing the config directory: %s\n", config_file_dir.c_str());
@@ -186,15 +187,14 @@ int main (int argc, char const *argv[])
   debug(dbg, 2, "Entering daemon loop\n");
   while (!terminated) {
     debug(dbg, 4, "looping... (%d)\n", (int)terminated);
+
     // Detect "open" for serial pty slave
     FD_ZERO (&readfds);
     FD_SET (eis.read_handle(), &readfds);
     
-    while (!terminated && (exited_children.size() > 0 || signaled)) check_children(terminated);
-    check_pending_processes(); // Check for pending signals arrived while we were in the signal handler
-    debug(dbg, 4, "terminated in check_pending_processes... %d\n", (int)terminated);
-    if (terminated) break;
+    if (pm_next_loop()) break;
     
+    // Erlang fun... pull the next command from the readfds parameter on the erlang fd
     ei::TimeVal timeout(5, 0);
     int cnt = select(maxfd, &readfds, (fd_set *)0, (fd_set *) 0, &timeout.timeval());
     int interrupted = (cnt < 0 && errno == EINTR);

@@ -21,7 +21,7 @@
 #define SIGCHLD_MAX_SIZE 4096
 
 // Signals
-int pm_process_child_signal(pid_t pid);
+int  pm_process_child_signal(pid_t pid);
 void pm_pending_signals(int sig);
 void pm_gotsignal(int signal);
 void pm_gotsigchild(int signal, siginfo_t* si, void* context);
@@ -41,6 +41,7 @@ int kill_child(pid_t pid, int signal, int transId, bool notify);
 void terminate_all();
 int check_pending_processes();
 int check_children(int& isTerminated);
+int pm_next_loop();
 
 // Other
 void setup_process_manager_defaults();

@@ -98,10 +98,8 @@ int main (int argc, const char *argv[])
   int terminated = 0;
   
   while (!terminated) {
-    
-    while (!terminated && (exited_children.size() > 0 || signaled)) check_children(terminated);
-    check_pending_processes(); // Check for pending signals arrived while we were in the signal handler
-    if (terminated) break;
+    // Call the next loop    
+    if (pm_next_loop()) break;
     
     // Read the next command
     cmd_buf = readline(PROMPT_STR);
