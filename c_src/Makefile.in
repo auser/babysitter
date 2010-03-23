@@ -55,7 +55,7 @@ EXES=$(patsubst bin/%.cpp.o, %.o, $(wildcard bin/*.cpp))
 # For generating makefile dependencies..
 SHELL=/bin/sh
 
-all: $(MAKEMAKE) config_parser $(OBJS) $(EXES)
+all: config_parser $(OBJS) $(EXES)
 
 $(MAKEMAKE):
 	@(rm -f $(MAKEMAKE))

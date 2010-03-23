@@ -13,7 +13,6 @@
 /*---------------------------- Includes ------------------------------------*/
 // STL Includes
 #include <list>
-#include <sstream>
 #include <string>
 #include <string.h>
 #include <errno.h>
