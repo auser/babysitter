@@ -1,7 +1,7 @@
 #!/bin/bash
 CURL=$(which curl)
 
-esc="\\"
+esc=""
 
 black="${esc}[30m";   red="${esc}[31m";    green="${esc}[32m"
 yellow="${esc}[33m"   blue="${esc}[34m";   purple="${esc}[35m"

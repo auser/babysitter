@@ -63,7 +63,7 @@ $(MAKEMAKE):
 
 $(EXES): $(OBJS) clean_bins
 	@echo "Creating a executable $(subst ,,$(subst .cpp,,$@))"
-	$(CXX) -O2 -g3 $@ -o $(EXECUTABLE_DIR)/babysitter_$(subst bin/,,$(subst src/,,$(subst .cpp,,$@))) $(CPPFLAGS) $(PARSER_LIBS) $(OBJS) $(LIBS) $(LDFLAGS)
+	$(CXX) $@ -o $(EXECUTABLE_DIR)/babysitter_$(subst bin/,,$(subst src/,,$(subst .cpp,,$@))) $(CPPFLAGS) $(PARSER_LIBS) $(OBJS) $(LIBS) $(LDFLAGS)
 
 clean_bins:
 	@(rm -rf $(top_srcdir)/priv/bin/*)
