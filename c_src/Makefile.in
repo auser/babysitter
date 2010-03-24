@@ -19,13 +19,14 @@ EXECUTABLE_DIR = $(top_srcdir)/priv/bin
 INCLUDE+=-I $(srcdir)/parser -I $(top_srcdir)/build/readline/include -I $(srcdir)/utils -I $(srcdir)/erl -I $(srcdir)/babysitter
 
 ifeq ($(shell uname),Linux)
+	#  -shared
 	ARCH=linux
-	LDFLAGS=$(LDFLAGS_COMMON) -shared
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON)
 endif
+
+LDFLAGS=$(LDFLAGS_COMMON)
 
 # Defines
 CC = g++
