@@ -107,7 +107,6 @@ pid_t start_child(const char* command_argv, const char *cd, const char** env, in
     if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
       fperror("Cannot set priority of pid %d to %d", pid, nice);
     }
-    fprintf(stderr, " in parent process pid: %d\n", pid);
     return pid;
   }
 }
