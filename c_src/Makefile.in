@@ -10,8 +10,7 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 
-CPPFLAGS+=$(INCLUDE) -O2 -g
-CFLAGS = $(CPPFLAGS) @CFLAGS@
+
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = $(srcdir)/parser/y.tab.o $(srcdir)/parser/lex.yy.o
 INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -L$(top_srcdir)/build/readline/lib -lreadline -lhistory -lfl -lm -ll
@@ -30,7 +29,8 @@ endif
 
 # Defines
 CC = g++
-CPPFLAGS = @CPPFLAGS@ $(INCLUDE)
+CPPFLAGS = @CPPFLAGS@ $(INCLUDE) -O2 -g3
+CFLAGS = $(CPPFLAGS) @CFLAGS@
 LIBS = @LIBS@ $(INC_LIBS)
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
