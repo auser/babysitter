@@ -135,7 +135,7 @@ int main (int argc, const char *argv[])
         command_argv[command_argc] = 0; // NULL TERMINATE IT
         const char *cd = NULL;
         // start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
-        pid_t pid = start_child((const char*)cmd_buf, cd, (const char**)env, run_as_user, 0);
+        pid_t pid = start_child((const char*)commandify(command_argc, (const char**)command_argv), cd, (const char**)env, run_as_user, 0);
         //CmdInfo(const char* _cmd, const char* _kill_cmd, pid_t _cmd_pid)
         CmdInfo ci(*command_argv, "", pid);
         children[pid] = ci;

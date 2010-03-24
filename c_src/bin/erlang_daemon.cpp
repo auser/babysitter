@@ -192,7 +192,7 @@ int main (int argc, char const *argv[])
     if (terminated) break;
     
     ei::TimeVal timeout(5, 0);
-    int cnt = select (maxfd, &readfds, (fd_set *)0, (fd_set *) 0, &timeout.timeval());
+    int cnt = select(maxfd, &readfds, (fd_set *)0, (fd_set *) 0, &timeout.timeval());
     int interrupted = (cnt < 0 && errno == EINTR);
       
     if (interrupted || cnt == 0) {

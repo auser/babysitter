@@ -22,6 +22,7 @@ int copy_args (const char * input, int argc, char ** argv);
 int argify(const char *line, char ***argv_ptr);
 char* commandify(int argc, const char** argv);
 char* chomp(char *string);
+char* connect_string_array(const char **argv);
 
 #ifdef __cplusplus
 }

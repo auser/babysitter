@@ -23,9 +23,8 @@ clean:
 	(cd c_src;$(MAKE) clean)
 	(cd erl;$(MAKE) clean)
  
-test:
-	(cd c_src; $(MAKE) test)
-	(cd erl; $(MAKE) test)
+tests: all
+	(cd test; $(MAKE))
  
 install: all
 	(cd c_src; $(MAKE) install)

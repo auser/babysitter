@@ -1,0 +1,33 @@
+top_srcdir = @top_srcdir@
+srcdir = @srcdir@
+prefix = @prefix@
+
+C_DIR=${top_srcdir}/c_src
+BUILD_DIR=${top_srcdir}/build
+EXE=${top_srcdir}/run_tests
+
+CMOCKERY_DIR=$(BUILD_DIR)/cmockery
+LIBMOCKERY=$(CMOCKERY_DIR)/lib/libcmockery.a
+INCMOCKERY=$(CMOCKERY_DIR)/include/google
+
+TEST_CFLAGS = $(CFLAGS) -Isrc -Itest -I $(INCMOCKERY)
+
+SRC_SOURCES=$(wildcard $(C_DIR)/utils/*.cpp)
+SRC_OBJECTS=$(patsubst %.c,%.o,$(SRC_SOURCES))
+
+TEST_SOURCES := $(wildcard c_src/test_*.c)
+TEST_OBJECTS := $(patsubst %.c,%.o,$(TEST_SOURCES))
+
+TEST_SRCS=$(wildcard c_src/*.c)
+TEST_OBJ = $(TEST_SRCS:.c=.o)
+
+INCLUDE+=-I $(C_DIR)/parser -I $(C_DIR)/utils -I $(C_DIR)/erl -I $(C_DIR)/babysitter -I ${INCMOCKERY}
+
+.c.o: %.o: %.c
+	$(CC) $(INCLUDE) -c $(TEST_CFLAGS) $< -o $@
+	
+default: clean $(TEST_OBJ)
+	$(LINK.cc) -o $(EXE) $(TEST_OBJ) $(SRC_OBJECTS) $(LIBS) $(LIBMOCKERY)
+
+clean:
+	rm -rf c_src/*.o $(EXE)
