@@ -20,7 +20,7 @@ INCLUDE+=-I $(srcdir)/parser -I $(top_srcdir)/build/readline/include -I $(srcdir
 
 ifeq ($(shell uname),Linux)
 	ARCH=linux
-	LDFLAGS=$(LDFLAGS_COMMON) #-shared
+	LDFLAGS=$(LDFLAGS_COMMON) -shared
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
@@ -29,7 +29,7 @@ endif
 
 # Defines
 CC = g++
-CPPFLAGS = @CPPFLAGS@ $(INCLUDE) 
+CPPFLAGS = @CPPFLAGS@ $(INCLUDE) -O2 -g3
 CFLAGS = $(CPPFLAGS) @CFLAGS@
 LIBS = @LIBS@ $(INC_LIBS)
 TEST_SOURCES := $(wildcard check_*.cpp)
@@ -43,6 +43,11 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 CC=gcc
 CXX=g++
 
+MAKEMAKE=mm
+MYCFLAGS=-DGNU_READLINE -DDEBUG_PRT -g3
+
+CFLAGS+=$(MYCFLAGS) $(OS_DEFINES)
+
 SRCS=$(wildcard utils/*.cpp) $(wildcard erl/*.cpp) $(wildcard babysitter/*.cpp)
 OBJS=$(patsubst %.cpp, %.o, $(patsubst %.c, %.o, $(SRCS)))
 EXES=$(patsubst bin/%.cpp.o, %.o, $(wildcard bin/*.cpp))
@@ -52,10 +57,13 @@ SHELL=/bin/sh
 
 all: config_parser $(OBJS) $(EXES)
 
+$(MAKEMAKE):
+	@(rm -f $(MAKEMAKE))
+	$(CXX) -M  $(INCLUDE) $(CPPFLAGS) $(SRCS) > $(MAKEMAKE)
+
 $(EXES): $(OBJS) clean_bins
 	@echo "Creating a executable $(subst ,,$(subst .cpp,,$@))"
-	$(CXX) -c -o $(subst .cpp,.o,$@) $(INCLUDE) $(CPPFLAGS) $@
-	$(CXX) $(subst .cpp,.o,$@) $(INCLUDE) -o $(EXECUTABLE_DIR)/babysitter_$(subst bin/,,$(subst src/,,$(subst .cpp,,$@))) $(CPPFLAGS) $(PARSER_LIBS) $(OBJS) $(LIBS) $(LDFLAGS)
+	$(CXX) $@ -o $(EXECUTABLE_DIR)/babysitter_$(subst bin/,,$(subst src/,,$(subst .cpp,,$@))) $(CPPFLAGS) $(PARSER_LIBS) $(OBJS) $(LIBS) $(LDFLAGS)
 
 clean_bins:
 	@(rm -rf $(top_srcdir)/priv/bin/*)
@@ -70,7 +78,7 @@ config_parser: $(patsubst %.cpp, %.o, $(wildcard utils/*.cpp))
 	@(cd ./parser;$(MAKE)) # make the config parser
 
 clean:
-	rm -rf *.o *.o $(OBJS) test/*.o run_tests c_src/*/*.o
+	rm -rf *.o *.o $(OBJS) $(MAKEMAKE) test/*.o run_tests c_src/*/*.o
 	@(cd parser && $(MAKE) clean)
 
 clean_deps:
