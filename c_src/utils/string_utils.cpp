@@ -64,8 +64,8 @@ int argify(const char *line, char ***argv_ptr)
 
 char* commandify(int argc, const char** argv)
 {
-  int curr_pos = 0, i = 0, j = 0, total, len;
-  char *cmd;
+  int curr_pos = 0, i = 0, j = 0, total = 0, len = 0;
+  char *cmd = NULL;
   
   for (i = 0; i < argc; i++) total += strlen(argv[i]) + 1; // plus a space
   
