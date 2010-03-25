@@ -13,14 +13,14 @@ mandir = $(prefix)/man/man1
 
 ERL_INTERFACE=${ERLDIR}/lib/${ERL_INTERFACE}
 PARSER_LIBS = $(srcdir)/parser/y.tab.o $(srcdir)/parser/lex.yy.o
-INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -L$(top_srcdir)/build/readline/lib -lreadline -lhistory -lfl -lm -ll
+INC_LIBS = -L@EI_LIB_DIR@ -lerl_interface -lei -lstdc++ -L$(top_srcdir)/build/readline/lib -lcurses -lreadline -lhistory -lfl -lm -ll
 EXECUTABLE_DIR = $(top_srcdir)/priv/bin
 
 INCLUDE+=-I $(srcdir)/parser -I $(top_srcdir)/build/readline/include -I $(srcdir)/utils -I $(srcdir)/erl -I $(srcdir)/babysitter
 
 ifeq ($(shell uname),Linux)
 	ARCH=linux
-	LDFLAGS=$(LDFLAGS_COMMON) -shared
+	LDFLAGS=$(LDFLAGS_COMMON) -static
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
