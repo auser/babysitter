@@ -1,3 +1,7 @@
+top_srcdir = @top_srcdir@
+srcdir = @srcdir@
+prefix = @prefix@
+
 # Defines
 OUT=test
 LIB_SOURCE=honeycomb.l honeycomb.y
@@ -6,9 +10,6 @@ CC=cc
 GCC=g++
 CPPFLAGS= @CPPFLAGS@ -I ./ -I ../babysitter -I ../utils -I libs 
 YACCFLAGS=-d -t
-top_srcdir = @top_srcdir@
-srcdir = @srcdir@
-prefix = @prefix@
 c_srcdir = $(top_srcdir)/c_src
 INCLUDE+=-I . -I $(c_srcdir)/utils -I $(c_srcdir)/erl -I $(c_srcdir)/babysitter
 
@@ -22,16 +23,17 @@ prereq:
 	$(GCC) -c -o honeycomb_config.o $(INCLUDE) $(CFLAGS) libs/honeycomb_config.c
 
 clean:
-	rm -rf *.o y.tab.h *.dSYM
+	rm -rf *.o y.tab.h *.dSYM y.tab.o lex.yy.o lex.yy.c y.tab.c
 	
 lex:
 	lex honeycomb.l
-
-.c.o: $(SRCS) $(HDR)
-	$(CC) -c -o $*.o $(CPPFLAGS) $*.c
-
-y.tab.h: lex honeycomb.y 
+lex.yy.o:
+	$(CC) -c -o lex.yy.o $(CPPFLAGS) lex.yy.c
+	
+y.tab.h: lex honeycomb.y
 	yacc $(YACCFLAGS) honeycomb.y
+y.tab.o:
+	$(CC) -c -o y.tab.o $(CPPFLAGS) y.tab.c
 
 test_hc_config: honeycomb.c y.tab.h hc_support.o $(LIB_OBJ)
 	$(GCC) $(CPPFLAGS) -o $(OUT) test_hc_config.cpp $(LIB_OBJ) -ll

@@ -42,7 +42,7 @@ AC_SUBST(ERLDIR)
 
 ERL_INTERFACE=`ls ${ERLDIR}/lib | grep erl_interface | tail -n 1`
 
-CPPFLAGS="-O2 -g3 -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -Wall -Werror -shared -fPIC -I./"
+CPPFLAGS="-O2 -g3 -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -Wall -Werror -fPIC -I./"
 
 EI_LIB_DIR="${ERLDIR}/lib/${ERL_INTERFACE}/lib"
 LIBEI="${EI_LIB_DIR}/libei.a"
