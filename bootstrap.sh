@@ -90,6 +90,28 @@ else
   fi
 fi
 
+ncurses_version=5.7
+ncurses_root=ncurses-${ncurses_version}
+ncurses_tar=${ncurses_root}.tar.gz
+ncurses_repos=http://ftp.gnu.org/pub/gnu/ncurses/${ncurses_tar}
+
+cecho "ncurses..." $blue no
+if [ -f "build/ncurses/lib/libncurses.a" ]; then
+  found_msg
+else
+  not_found_msg
+  cecho "Downloading and building ncurses" $red
+  pushd build
+  prefix=`pwd`/ncurses
+  $CURL -o ${ncurses_tar} ${ncurses_repos}
+  tar -xzf ${ncurses_tar}
+  pushd ${ncurses_root}
+  ./configure --prefix=$prefix && make && make install
+  popd
+  rm -rf ${ncurses_tar} ${ncurses_root}
+  popd
+fi
+
 cecho "readline..." $blue no
 if [ -f "build/readline/lib/libreadline.a" ]; then
   found_msg
