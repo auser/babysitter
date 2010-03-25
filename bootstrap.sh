@@ -45,10 +45,6 @@ function found_msg () {
   aligned_msg "found" $green
 }
 
-readline_version="6.1"
-readline_tar="readline-${readline_version}.tar.gz"
-readline_repos="ftp://ftp.cwru.edu/pub/bash/${readline_tar}"
-
 # Build cmockery
 cmockery_version="0.1.2"
 cmockery_tar="cmockery-${cmockery_version}.tar.gz"
@@ -88,47 +84,6 @@ else
       rm -rf cmockery-${cmockery_version}
       popd
   fi
-fi
-
-ncurses_version=5.7
-ncurses_root=ncurses-${ncurses_version}
-ncurses_tar=${ncurses_root}.tar.gz
-ncurses_repos=http://ftp.gnu.org/pub/gnu/ncurses/${ncurses_tar}
-
-cecho "ncurses..." $blue no
-if [ -f "build/ncurses/lib/libncurses.a" ]; then
-  found_msg
-else
-  not_found_msg
-  cecho "Downloading and building ncurses" $red
-  pushd build
-  prefix=`pwd`/ncurses
-  $CURL -o ${ncurses_tar} ${ncurses_repos}
-  tar -xzf ${ncurses_tar}
-  pushd ${ncurses_root}
-  ./configure --prefix=$prefix && make && make install
-  popd
-  rm -rf ${ncurses_tar} ${ncurses_root}
-  popd
-fi
-
-cecho "readline..." $blue no
-if [ -f "build/readline/lib/libreadline.a" ]; then
-  found_msg
-else
-  not_found_msg
-  cecho "Downloading and building readline" $red
-  pushd build
-  prefix=`pwd`/readline
-  $CURL -o $readline_tar $readline_repos
-  echo $readline_tar
-  tar -xzf $readline_tar
-  mv readline readline-${readline_version}
-  pushd readline-${readline_version}
-  ./configure --prefix=$prefix && make && make install
-  popd
-  rm -rf readline-${readline_version}
-  popd
 fi
 
 AUTOCONF_VERSION=2.65
