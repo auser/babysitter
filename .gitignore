@@ -22,3 +22,7 @@ build/
 Makefile
 c_src/parser/y.tab.h
 c_src/mm
+run_tests
+test/run_tests
+c_src/parser/lex.yy.c
+c_src/parser/y.tab.c

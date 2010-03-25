@@ -139,7 +139,7 @@ make
 if [ "$?" != "0" ]; then
   cecho "Error making..." $red
 else
-  echo "success" $green
+  cecho "success" $green
 fi
 
 # cleanup
