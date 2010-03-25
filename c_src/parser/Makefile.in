@@ -5,10 +5,10 @@ prefix = @prefix@
 # Defines
 OUT=test
 LIB_SOURCE=honeycomb.l honeycomb.y
-LIB_OBJ=lex.yy.o ../utils/print_utils.o ../babysitter/hc_support.o ../babysitter/honeycomb_config.o
+LIB_OBJ=y.tab.o lex.yy.o ../utils/print_utils.o ../babysitter/hc_support.o ../babysitter/honeycomb_config.o
 CC=cc
 GCC=g++
-CPPFLAGS=@CPPFLAGS@ -I ./ -I ../babysitter -I ../utils -I libs 
+CPPFLAGS= @CPPFLAGS@ -I ./ -I ../babysitter -I ../utils -I libs 
 YACCFLAGS=-d -t
 c_srcdir = $(top_srcdir)/c_src
 INCLUDE+=-I . -I $(c_srcdir)/utils -I $(c_srcdir)/erl -I $(c_srcdir)/babysitter
