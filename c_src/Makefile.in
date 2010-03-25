@@ -29,9 +29,9 @@ endif
 
 # Defines
 CC = g++
-CPPFLAGS = @CPPFLAGS@ $(INCLUDE) -DGNU_READLINE -DDEBUG_PRT
+CPPFLAGS = @CPPFLAGS@ $(INCLUDE)
 CFLAGS = $(CPPFLAGS) @CFLAGS@
-LIBS = @LIBS@ $(INC_LIBS)
+LIBS = $(INC_LIBS)
 TEST_SOURCES := $(wildcard check_*.cpp)
 TEST_OBJECTS := $(patsubst %.cpp,%.o,$(TEST_SOURCES))
 UNDER_TEST := $(patsubst check_%.cpp,%.o,$(TEST_SOURCES))
@@ -56,7 +56,7 @@ all: config_parser $(OBJS) $(EXES)
 
 $(MAKEMAKE):
 	@(rm -f $(MAKEMAKE))
-	$(CXX) -M  $(INCLUDE) $(CPPFLAGS) $(SRCS) > $(MAKEMAKE)
+	$(CXX) -M  $(CPPFLAGS) $(SRCS) > $(MAKEMAKE)
 
 $(EXES): $(OBJS) clean_bins
 	@echo "Creating a executable $(subst ,,$(subst .cpp,,$@))"
@@ -66,10 +66,10 @@ clean_bins:
 	@(rm -rf $(top_srcdir)/priv/bin/*)
 
 .cpp.o: $(SRCS) $(HDR)
-	$(CXX) -c -o $*.o $(INCLUDE) $(CPPFLAGS) $*.cpp
+	$(CXX) -c -o $*.o $(CPPFLAGS) $*.cpp
 
 .c.o: $(SRCS) $(HDR)
-	$(CC) -c -o $*.o $(INCLUDE) $(CFLAGS) $*.c
+	$(CC) -c -o $*.o $(CFLAGS) $*.c
 
 config_parser: $(patsubst %.cpp, %.o, $(wildcard utils/*.cpp))
 	@(cd ./parser;$(MAKE)) # make the config parser

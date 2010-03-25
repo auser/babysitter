@@ -25,3 +25,4 @@ run_tests
 test/run_tests
 c_src/parser/lex.yy.c
 c_src/parser/y.tab.c
+c_src/parser/Makefile
