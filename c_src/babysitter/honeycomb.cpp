@@ -26,7 +26,6 @@
 // Erlang interface
 // #include "ei++.h"
 
-#include "macros.h"
 #include "honeycomb_config.h"
 #include "honeycomb.h"
 #include "hc_support.h"
@@ -384,7 +383,7 @@ pid_t Honeycomb::run_in_fork_and_wait(char *argv[], char* const* env, std::strin
   switch (pid) {
     case -1: 
       sigprocmask(SIG_SETMASK, &original_sigs, NULL);
-      SYS_ERROR(-1, "Unknown error in spawn_child_process\n");
+      babysitter_system_error(-1, "Unknown error in spawn_child_process\n");
     case 0: {      
       // I am the child
       perm_drop();

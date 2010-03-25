@@ -1,14 +1,15 @@
+top_srcdir = ../..
+srcdir = .
+prefix = /usr/local
+
 # Defines
 OUT=test
 LIB_SOURCE=honeycomb.l honeycomb.y
 LIB_OBJ=y.tab.o lex.yy.o ../utils/print_utils.o ../babysitter/hc_support.o ../babysitter/honeycomb_config.o
 CC=cc
 GCC=g++
-CPPFLAGS= -O2 -g3 -I /usr/lib64/erlang/lib/erl_interface-3.5.9/include -Wall -Werror -shared -fPIC -I./ -I ./ -I ../babysitter -I ../utils -I libs 
+CPPFLAGS=  -I /usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/include -Wall -fPIC -I./ -I ./ -I ../babysitter -I ../utils -I libs 
 YACCFLAGS=-d -t
-top_srcdir = ../..
-srcdir = .
-prefix = /usr/local
 c_srcdir = $(top_srcdir)/c_src
 INCLUDE+=-I . -I $(c_srcdir)/utils -I $(c_srcdir)/erl -I $(c_srcdir)/babysitter
 
@@ -22,7 +23,7 @@ prereq:
 	$(GCC) -c -o honeycomb_config.o $(INCLUDE) $(CFLAGS) libs/honeycomb_config.c
 
 clean:
-	rm -rf *.o y.tab.h *.dSYM
+	rm -rf *.o y.tab.h *.dSYM y.tab.o lex.yy.o lex.yy.c y.tab.c
 	
 lex:
 	lex honeycomb.l
@@ -30,7 +31,7 @@ lex:
 .c.o: $(SRCS) $(HDR)
 	$(CC) -c -o $*.o $(CPPFLAGS) $*.c
 
-y.tab.h: lex honeycomb.y 
+y.tab.h: lex honeycomb.y
 	yacc $(YACCFLAGS) honeycomb.y
 
 test_hc_config: honeycomb.c y.tab.h hc_support.o $(LIB_OBJ)
