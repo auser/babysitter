@@ -10,7 +10,7 @@
 
 /* Readline */
 #include <readline/readline.h>
-#include <readline/history.h>
+// #include <readline/history.h>
 
 #include "string_utils.h"
 #include "process_manager.h"
@@ -93,7 +93,7 @@ int main (int argc, const char *argv[])
   int env_c = 1;
   
   // drop_into_shell();  
-  static char *line = (char *)NULL;
+  // static char *line = (char *)NULL;
   char *cmd_buf;
   int terminated = 0;
   
@@ -104,12 +104,13 @@ int main (int argc, const char *argv[])
     if (terminated) break;
     
     // Read the next command
-    line = readline(PROMPT_STR);
-    int result;
-    result = history_expand(line, &cmd_buf);
+    cmd_buf = readline(PROMPT_STR);
+    
+    // int result;
+    // result = history_expand(line, &cmd_buf);
         
-    if (result < 0 || result == 2) fprintf(stderr, "%s\n", cmd_buf);
-    else { add_history(cmd_buf); }
+    // if (result < 0 || result == 2) fprintf(stderr, "%s\n", cmd_buf);
+    // else { add_history(cmd_buf); }
 
     cmd_buf[ strlen(cmd_buf) ] = '\0';
 
@@ -172,7 +173,7 @@ int main (int argc, const char *argv[])
     
     for (int i = 0; i < command_argc; i++) free(command_argv[i]);
     free(cmd_buf);
-    free(line);
+    // free(line);
   }
   
   printf("Exiting... killing all processes...\n");
