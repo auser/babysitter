@@ -290,7 +290,7 @@ void setup_signal_handlers()
   sigaction(SIGCHLD, &sact, NULL);
 }
 
-int check_pending(int signum)
+int check_pending(int signum = SIGALRM)
 {
   int sig = 0;
   sigset_t sigset;
