@@ -290,13 +290,13 @@ void setup_signal_handlers()
   sigaction(SIGCHLD, &sact, NULL);
 }
 
-int check_pending(int signum = SIGALRM)
+int check_pending()
 {
   int sig = 0;
   sigset_t sigset;
   setup_pm_pending_alarm();
   if ((sigemptyset(&sigset) == -1)
-      || (sigaddset(&sigset, signum) == -1)
+      || (sigaddset(&sigset, SIGALRM) == -1)
       || (sigaddset(&sigset, SIGINT) == -1)
       || (sigaddset(&sigset, SIGTERM) == -1)
       || (sigprocmask( SIG_BLOCK, &sigset, NULL) == -1)
