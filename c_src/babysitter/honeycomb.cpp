@@ -278,9 +278,8 @@ int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
   for (int i = 0; i < argc; i++) printf("\targv[%d] = %s\n", i, argv[i]);
   
   debug(m_debug_level, 3, "Running... %s\n", argv[0]);
-  pid_t p_pid = run_in_fork_and_wait((char **)argv, (char * const*) m_cenv, cd, running_script);
-  
-  return p_pid;
+  // pm_start_child(const char* command_argv, const char *cd, const char** env, int user, int nice);
+  return pm_start_child((const char *)argv, cd.c_str(), (char const**) m_cenv, m_user, m_nice);
 }
 
 // Execute a hook
@@ -299,9 +298,7 @@ void Honeycomb::exec_hook(std::string action, int stage, phase *p, std::string c
   }
 }
 
-void Honeycomb::ensure_exists(std::string dir) {
-  mkdir_p(dir, m_user, m_group, m_mode);
-}
+void Honeycomb::ensure_exists(std::string dir) {mkdir_p(dir, m_user, m_group, m_mode);}
 
 string_set *Honeycomb::string_set_from_lines_in_file(std::string filepath) {
   string_set *lines = new string_set();
@@ -365,9 +362,14 @@ void Honeycomb::setup_internals()
   m_working_dir = replace_vars_with_value(m_working_dir);
   m_skel_dir = replace_vars_with_value(m_skel_dir);
   m_image = replace_vars_with_value(m_image);
+  
+  //--- Make sure the directory exists  
+  ensure_exists(m_run_dir);
+  ensure_exists(m_storage_dir);
+  ensure_exists(m_working_dir);
 }
 
-pid_t Honeycomb::run_in_fork_and_wait(char *argv[], char* const* env, std::string cd = "", int running_script = 0)
+pid_t Honeycomb::fork_and_execute(char *argv[], char* const* env, std::string cd = "", int running_script = 0)
 {
   pid_t pid;
   sigset_t child_sigs, original_sigs;
@@ -427,18 +429,55 @@ pid_t Honeycomb::run_in_fork_and_wait(char *argv[], char* const* env, std::strin
 // ACTIONS
 //---
 
-int Honeycomb::bundle() {
+/**
+* bundle/0
+**/
+int Honeycomb::bundle()
+{
+  if (run_action("bundle")) return -1;
+  return 0;
+}
+/**
+* start/0
+**/
+int Honeycomb::start()
+{
+  if (run_action("mount")) return -1;
+  if (run_action("start")) return -1;
+  return 0;
+}
+
+/**
+* stop/0
+**/
+int Honeycomb::stop()
+{
+  if (run_action("stop")) return -1;
+  if (run_action("unmount")) return -1;
+  if (run_action("cleanup")) return -1;
+  return 0;
+}
+
+/**
+* run_action/1
+* params: std::string action - Action phase to run (matches to action in the config file)
+*
+* Sets up the environment to run the action
+* drops into the user defined
+* executes the hooks for before action, drops into the working directory
+* executes the action
+* executes the after hook and cleans up the working directory
+**/
+int Honeycomb::run_action(std::string action)
+{
   if (!valid()) return -1;
   setup_internals();
   temp_drop();
   
   phase *p = find_phase(m_honeycomb_config, T_BUNDLE, m_debug_level);
-    
-  exec_hook("bundle", BEFORE, p);
-  // Run command
-  //--- Make sure the directory exists  
-  ensure_exists(m_working_dir);
-  ensure_exists(m_storage_dir);
+  
+  // Run before hook
+  exec_hook(action, BEFORE, p);
   
   // Change into the working directory
   if (chdir(m_working_dir.c_str())) {
@@ -446,149 +485,23 @@ int Honeycomb::bundle() {
     return -1;
   }
   
-  // Clone the app in the directory if there is an scm_url
-  // Get the clone command
-  if (m_scm_url != "") {
-    debug(m_debug_level, 2, "Cloning from %s\n", m_scm_url.c_str());
-    std::string clone_command ("git clone --depth 0 %s home/app");
-    
-    if (m_honeycomb_config->clone_command != NULL) clone_command = m_honeycomb_config->clone_command;
-    char str_clone_command[256];
-    // The str_clone_command looks like:
-    //  /usr/bin/git clone --depth 0 [git_url] [m_working_dir]/home/app
-    snprintf(str_clone_command, 256, clone_command.c_str(), m_scm_url.c_str());
-    // Do the cloning
-    debug(m_debug_level, 3, "Cloning with command %s\n", clone_command.c_str());
-    // Do not like me some system(3)
-    int argc = 0;
-    const char* argv[] = { NULL };
-    
-    // Get the binary
-    std::string bin = find_binary("git");
-    argv[argc] = bin.c_str();
-    // Remove the first one
-    strtok(str_clone_command, " \r\t\n");
-
-    while (argc++ < MAX_ARGS) if (! (argv[argc] = strtok(NULL, " \t\n")) ) break;
-    
-    int path_max = 120;
-    char buf[path_max];
-    memset(buf, 0, path_max);
-    getcwd(buf, path_max);
-    debug(m_debug_level, 4, "Operating in '%s' dir\n", buf);
-    
-    run_in_fork_and_wait((char **)argv, (char * const*) m_cenv, m_working_dir, 0);
-    
-    std::string git_root_dir = m_working_dir + "/home/app";
-    m_sha = parse_sha_from_git_directory(git_root_dir);
-    m_size = dir_size_r(m_working_dir.c_str());
-  }
-  
+  // Run the command  
   if ((p != NULL) && (p->command != NULL)) {
     debug(m_debug_level, 1, "Running client code: %s\n", p->command);
     // Run the user's command
     comb_exec(p->command, m_working_dir);
-  } else {
-    //Default action
-    printf("Running default action for bundle\n");
   }
   restore_perms();
   
-  exec_hook("bundle", AFTER, p);
+  exec_hook(action, AFTER, p);
   
   debug(m_debug_level, 2, "Removing working directory: %s\n", working_dir());
   rmdir_p(m_working_dir);
   
   return 0;
+  
 }
 
-int Honeycomb::start(MapChildrenT &children) 
-{
-  debug(m_debug_level, 1, "Trying to start comb: %s\n", name());
-  if (!valid()) return -1;
-  
-  setup_internals();
-  phase *p = find_phase(m_honeycomb_config, T_START, m_debug_level);
-  exec_hook("start", BEFORE, p);
-  
-  // Run command
-  //--- Make sure the directory exists
-  ensure_exists(m_run_dir);
-  
-  temp_drop();
-  
-  // Change into the working directory
-  if (chdir(m_run_dir.c_str())) {
-    perror("chdir:");
-    return -1;
-  }
-  
-  pid_t pid = comb_exec(p->command, m_run_dir);
-  CmdInfo ci(p->command, "", pid);
-  children[pid] = ci;
-  
-  printf("Stored pid: %d into children\n", (int)pid);
-  
-  restore_perms();
-  
-  exec_hook("start", AFTER, p);
-  return 0;
-}
-int Honeycomb::stop(pid_t kill_pid, MapChildrenT &children)
-{
-  if (!valid()) return -1;
-  
-  debug(m_debug_level, 1, "Trying to stop comb: %s\n", name());
-  if (!valid()) return -1;
-  
-  setup_internals();
-  phase *p = find_phase(m_honeycomb_config, T_STOP, m_debug_level);
-  exec_hook("stop", BEFORE, p);
-  
-  // Run command
-  //--- Make sure the directory exists
-  ensure_exists(m_run_dir);
-  
-  temp_drop();
-  
-  // Change into the working directory
-  if (chdir(m_run_dir.c_str())) {
-    perror("chdir:");
-    return -1;
-  }
-  
-  if ((p != NULL) && (p->command != NULL)) {
-    debug(m_debug_level, 1, "Running client code: %s\n", p->command);
-    // Run the user's command
-    comb_exec(p->command, m_run_dir);
-  } else {
-    //Default action
-    printf("Running default action for stop\n");
-    time_t now = time (NULL);
-    pm_stop_child(kill_pid, 0, now);    
-  }
-  
-  restore_perms();
-  
-  exec_hook("stop", AFTER, p);
-  
-  return 0;
-}
-int Honeycomb::mount()
-{
-  if (!valid()) return -1;
-  return 0;
-}
-int Honeycomb::unmount()
-{
-  if (!valid()) return -1;
-  return 0;
-}
-int Honeycomb::cleanup()
-{
-  if (!valid()) return -1;
-  return 0;
-}
 void Honeycomb::set_rlimits() {
   if(m_nofiles) set_rlimit(RLIMIT_NOFILE, m_nofiles);
 }

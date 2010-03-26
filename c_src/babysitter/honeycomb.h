@@ -91,6 +91,7 @@ private:
   size_t                  m_size;         // The directory size
   uid_t                   m_user;         // run as user (generated if not given)
   gid_t                   m_group;        // run as this group
+  std::list<std::string>  m_env;
   const char**            m_cenv;         // The string list of environment variables
   // Internal
   std::string             m_script_file;  // The script used to launch this honeycomb
@@ -130,12 +131,12 @@ public:
   const char*   storage_dir() const { return m_storage_dir.c_str(); }
   const char*   name()    const { return m_name.c_str(); }
   int           port()     const { return m_port; }
+  int           nice()     const { return m_nice; }
   char* const*  env()      const { return (char* const*)m_cenv; }
   string_set    executables() const { return m_executables; }
   string_set    directories() const { return m_dirs; }
   uid_t         user()     const { return m_user; }
   gid_t         group()    const { return m_group; }
-  int           nice()     const { return m_nice; }
   const char*   app_type() const { return m_app_type.c_str(); }
   const         honeycomb_config *config() const {return m_honeycomb_config; }  
     
@@ -150,6 +151,7 @@ public:
     m_honeycomb_config = c;
     init();
   }
+  void set_nice(int n) { m_nice = n; }
   void set_scm_url(std::string url) {m_scm_url = url;}
   void set_root_dir(std::string dir) {
     m_root_dir = replace_vars_with_value(dir);
@@ -164,39 +166,43 @@ public:
   void set_skel_dir(std::string i) { m_skel_dir = i; }
   
   void set_sha(std::string sha) { m_sha = sha; }
+  void add_env(std::string s) { 
+    m_env.push_back(s); 
+    m_cenv[m_cenv_c++] = s.c_str();
+    m_cenv[m_cenv_c] = NULL;
+  }
   void add_file(std::string file) { m_files.insert(file); }
   void add_dir(std::string dir) { m_dirs.insert(dir); }
   void add_executable(std::string exec) { m_executables.insert(exec); }
   
   // Actions
+  int start();
+  int stop();
   int bundle();
-  int start(MapChildrenT &children); 
-  int stop(pid_t pid, MapChildrenT &children);
-  int mount();
-  int unmount();
-  int cleanup();
   
   int valid();
     
 private:
-  void init();
-  void setup_internals();
+  int   run_action(std::string action);
+  void  init();
+  void  setup_internals();
   std::string find_binary(const std::string& file);
-  bool abs_path(const std::string & path);
+  bool  abs_path(const std::string & path);
   uid_t random_uid();
-  int setup_defaults();
-  int build_env_vars();
+  int   setup_defaults();
+  int   build_env_vars();
   const char * const to_string(long long int n, unsigned char base);
-  int temp_drop();
-  int perm_drop();
-  int restore_perms();
+  // Permissions
+  int   temp_drop();
+  int   perm_drop();
+  int   restore_perms();
   // Limits
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
   int comb_exec(std::string cmd, std::string cd);
   void exec_hook(std::string action, int stage, phase *p, std::string cd);
-  pid_t run_in_fork_and_wait(char *argv[], char* const* env, std::string cd, int running_script);
+  pid_t fork_and_execute(char *argv[], char* const* env, std::string cd, int running_script);
   void ensure_exists(std::string s);
   std::string replace_vars_with_value(std::string original);
   std::string map_char_to_value(std::string f_name);

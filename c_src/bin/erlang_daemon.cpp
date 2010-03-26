@@ -153,20 +153,91 @@ int cmd_start(int transId, CmdOptions& co) {
     return 0;
   }
 }
-int cmd_bundle(int transId, CmdOptions& co) {return 0;}
-int cmd_mount(int transId, CmdOptions& co) {return 0;}
-int cmd_stop(int transId, CmdOptions& co) {return 0;}
-int cmd_kill(int transId, CmdOptions& co) {return 0;}
-int cmd_list(int transId, CmdOptions& co) {return 0;}
-int cmd_unmount(int transId, CmdOptions& co) {return 0;}
-int cmd_cleanup(int transId, CmdOptions& co) {return 0;}
+
+int ei_decode(std::string cmd, Honeycomb *comb)
+{
+    // {Cmd::string(), [Option]}
+    //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
+  int sz = 0, nice = 0;
+  std::string op, val;
+  e_error.str("");
+    
+  if (eis.decodeString(cmd) < 0) {
+    e_error << "badarg: cmd string expected or string size too large";
+    return -1;
+  } else if ((sz = eis.decodeListSize()) < 0) {
+    e_error << "option list expected";
+    return -1;
+  } else if (sz == 0) {
+    comb->set_root_dir("");
+    // comb->set_ki
+    return 0;
+  }
+
+  for ( int i = 0; i < sz; i++) {
+    enum OptionT            { CD,   ENV,   NICE,   USER } opt;
+    const char* options[] = {"cd", "env", "nice", "user" };
+      
+    if (eis.decodeTupleSize() != 2 || (int)(opt = (OptionT)eis.decodeAtomIndex(options, op)) < 0) {
+      e_error << "badarg: cmd option must be an atom"; return -1;
+    }
+        
+    switch (opt) {
+      case CD:
+      case USER:
+      // {cd, Dir::string()} | {kill, Cmd::string()}
+        if (eis.decodeString(val) < 0) {
+          e_error << op << " bad option value"; return -1;
+        }
+        if      (opt == CD)     comb->set_root_dir(val);
+        else if (opt == USER) {
+          struct passwd *pw = getpwnam(val.c_str());
+          if (pw == NULL) {
+            e_error << "Invalid user " << val << ": " << ::strerror(errno);
+            return -1;
+          }
+          comb->set_user(pw->pw_uid);
+        }
+        break;
+
+      case NICE:
+        if (eis.decodeInt(nice) < 0 || nice < -20 || nice > 20) {
+          e_error << "nice option must be an integer between -20 and 20"; 
+          return -1;
+        }
+        comb->set_nice(nice);
+        break;
+
+      case ENV: {
+        // {env, [NameEqualsValue::string()]}
+        int env_sz = eis.decodeListSize();
+        if (env_sz < 0) {
+          e_error << "env list expected"; return -1;
+        }
+
+        for (int i=0; i < env_sz; i++) {
+          std::string s;
+          if (eis.decodeString(s) < 0) {
+            e_error << "invalid env argument #" << i; return -1;
+          }
+          comb->add_env(s);
+        }
+        break;
+      }
+      default:
+        e_error << "bad option: " << op; return -1;
+      }
+    }
+
+  return 0;
+}
+
 
 int main (int argc, char const *argv[])
 {
   fd_set readfds;
-  // setup_erl_daemon_signal_handlers();
-  // const char* env[] = { "PLATFORM_HOST=beehive", NULL };
-  // int env_c = 1;
+  Honeycomb comb;
+
   // Never use stdin/stdout/stderr
   eis.set_handles(3, 4);
   if (parse_the_command_line(argc, (char **)argv)) return 0;
@@ -225,27 +296,42 @@ int main (int argc, char const *argv[])
       
       debug(dbg, 4, "terminated before commands: %d\n", (int) terminated);
       // Available commands from erlang    
-      enum CmdTypeT         { BUNDLE,   MOUNT,     RUN,   STOP,   KILL,   LIST,   UNMOUNT,   CLEANUP } cmd;
-      const char* cmds[] =  { "bundle", "mount",  "run", "stop", "kill", "list", "unmount", "cleanup"};
+      enum CmdTypeT         { BUNDLE,    RUN,   STOP,   KILL,   LIST  } cmd;
+      const char* cmds[] =  { "bundle", "run", "stop", "kill", "list" };
 
       // Determine which of the commands was called
       if ((int)(cmd = (CmdTypeT) eis.decodeAtomIndex(cmds, command)) < 0) {
         if (send_error_str(transId, false, "Unknown command: %s", command.c_str()) < 0) {
-          terminated = 11; 
+          terminated = 10;
           break;
         } else continue;
       }
       
-      CmdOptions co;
+      if (arity != 3 || ei_decode(command, &comb) < 0) {
+        send_error_str(transId, false, e_error.str().c_str());
+        continue;
+      }
+      
       switch (cmd) {
-        case RUN: {
-          if (arity != 3 || co.ei_decode(eis) < 0) {
-            send_error_str(transId, false, co.strerror());
-            continue;
-          }
-          cmd_start(transId, co);
-        }
+        case BUNDLE:
+          comb.bundle();
+          send_ok(transId, 0);
         break;
+        case RUN:
+          comb.start();
+          send_ok(transId, 0);
+        break;
+        case STOP:
+        case KILL:
+          comb.stop();
+          // pid_t kill_pid = atoi(command_argv[1]);
+          // time_t now = time (NULL);
+          // pm_stop_child(kill_pid, 0, now);
+          send_ok(transId, 0);
+        break;
+        case LIST:
+          debug(dbg, 1, "listing\n");
+          break;
         default: {
           debug(dbg, 4, "got command: %s\n", command.c_str());
           send_ok(transId, 0);
