@@ -24,7 +24,7 @@ ifeq ($(shell uname),Linux)
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON)
+	LDFLAGS=$(LDFLAGS_COMMON) -dynamic -undefined suppress -flat_namespace
 endif
 
 # Defines
