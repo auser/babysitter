@@ -69,8 +69,7 @@ void pending_signals(int sig)
 
 void pm_gotsignal(int signal)
 {
-  if (signal == SIGTERM || signal == SIGINT || signal == SIGPIPE)
-    terminated = 1;
+  if (signal == SIGTERM || signal == SIGINT) terminated = 1;
 }
 
 void pm_gotsigchild(int signal, siginfo_t* si, void* context)
@@ -79,6 +78,24 @@ void pm_gotsigchild(int signal, siginfo_t* si, void* context)
     if (signal != SIGCHLD) return;
 
     process_child_signal(si->si_pid);
+}
+
+int setup_pm_pending_alarm()
+{
+  struct itimerval tval;
+  struct timeval interval = {0, 20000};
+  
+  tval.it_interval = interval;
+  tval.it_value = interval;
+  setitimer(ITIMER_REAL, &tval, NULL);
+  
+  struct sigaction spending;
+  spending.sa_handler = pm_gotsignal;
+  sigemptyset(&spending.sa_mask);
+  spending.sa_flags = 0;
+  sigaction(SIGALRM, &spending, NULL);
+  
+  return 0;
 }
 
 pid_t start_child(const char* command_argv, const char *cd, const char** env, int user, int nice)
@@ -271,27 +288,27 @@ void setup_signal_handlers()
   sigemptyset(&sact.sa_mask);
   sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
   sigaction(SIGCHLD, &sact, NULL);
-  
-  spending.sa_handler = pending_signals;
-  sigemptyset(&spending.sa_mask);
-  spending.sa_flags = 0;
-  sigaction(SIGALRM, &spending, NULL);
 }
 
-void check_pending()
+int check_pending(int signum)
 {
-  sigset_t  set;
-  int info;
-  int sig;
-  struct itimerval tval;
-  struct timeval interval = {0, 20000};
-  sigemptyset(&set);
-  if (sigpending(&set) == 0) {
-    pending_sigalarm_signal = 0;
-    tval.it_interval = interval;
-    tval.it_value = interval;
-    setitimer(ITIMER_REAL, &tval, NULL);
-    while (((sig = sigwait(&set, &info)) > 0 || errno == EINTR) && !pending_sigalarm_signal )
+  int sig = 0;
+  sigset_t sigset;
+  setup_pm_pending_alarm();
+  if ((sigemptyset(&sigset) == -1)
+      || (sigaddset(&sigset, signum) == -1)
+      || (sigaddset(&sigset, SIGINT) == -1)
+      || (sigaddset(&sigset, SIGTERM) == -1)
+      || (sigprocmask( SIG_BLOCK, &sigset, NULL) == -1)
+     )
+    perror("Failed to block signals before sigwait\n");
+  
+  if (sigpending(&sigset) == 0) {
+    while ( errno == EINTR )
+    if (sigwait(&sigset, &sig) == -1) {
+      perror("sigwait");
+      return -1;
+    }
     switch (sig) {
       case SIGCHLD:   pm_gotsignal(sig); break;
       case SIGTERM:
@@ -301,8 +318,7 @@ void check_pending()
       default:        break;
     }
   }
-  // Clear
-  pending_sigalarm_signal = 0;
+  return 0;
 }
 
 int check_children(int& isTerminated)
