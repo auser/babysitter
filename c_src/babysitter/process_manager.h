@@ -39,7 +39,7 @@ int stop_child(CmdInfo& ci, int transId, time_t &now, bool notify = true);
 void stop_child(pid_t pid, int transId, time_t &now);
 int kill_child(pid_t pid, int signal, int transId, bool notify);
 void terminate_all();
-void check_pending();
+int check_pending();
 int check_children(int& isTerminated);
 
 // Other
