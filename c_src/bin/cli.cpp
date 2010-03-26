@@ -100,7 +100,7 @@ int main (int argc, const char *argv[])
   while (!terminated) {
     
     while (!terminated && (exited_children.size() > 0 || signaled)) check_children(terminated);
-    check_pending(); // Check for pending signals arrived while we were in the signal handler
+    check_pending_processes(); // Check for pending signals arrived while we were in the signal handler
     if (terminated) break;
     
     // Read the next command

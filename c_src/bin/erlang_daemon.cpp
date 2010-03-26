@@ -183,12 +183,14 @@ int main (int argc, char const *argv[])
   **/
   debug(dbg, 2, "Entering daemon loop\n");
   while (!terminated) {
+    debug(dbg, 4, "looping... (%d)\n", (int)terminated);
     // Detect "open" for serial pty slave
     FD_ZERO (&readfds);
     FD_SET (eis.read_handle(), &readfds);
     
     while (!terminated && (exited_children.size() > 0 || signaled)) check_children(terminated);
-    check_pending(); // Check for pending signals arrived while we were in the signal handler
+    check_pending_processes(); // Check for pending signals arrived while we were in the signal handler
+    debug(dbg, 4, "terminated in check_pending_processes... %d\n", (int)terminated);
     if (terminated) break;
     
     ei::TimeVal timeout(5, 0);
@@ -209,7 +211,7 @@ int main (int argc, char const *argv[])
       err = eis.read();
       
       // Note that if we were using non-blocking reads, we'd also need to check for errno EWOULDBLOCK.
-      if (err < 0 || err == EWOULDBLOCK) {
+      if (err < 0) {
         terminated = 90-err;
         break;
       }
@@ -242,15 +244,15 @@ int main (int argc, char const *argv[])
         }
         break;
         default: {
-          fprintf(stderr, "got command: %s\n", command.c_str());
+          debug(dbg, 4, "got command: %s\n", command.c_str());
           send_ok(transId, 0);
         }
         break;
       }
-      eis.reset();
     }      
   }
-    
+  
+  debug(dbg, 2, "Terminating erlang_daemon\n");
   terminate_all();
   return 0;
 }

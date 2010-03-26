@@ -30,7 +30,6 @@ struct sigaction                old_action;
 struct sigaction                sact, sterm, spending;
 bool                            signaled   = false;     // indicates that SIGCHLD was signaled
 int                             terminated = 0;         // indicates that we got a SIGINT / SIGTERM event
-int                             pending_sigalarm_signal = 0;
 int                             run_as_user;
 pid_t                           process_pid;
 
@@ -61,15 +60,12 @@ int process_child_signal(pid_t pid)
   }
 }   
 
-void pending_signals(int sig) 
-{
-  pending_sigalarm_signal = 1;
-  alarm(0);
-}
-
 void pm_gotsignal(int signal)
 {
-  if (signal == SIGTERM || signal == SIGINT) terminated = 1;
+  if (signal != SIGCHLD)
+    if (signal == SIGTERM || signal == SIGINT) terminated = 1;
+  // Clear the alarm
+  alarm(0);
 }
 
 void pm_gotsigchild(int signal, siginfo_t* si, void* context)
@@ -290,7 +286,7 @@ void setup_signal_handlers()
   sigaction(SIGCHLD, &sact, NULL);
 }
 
-int check_pending()
+int check_pending_processes()
 {
   int sig = 0;
   sigset_t sigset;
@@ -301,22 +297,18 @@ int check_pending()
       || (sigaddset(&sigset, SIGTERM) == -1)
       || (sigprocmask( SIG_BLOCK, &sigset, NULL) == -1)
      )
-    perror("Failed to block signals before sigwait\n");
+    fperror("Failed to block signals before sigwait\n");
   
   if (sigpending(&sigset) == 0) {
-    while ( errno == EINTR )
     if (sigwait(&sigset, &sig) == -1) {
-      perror("sigwait");
+      fperror("sigwait");
       return -1;
     }
-    switch (sig) {
-      case SIGCHLD:   pm_gotsignal(sig); break;
-      case SIGTERM:
-      case SIGINT:
-      case SIGHUP:    pm_gotsignal(sig); break;
-      case SIGALRM:   printf("got SIGALRM\n"); break;
-      default:        break;
-    }
+    // if (errno == EINTR) {
+    //   fperror("error with sigwait\n");
+    //   return -1;
+    // }
+    pm_gotsignal(sig);
   }
   return 0;
 }
