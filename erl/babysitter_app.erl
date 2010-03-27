@@ -11,10 +11,11 @@
 
 -export([start/2, stop/1]).
 
-start(_Type, _Args) -> 
+start(_Type, Args) -> 
+  io:format("Args: ~p~n", [Args]),
   lists:map(fun(A) ->
     io:format("Starting ~p...~n", [A]),
-    A:start([{debug, true}])
+    A:start([{config, "./docs/apps"}])
   end, [exec]),
   io:format("Starting babysitter~n"),
   babysitter_sup:start_link().

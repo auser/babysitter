@@ -32,6 +32,11 @@ struct sigaction                mainact;
 extern int terminated;
 std::stringstream     e_error;
 
+// Available commands from erlang    
+enum CmdTypeT         { SET_DEBUG, SET_CONFIG,    BUNDLE,    RUN,   STOP,   KILL,   LIST  } cmd;
+const char* cmds[] =  { "set_debug", "set_config", "bundle", "run", "stop", "kill", "list" };
+
+
 // Required methods
 
 int handle_ok(int transId, pid_t pid) {
@@ -154,10 +159,42 @@ int cmd_start(int transId, CmdOptions& co) {
   }
 }
 
-int ei_decode(std::string cmd, Honeycomb *comb)
+/*
+
+*/
+int ei_decode_action(int cmd)
 {
-    // {Cmd::string(), [Option]}
-    //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
+  int integer = 0;
+  std::string op, val;
+  e_error.str("");
+
+  switch (cmd) {
+    case SET_CONFIG:
+      if (eis.decodeString(val) < 0) {
+        e_error << op << " bad option value"; return -1;
+      }
+      debug(dbg, 2, "parsing a new config directory: %s\n", val.c_str());
+      parse_config_dir(val, known_configs);
+    break;
+    case SET_DEBUG:
+      debug(dbg, 2, "Setting a new debug level");
+      if (eis.decodeInt(integer) < 0) {
+        e_error << "debug must be an integer equal to or greater than 0"; 
+        return -1;
+      }
+      dbg = integer;
+      break;
+    default:
+    break;
+  }
+  return 0;
+
+}
+// Decode the rest of the request here
+int ei_decode_comb(std::string cmd, Honeycomb *comb)
+{
+  // {Cmd::string(), [Option]}
+  //      Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
   int sz = 0, nice = 0;
   std::string op, val;
   e_error.str("");
@@ -170,13 +207,15 @@ int ei_decode(std::string cmd, Honeycomb *comb)
     return -1;
   } else if (sz == 0) {
     comb->set_root_dir("");
-    // comb->set_ki
     return 0;
   }
 
   for ( int i = 0; i < sz; i++) {
-    enum OptionT            { CD,   ENV,   NICE,   USER } opt;
-    const char* options[] = {"cd", "env", "nice", "user" };
+    enum OptionT            { CD,   
+                              ENV,   
+                              NICE,   
+                              USER } opt;
+    const char* options[] = { "cd", "env", "nice", "user" };
       
     if (eis.decodeTupleSize() != 2 || (int)(opt = (OptionT)eis.decodeAtomIndex(options, op)) < 0) {
       e_error << "badarg: cmd option must be an atom"; return -1;
@@ -236,7 +275,6 @@ int ei_decode(std::string cmd, Honeycomb *comb)
 int main (int argc, char const *argv[])
 {
   fd_set readfds;
-  Honeycomb comb;
 
   // Never use stdin/stdout/stderr
   eis.set_handles(3, 4);
@@ -295,10 +333,6 @@ int main (int argc, char const *argv[])
       }
       
       debug(dbg, 4, "terminated before commands: %d\n", (int) terminated);
-      // Available commands from erlang    
-      enum CmdTypeT         { BUNDLE,    RUN,   STOP,   KILL,   LIST  } cmd;
-      const char* cmds[] =  { "bundle", "run", "stop", "kill", "list" };
-
       // Determine which of the commands was called
       if ((int)(cmd = (CmdTypeT) eis.decodeAtomIndex(cmds, command)) < 0) {
         if (send_error_str(transId, false, "Unknown command: %s", command.c_str()) < 0) {
@@ -307,36 +341,43 @@ int main (int argc, char const *argv[])
         } else continue;
       }
       
-      if (arity != 3 || ei_decode(command, &comb) < 0) {
-        send_error_str(transId, false, e_error.str().c_str());
-        continue;
-      }
-      
-      switch (cmd) {
-        case BUNDLE:
-          comb.bundle();
-          send_ok(transId, 0);
-        break;
-        case RUN:
-          comb.start();
-          send_ok(transId, 0);
-        break;
-        case STOP:
-        case KILL:
-          comb.stop();
-          // pid_t kill_pid = atoi(command_argv[1]);
-          // time_t now = time (NULL);
-          // pm_stop_child(kill_pid, 0, now);
-          send_ok(transId, 0);
-        break;
-        case LIST:
-          debug(dbg, 1, "listing\n");
-          break;
-        default: {
-          debug(dbg, 4, "got command: %s\n", command.c_str());
-          send_ok(transId, 0);
+      if (cmd == SET_CONFIG || cmd == SET_DEBUG) {
+        if (ei_decode_action(cmd))
+          send_error_str(transId, 0, "Uh oh");
+        send_ok(transId, 0);
+      } else {
+        Honeycomb comb;
+        if (arity != 3 || ei_decode_comb(command, &comb) < 0) {
+          send_error_str(transId, false, e_error.str().c_str());
+          continue;
         }
-        break;
+
+        switch (cmd) {
+          case BUNDLE:
+            comb.bundle();
+            send_ok(transId, 0);
+          break;
+          case RUN:
+            comb.start();
+            send_ok(transId, 0);
+          break;
+          case STOP:
+          case KILL:
+            comb.stop();
+            // pid_t kill_pid = atoi(command_argv[1]);
+            // time_t now = time (NULL);
+            // pm_stop_child(kill_pid, 0, now);
+            send_ok(transId, 0);
+          break;
+          case LIST:
+            debug(dbg, 1, "listing\n");
+            break;
+          default: {
+            debug(dbg, 4, "got command: %s\n", command.c_str());
+            send_ok(transId, 0);
+          }
+          break;
+        }
       }
     }
     eis.reset();
