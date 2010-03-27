@@ -1,4 +1,5 @@
 autom4te.cache/*
+Makefile
 c_src/Makefile
 */Makefile
 c_src/parser/Makefile

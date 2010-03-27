@@ -102,8 +102,12 @@
 
 %% External exports
 -export([
-    start/1, start_link/1, run/2, run_link/2,
-    which_children/0, kill/2, stop/1, ospid/1, status/1
+  start/1, start_link/1, run/2, run_link/2,
+  which_children/0, kill/2, stop/1, ospid/1, status/1
+]).
+
+-export ([
+  run_action/1
 ]).
 
 %% Internal exports
@@ -166,7 +170,7 @@ run_link(Exe, Options) when is_list(Exe), is_list(Options) ->
 %% @end
 %%-------------------------------------------------------------------------
 which_children() ->
-    gen_server:call(?MODULE, {port, {list}}).
+  gen_server:call(?MODULE, {port, {list}}).
 
 %%-------------------------------------------------------------------------
 %% @spec (Pid, Signal::integer()) -> ok | {error, Reason}
@@ -176,7 +180,7 @@ which_children() ->
 %% @end
 %%-------------------------------------------------------------------------
 kill(Pid, Signal) when is_pid(Pid); is_integer(Pid) ->
-    gen_server:call(?MODULE, {port, {kill, Pid, Signal}}).
+  gen_server:call(?MODULE, {port, {kill, Pid, Signal}}).
 
 %%-------------------------------------------------------------------------
 %% @spec (Pid) -> ok | {error, Reason}
@@ -186,7 +190,16 @@ kill(Pid, Signal) when is_pid(Pid); is_integer(Pid) ->
 %% @end
 %%-------------------------------------------------------------------------
 stop(Pid) when is_pid(Pid); is_integer(Pid) ->
-    gen_server:call(?MODULE, {port, {stop, Pid}}, 30000).
+  gen_server:call(?MODULE, {port, {stop, Pid}}, 30000).
+
+%%-------------------------------------------------------------------------
+%% @spec (Tuple) -> ok | {error, Reason}
+%%          Tuple = tuple()
+%% @doc Run an unspecified action on the port
+%% @end
+%%-------------------------------------------------------------------------
+run_action(Tuple) when is_tuple(Tuple) ->
+  gen_server:call(?MODULE, {port, Tuple}, 30000).
 
 %%-------------------------------------------------------------------------
 %% @spec (Pid::pid()) -> ok | {error, Reason}
@@ -231,11 +244,8 @@ default() ->
      {alarm, 12},
      {user, ""},        % Run port program as this user
      {limit_users, []}, % Restricted list of users allowed to run commands
-     {portexe, default(portexe)}].
+     {portexe, babysitter:erlang_daemon_command()}].
 
-default(portexe) -> 
-    % Get architecture (e.g. i386-linux)
-    babysitter:erlang_daemon_command();
 default(Option) ->
     proplists:get_value(Option, default()).
 
@@ -257,7 +267,8 @@ get_opt(debug)           -> {debug, true}.
 init([Options]) ->
   process_flag(trap_exit, true),
   Args = lists:foldl(
-    fun({debug, true},       Acc) -> [" -D 4" | Acc];
+    fun({debug, true},       Acc) -> [" --debug 4" | Acc];
+        ({config, C},         Acc) -> [" --config "++C];
         ({alarm, I},          Acc) -> [" -alarm "++integer_to_list(I) | Acc];
         ({args, Arg},         Acc) -> [" "++Arg | Acc];
         ({user, User}, Acc) when User =/= "" -> [" -user "++User | Acc];
@@ -288,14 +299,15 @@ init([Options]) ->
 %% @private
 %%----------------------------------------------------------------------
 handle_call({port, Instruction}, From, #state{last_trans=Last} = State) ->
-    try is_port_command(Instruction, State) of
-    {ok, Term, Link} ->
-        Next = next_trans(Last),
-        erlang:port_command(State#state.port, term_to_binary({Next, Term})),
-        {noreply, State#state{trans = queue:in({Next, From, Link}, State#state.trans)}}
-    catch _:{error, Why} ->
-        {reply, {error, Why}, State}
-    end;
+  try is_port_command(Instruction, State) of
+  {ok, Term, Link} ->
+    io:format("Term: ~p~n", [Term]),
+    Next = next_trans(Last),
+    erlang:port_command(State#state.port, term_to_binary({Next, Term})),
+    {noreply, State#state{trans = queue:in({Next, From, Link}, State#state.trans)}}
+  catch _:{error, Why} ->
+    {reply, {error, Why}, State}
+  end;
 
 handle_call(Request, _From, _State) ->
     {stop, {not_implemented, Request}}.
@@ -474,7 +486,9 @@ get_transaction(Q, I, OldQ) ->
     {_, Q2} ->
         get_transaction(Q2, I, OldQ)
     end.
-    
+
+is_port_command({set_debug, _Str} = T, _State) -> {ok, T, undefined}; 
+is_port_command({set_config, _Str} = T, _State) -> {ok, T, undefined}; 
 is_port_command({start, {run, _Cmd, Options} = T, Link}, State) ->
     check_cmd_options(Options, State),
     {ok, T, Link};

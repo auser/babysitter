@@ -10,7 +10,7 @@
 
 /* Readline */
 #include <readline/readline.h>
-#include <readline/history.h>
+// #include <readline/history.h>
 
 #include "string_utils.h"
 #include "process_manager.h"
@@ -93,23 +93,22 @@ int main (int argc, const char *argv[])
   int env_c = 1;
   
   // drop_into_shell();  
-  static char *line = (char *)NULL;
+  // static char *line = (char *)NULL;
   char *cmd_buf;
   int terminated = 0;
   
   while (!terminated) {
-    
-    while (!terminated && (exited_children.size() > 0 || signaled)) check_children(terminated);
-    check_pending(); // Check for pending signals arrived while we were in the signal handler
-    if (terminated) break;
+    // Call the next loop    
+    if (pm_next_loop()) break;
     
     // Read the next command
-    line = readline(PROMPT_STR);
-    int result;
-    result = history_expand(line, &cmd_buf);
+    cmd_buf = readline(PROMPT_STR);
+    
+    // int result;
+    // result = history_expand(line, &cmd_buf);
         
-    if (result < 0 || result == 2) fprintf(stderr, "%s\n", cmd_buf);
-    else { add_history(cmd_buf); }
+    // if (result < 0 || result == 2) fprintf(stderr, "%s\n", cmd_buf);
+    // else { add_history(cmd_buf); }
 
     cmd_buf[ strlen(cmd_buf) ] = '\0';
 
@@ -134,8 +133,8 @@ int main (int argc, const char *argv[])
         // For example: start ./comb_test.sh
         command_argv[command_argc] = 0; // NULL TERMINATE IT
         const char *cd = NULL;
-        // start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
-        pid_t pid = start_child((const char*)commandify(command_argc, (const char**)command_argv), cd, (const char**)env, run_as_user, 0);
+        // pm_start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
+        pid_t pid = pm_start_child((const char*)commandify(command_argc, (const char**)command_argv), cd, (const char**)env, run_as_user, 0);
         //CmdInfo(const char* _cmd, const char* _kill_cmd, pid_t _cmd_pid)
         CmdInfo ci(*command_argv, "", pid);
         children[pid] = ci;
@@ -154,7 +153,7 @@ int main (int argc, const char *argv[])
       } else {
         pid_t kill_pid = atoi(command_argv[1]);
         time_t now = time (NULL);
-        stop_child(kill_pid, 0, now);
+        pm_stop_child(kill_pid, 0, now);
       }
     } else if ( !strncmp(command_argv[0], "env", 3)) {
       if (command_argc < 2) {
@@ -172,10 +171,10 @@ int main (int argc, const char *argv[])
     
     for (int i = 0; i < command_argc; i++) free(command_argv[i]);
     free(cmd_buf);
-    free(line);
+    // free(line);
   }
   
   printf("Exiting... killing all processes...\n");
-  terminate_all();
+  pm_terminate_all();
   return 0;
 }
