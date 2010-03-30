@@ -282,7 +282,7 @@ int parse_the_command_line(int argc, char *argv[], int c)
 
 int parse_the_command_line_into_honeycomb_config(int argc, char **argv, Honeycomb *comb)
 {
-  if (parse_the_command_line(argc, argv, 1)) return -1;
+  if (parse_the_command_line(argc, argv, 0)) return -1;
   
   char *action_str = phase_type_to_string(action);
   parse_config_dir(config_file_dir, known_configs);

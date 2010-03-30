@@ -139,7 +139,6 @@ int main (int argc, const char *argv[])
       if (command_argc < 2) {
         fprintf(stderr, "usage: start [command]\n");
       } else {
-        command_argv++;command_argc--;
         // For example: start ./comb_test.sh
         command_argv[command_argc] = 0; // NULL TERMINATE IT
         // pm_start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
