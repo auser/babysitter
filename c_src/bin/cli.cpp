@@ -17,6 +17,7 @@
 #include "babysitter_types.h"
 #include "babysitter_utils.h"
 #include "hc_support.h"
+#include "callbacks.h"
 
 // Globals
 extern MapChildrenT children;
@@ -73,13 +74,21 @@ void print_help()
   );
 }
 
+void reload(void *data)
+{
+  printf("reload");
+  debug(dbg, 1, "Reloading configs...\n");
+  parse_config_dir(config_file_dir, known_configs); // Parse the config
+}
+
 /**
 * Setup defaults for the program. These can be overriden after the
 * command-line is parsed. This way we don't have variables we expect to be non-NULL 
 * being NULL at runtime.
 **/
 void setup_defaults() {
-  setup_process_manager_defaults();
+  pm_setup();
+  register_callback("pm_reload", reload);
   config_file_dir = "/etc/beehive/configs";
 }
 

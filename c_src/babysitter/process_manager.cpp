@@ -14,6 +14,7 @@
 #include "string_utils.h"
 #include "time_utils.h"
 #include "print_utils.h"
+#include "callbacks.h"
 
 #include "command_info.h"
 #include "process_manager.h"
@@ -80,12 +81,26 @@ int process_child_signal(pid_t pid)
   }
 }   
 
+void pm_reload(void *data)
+{
+  // Nothing yet
+}
+
 void pm_gotsignal(int signal)
 {
   debug(dbg, 4, "Got signal: %d\n", signal);
-  if (signal != SIGCHLD)
-    if (signal == SIGTERM || signal == SIGINT) terminated = 1;
-  if (pm_can_jump) siglongjmp(saved_jump_buf, 1);
+  
+  switch(signal) {
+    case SIGHUP:
+      run_callbacks("pm_reload", &signal);
+      break;
+    case SIGTERM:
+    case SIGINT:
+      terminated = 1;
+    default:
+      if (pm_can_jump) siglongjmp(saved_jump_buf, 1);
+    break;
+  }
 }
 
 void pm_gotsigchild(int signal, siginfo_t* si, void* context)
@@ -398,13 +413,14 @@ int pm_check_children(int& isTerminated)
   return 0;
 }
 
-void setup_process_manager_defaults()
-{	
+void pm_setup()
+{
   debug(dbg, 1, "Setting up process manager defaults\n");
   run_as_user = getuid();
   process_pid = (int)getpid();
   exited_children.resize(SIGCHLD_MAX_SIZE);
   setup_signal_handlers();
   debug(dbg, 4, "exited_children (%d) max_size: %d\n", (int)exited_children.size(), (int)exited_children.max_size());
+  // Callbacks
+  register_callback("pm_reload", pm_reload);
 }
-

@@ -281,7 +281,7 @@ int main (int argc, char const *argv[])
   if (parse_the_command_line(argc, (char **)argv)) return 0;
   
   setup_erl_daemon_signal_handlers();
-  setup_process_manager_defaults();
+  pm_setup();
   
   debug(dbg, 2, "parsing the config directory: %s\n", config_file_dir.c_str());
   parse_config_dir(config_file_dir, known_configs); // Parse the config

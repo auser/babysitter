@@ -44,6 +44,6 @@ int   pm_check_children(int& isTerminated);
 int   pm_next_loop();
 
 // Other
-void setup_process_manager_defaults();
+void pm_setup();
 
 #endif
