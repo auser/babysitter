@@ -173,8 +173,8 @@ int pm_stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
       // There was already an attempt to kill it.
     if (ci.sigterm() && diff < 0) {
       // More than 5 secs elapsed since the last kill attempt
-      kill(ci.cmd_pid(), SIGKILL);
-      kill(ci.kill_cmd_pid(), SIGKILL);
+      if (ci.cmd_pid() > 0) kill(ci.cmd_pid(), SIGKILL);
+      if (ci.kill_cmd_pid() > 0) kill(ci.kill_cmd_pid(), SIGKILL);
       ci.set_sigkill(true);
     }
     if (notify) handle_ok(transId);
@@ -226,9 +226,10 @@ int pm_stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
 
 int pm_kill_child(pid_t pid, int signal, int transId, bool notify)
 {
+  if (pid < 0) return -1;
   // We can't use -pid here to kill the whole process group, because our process is
   // the group leader.
-  debug(dbg, 2, "CAlling pm_kill_child on pid: %d\n", (int)pid);
+  debug(dbg, 2, "Calling pm_kill_child on pid: %d\n", (int)pid);
   int err = kill(pid, signal);
   switch (err) {
     case 0:
@@ -286,7 +287,7 @@ void pm_terminate_all()
     
     // Definitely kill the transient_pids
     for(MapKillPidT::iterator it=transient_pids.begin(), end=transient_pids.end(); it != end; ++it) {
-      kill(it->first, SIGKILL);
+      if ((pid_t)it->first > 0) kill(it->first, SIGKILL);
       transient_pids.erase(it);
     }
       

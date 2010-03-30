@@ -189,7 +189,7 @@ int Honeycomb::build_env_vars() {
 #define MAX_ARGS 64
 #endif
 // Run a hook on the system
-int Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
+pid_t Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
 {
   setup_defaults(); // Setup default environments
   build_env_vars();
@@ -440,22 +440,22 @@ int Honeycomb::bundle()
 /**
 * start/0
 **/
-int Honeycomb::start()
+pid_t Honeycomb::start()
 {
   if (run_action("mount")) return -1;
-  if (run_action("start")) return -1;
-  return 0;
+  return run_action("start");
 }
 
 /**
 * stop/0
 **/
-int Honeycomb::stop()
+pid_t Honeycomb::stop()
 {
-  if (run_action("stop")) return -1;
+  pid_t pid = run_action("stop");
+  if (pid < 0) return -1;
   if (run_action("unmount")) return -1;
   if (run_action("cleanup")) return -1;
-  return 0;
+  return pid;
 }
 
 /**

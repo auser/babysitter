@@ -176,8 +176,8 @@ public:
   void add_executable(std::string exec) { m_executables.insert(exec); }
   
   // Actions
-  int start();
-  int stop();
+  pid_t start();
+  pid_t stop();
   int bundle();
   
   int valid();
@@ -200,7 +200,7 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  int comb_exec(std::string cmd, std::string cd);
+  pid_t comb_exec(std::string cmd, std::string cd);
   void exec_hook(std::string action, int stage, phase *p, std::string cd);
   pid_t fork_and_execute(char *argv[], char* const* env, std::string cd, int running_script);
   void ensure_exists(std::string s);
