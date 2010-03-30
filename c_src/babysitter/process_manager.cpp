@@ -132,7 +132,7 @@ int setup_pm_pending_alarm()
   return 0;
 }
 
-pid_t pm_start_child(const char* command_argv, const char *cd, const char** env, int user, int nice)
+pid_t pm_start_child(const char* command_argv, const char *kill_cmd, const char *cd, const char** env, int user, int nice)
 {
   pid_t pid = fork();
   switch (pid) {
@@ -158,6 +158,10 @@ pid_t pm_start_child(const char* command_argv, const char *cd, const char** env,
     if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
       fperror("Cannot set priority of pid %d to %d", pid, nice);
     }
+    if (pid > 0) {
+      CmdInfo ci(command_argv, kill_cmd, pid);
+      children[pid] = ci;
+    }
     return pid;
   }
 }
@@ -181,7 +185,7 @@ int pm_stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
     return 0;
   } else if (strncmp(ci.kill_cmd(), "", 1) != 0) {
    // This is the first attempt to kill this pid and kill command is provided.
-   ci.set_kill_cmd_pid(pm_start_child((const char*)ci.kill_cmd(), NULL, NULL, INT_MAX, INT_MAX));
+   ci.set_kill_cmd_pid(pm_start_child((const char*)ci.kill_cmd(), NULL, NULL, NULL, INT_MAX, INT_MAX));
    if (ci.kill_cmd_pid() > 0) {
      transient_pids[ci.kill_cmd_pid()] = ci.cmd_pid();
      time_t ci_time = ci.deadline();

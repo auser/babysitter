@@ -34,7 +34,7 @@ extern int handle_error_str(int transId, bool asAtom, const char* fmt, ...);
 extern int handle_pid_list(int transId, const MapChildrenT& children);
 
 // Management
-pid_t pm_start_child(const char* command_argv, const char *cd, const char** env, int user, int nice);
+pid_t pm_start_child(const char* command_argv, const char*kill_cmd, const char *cd, const char** env, int user, int nice);
 int   pm_stop_child(CmdInfo& ci, int transId, time_t &now, bool notify = true);
 void  pm_stop_child(pid_t pid, int transId, time_t &now);
 int   pm_kill_child(pid_t pid, int signal, int transId, bool notify);

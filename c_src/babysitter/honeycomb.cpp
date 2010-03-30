@@ -279,7 +279,7 @@ pid_t Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
   
   debug(m_debug_level, 3, "Running... %s\n", argv[0]);
   // pm_start_child(const char* command_argv, const char *cd, const char** env, int user, int nice);
-  return pm_start_child((const char *)argv, cd.c_str(), (char const**) m_cenv, m_user, m_nice);
+  return pm_start_child((const char *)argv, NULL, cd.c_str(), (char const**) m_cenv, m_user, m_nice);
 }
 
 // Execute a hook
