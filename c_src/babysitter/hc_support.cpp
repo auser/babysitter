@@ -86,7 +86,7 @@ honeycomb_config* a_new_honeycomb_config_object() {
   c = (honeycomb_config *) malloc(sizeof(honeycomb_config));
 
   if ( !c ) {
-    fprintf(stderr, "Could not allocate a new honeycomb_config object. Out of memory\n");
+    perror("Could not allocate a new honeycomb_config object. Out of memory\n");
     return NULL;
   }
   
@@ -182,57 +182,60 @@ int add_phase(honeycomb_config *c, phase *p) {
   return 0;
 }
 
+int malloc_and_set_attribute(char **obj, char *value)
+{
+  printf("malloc_and_set_attribute: (TOP): %s\n", value);
+  char *new_obj = (char *) calloc(sizeof(char), strlen(value));
+  printf("checking new_obj\n");
+  if (!new_obj) {
+    perror("malloc_and_set_attribute");
+    return -1;
+  }
+  printf("before memcpy\n");
+  memcpy(new_obj, value, strlen(value));
+  printf("new_obj: %s\n", new_obj);
+  obj = &new_obj;
+  printf("obj:%s\n", *obj);
+  return 0;
+}
+
 // Add an attribute to the config
 // To add another, add it here, add it to the type and specify it in the
 // honeycomb_config struct
 int add_attribute(honeycomb_config *c, attr_type t, char *value)
 {
+  printf("add_attribute: %s\n", value);
   switch (t) {
     case T_FILEPATH:
-      c->filepath = (char *) malloc(sizeof(char*) * strlen(value));
-      memset(c->filepath, 0, strlen(value)); memcpy(c->filepath, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->filepath, value); break;
     case T_DIRECTORIES:
-      c->directories = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->directories, 0, strlen(value)); memcpy(c->directories, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->directories, value); break;
     case T_EXECUTABLES:
-      c->executables = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->executables, 0, strlen(value)); memcpy(c->executables, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->executables, value); break;
     case T_FILES:
-      c->files = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->files, 0, strlen(value)); memcpy(c->files, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->files, value); break;
     case T_ENV:
-      c->env = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->env, 0, strlen(value)); memcpy(c->env, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->env, value); break;
     case T_STDOUT:
-      c->stdout = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->stdout, 0, strlen(value)); memcpy(c->stdout, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->stdout, value); break;
     case T_STDIN:
-      c->stdin = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->stdin, 0, strlen(value)); memcpy(c->stdin, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->stdin, value); break;
     case T_ROOT_DIR:
-      c->root_dir = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->root_dir, 0, strlen(value)); memcpy(c->root_dir, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->root_dir, value); break;
     case T_RUN_DIR:
-      c->run_dir = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->run_dir, 0, strlen(value)); memcpy(c->run_dir, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->run_dir, value); break;
     case T_USER:
-      c->user = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->user, 0, strlen(value)); memcpy(c->user, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->user, value); break;
     case T_GROUP:
-      c->group = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->group, 0, strlen(value)); memcpy(c->group, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->group, value); break;
     case T_CLONE_CMD:
-      c->clone_command = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->clone_command, 0, strlen(value)); memcpy(c->clone_command, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->clone_command, value); break;
     case T_IMAGE:
-      c->image = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->image, 0, strlen(value)); memcpy(c->image, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->image, value); break;
     case T_STORAGE_DIR:
-      c->storage_dir = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->storage_dir, 0, strlen(value)); memcpy(c->storage_dir, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->storage_dir, value); break;
     case T_SKEL_DIR:
-      c->skel_dir = (char *)malloc(sizeof(char *) * strlen(value));
-      memset(c->skel_dir, 0, strlen(value)); memcpy(c->skel_dir, value, strlen(value)); break;
+      malloc_and_set_attribute(&c->skel_dir, value); break;
     default:
       fprintf(stderr, "Unknown attribute: %s = %s on config\n", attribute_type_to_string(t), value);
       return -1;

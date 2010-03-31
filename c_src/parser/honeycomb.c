@@ -1384,10 +1384,10 @@ yyreduce:
   case 8:
 #line 53 "honeycomb.y"
     {
-    debug(DEBUG_LEVEL, 2, "Found phase\n");
+    debug(DEBUG_LEVEL, 2, "Found phase: %s\n", (yyvsp[(1) - (2)].ptype));
     // Set the phase and attach it to the config object
     phase *p = find_or_create_phase((honeycomb_config*)config, (yyvsp[(1) - (2)].ptype));
-    p->command = (char *) malloc( sizeof(char *) * strlen((yyvsp[(2) - (2)].stype)) );
+    p->command = (char *) malloc( sizeof(char) * strlen((yyvsp[(2) - (2)].stype)) ); // sizeof(char) == 1 anyway, but just for "safetyf"
     memset(p->command, 0, strlen((yyvsp[(2) - (2)].stype)));
     memcpy(p->command, (yyvsp[(2) - (2)].stype), strlen((yyvsp[(2) - (2)].stype)));
     add_phase((honeycomb_config*)config, p);
