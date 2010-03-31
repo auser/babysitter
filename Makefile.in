@@ -37,4 +37,3 @@ install: all
 debug:
 	(cd c_src;$(MAKE) debug)
 	(cd erl;$(MAKE) debug)
-	
