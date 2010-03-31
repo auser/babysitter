@@ -108,11 +108,11 @@ LD_LIBRARIES += -lerl_interface -lei -lstdc++ -lcurses -lreadline -lfl -lm -ll
 # PROCEED AT YOUR OWN RISK 
 
 #Helper Functions
-get_src_from_dir  = $(wildcard $1/*.cpp) $(wildcard $1/*.c)
+get_src_from_dir  = $(wildcard $1/*.cpp) $(wildcard $1/*.c) $(wildcard $1/*.y) $(wildcard $1/*.l)
 get_dirs_from_dirspec  = $(wildcard $1)
 get_src_from_dir_list = $(foreach dir, $1, $(call get_src_from_dir,$(dir)))				        
-src_to_o = $(subst .c,.o, $(subst .cpp,.o,$1))
-src_to_d = $(subst .c,.d, $(subst .cpp,.d,$1))
+src_to_o = $(subst .l,.o,$(subst .c,.o, $(subst .cpp,.o,$1)))
+src_to_d = $(subst .y,.o,$(subst .c,.d, $(subst .cpp,.d,$1)))
 #move_file_location = $(patsubst %.d,build/%.d, $1)
 src_to = $(subst .c,$1, $(subst .cpp,$1,$2))
 
@@ -185,6 +185,7 @@ STUFF_TO_CLEAN += $(STDLIB_CODE_START) + $(MAP_FILE) + cpputest_*.xml junit_run_
 # Targets
 .PHONY: all
 all: $(ALL_SRC) $(EXECUTABLE_SRC) $(TEST_TARGET)
+	@echo @(OBJ)
 	@echo $(EXECUTABLE_SRC)
 	@echo $(EXE_TARGET)
 	$(RUN_TEST_TARGET)
@@ -232,6 +233,16 @@ vtest: $(TEST_TARGET)
 	@echo compiling $(notdir $<)
 	$(SILENCE)$(COMPILE.c) -M -MF $(subst .o,.d,$@) -MT "$@ $(subst .o,.d,$@)" $<
 	$(SILENCE)$(COMPILE.c) $(OUTPUT_OPTION) $<
+
+%.o: %.l
+	$(SILENCE)echo "LEX"
+	lex $<
+
+%.o: %.y
+	$(SILENCE)echo "YACCing"
+	yacc $(YACCFLAGS) $<
+	$(CC) -c -o y.tab.o $(CPPFLAGS) y.tab.c
+
 
 ifneq "$(MAKECMDGOALS)" "clean"
 -include $(DEP_FILES)
