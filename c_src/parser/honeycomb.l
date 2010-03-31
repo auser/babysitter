@@ -1,6 +1,7 @@
 %option nounput
 %option noinput
 %option yylineno
+%option debug
 
 %{
 #include <stdio.h>

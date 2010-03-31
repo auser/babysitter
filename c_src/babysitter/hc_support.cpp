@@ -81,13 +81,15 @@ char *collect_to_period(char *str) {
 }
 
 // create a new config
-honeycomb_config* a_new_honeycomb_config_object(void) {
-  honeycomb_config* c;
-  
-  if ( (c = (honeycomb_config *) malloc(sizeof(honeycomb_config))) == NULL ) {
+honeycomb_config* a_new_honeycomb_config_object() {
+  honeycomb_config* c = NULL;
+  c = (honeycomb_config *) malloc(sizeof(honeycomb_config));
+
+  if ( !c ) {
     fprintf(stderr, "Could not allocate a new honeycomb_config object. Out of memory\n");
-    exit(-1);
+    return NULL;
   }
+  
   c->num_phases = 0;
   c->phases = NULL;
   
@@ -108,7 +110,6 @@ honeycomb_config* a_new_honeycomb_config_object(void) {
   c->storage_dir = NULL;
   
   return c;
-	// Should never get here
 }
 
 // Create a new phase

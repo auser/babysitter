@@ -15,7 +15,7 @@ INCLUDE+=-I . -I $(c_srcdir)/utils -I $(c_srcdir)/erl -I $(c_srcdir)/babysitter
 
 default: all
 
-all: honeycomb.c y.tab.h $(LIB_OBJ)
+all: yacc $(LIB_OBJ)
 
 prereq:
 	@echo "Building the parser"
@@ -23,16 +23,18 @@ prereq:
 	$(GCC) -c -o honeycomb_config.o $(INCLUDE) $(CFLAGS) libs/honeycomb_config.c
 
 clean:
-	rm -rf *.o y.tab.h *.dSYM y.tab.o lex.yy.o lex.yy.c y.tab.c
+	rm -rf *.o y.tab.h *.dSYM y.tab.o lex.yy.o lex.yy.c y.tab.c honeycomb.c
 	
-lex:
+lex_honeycomb:
 	lex honeycomb.l
-lex.yy.o:
+	
+lex.yy.o: lex_honeycomb
 	$(CC) -c -o lex.yy.o $(CPPFLAGS) lex.yy.c
 	
-y.tab.h: lex honeycomb.y
+y.tab.h: honeycomb.c
 	yacc $(YACCFLAGS) honeycomb.y
-y.tab.o:
+
+yacc: y.tab.h
 	$(CC) -c -o y.tab.o $(CPPFLAGS) y.tab.c
 
 test_hc_config: honeycomb.c y.tab.h hc_support.o $(LIB_OBJ)

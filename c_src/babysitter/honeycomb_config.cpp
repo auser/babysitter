@@ -49,13 +49,11 @@ honeycomb_config *parse_config_file(std::string conf_file) {
 	// Clear out the config struct for now
   honeycomb_config *config = a_new_honeycomb_config_object();
   // Set the filepath on the config
-  
-  char *fp = NULL;
-  fp = strdup(conf_file.c_str());
-  add_attribute(config, T_FILEPATH, fp);
+  add_attribute(config, T_FILEPATH, (char*)conf_file.c_str());
   
 	// parse through the input until there is no more:
-  yydebug = 0;
+  yydebug = 1;
+  printf("add_attribute T_FILEPATH: %s AND config: %p\n", config->filepath, (void *)config); 
   yyparse((void *) config);
   
   return config;

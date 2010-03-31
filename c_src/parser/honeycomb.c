@@ -1386,11 +1386,11 @@ yyreduce:
     {
     debug(DEBUG_LEVEL, 2, "Found phase\n");
     // Set the phase and attach it to the config object
-    phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
+    phase *p = find_or_create_phase((honeycomb_config*)config, (yyvsp[(1) - (2)].ptype));
     p->command = (char *) malloc( sizeof(char *) * strlen((yyvsp[(2) - (2)].stype)) );
     memset(p->command, 0, strlen((yyvsp[(2) - (2)].stype)));
     memcpy(p->command, (yyvsp[(2) - (2)].stype), strlen((yyvsp[(2) - (2)].stype)));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
     break;
 
@@ -1398,13 +1398,13 @@ yyreduce:
 #line 62 "honeycomb.y"
     {
     // I think these two can be combined... I hate code duplication
-    phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
+    phase *p = find_or_create_phase((honeycomb_config*)config, (yyvsp[(1) - (2)].ptype));
     p->command = (char *) malloc( sizeof(char *) * strlen((yyvsp[(2) - (2)].stype)) );
     memset(p->command, 0, strlen((yyvsp[(2) - (2)].stype)));
     memcpy(p->command, (yyvsp[(2) - (2)].stype), strlen((yyvsp[(2) - (2)].stype)));
-    free((yyvsp[(2) - (2)].stype));
+    // free($2);
     // debug(DEBUG_LEVEL, 3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command);
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
     break;
 
@@ -1412,19 +1412,19 @@ yyreduce:
 #line 72 "honeycomb.y"
     {
     debug(DEBUG_LEVEL, 3, "Found a nullable phase_decl: %s\n", phase_type_to_string((yyvsp[(1) - (2)].ptype)));
-    phase *p = find_or_create_phase(config, (yyvsp[(1) - (2)].ptype));
-    add_phase(config, p);
+    phase *p = find_or_create_phase((honeycomb_config*)config, (yyvsp[(1) - (2)].ptype));
+    add_phase((honeycomb_config*)config, p);
   }
     break;
 
   case 11:
 #line 80 "honeycomb.y"
-    {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (2)].stype)); free((yyvsp[(1) - (2)].stype));}
+    {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (2)].stype)); }
     break;
 
   case 12:
 #line 81 "honeycomb.y"
-    {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (1)].stype)); free((yyvsp[(1) - (1)].stype));}
+    {(yyval.ptype) = str_to_phase_type((yyvsp[(1) - (1)].stype)); }
     break;
 
   case 13:
@@ -1433,11 +1433,11 @@ yyreduce:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase(config, t);
+    phase *p = find_or_create_phase((honeycomb_config*)config, t);
     p->before = (char *)malloc(sizeof(char *) * strlen((yyvsp[(3) - (3)].stype)));
     memset(p->before, 0, strlen((yyvsp[(3) - (3)].stype)));
     memcpy(p->before, (yyvsp[(3) - (3)].stype), strlen((yyvsp[(3) - (3)].stype)));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
     break;
 
@@ -1447,11 +1447,11 @@ yyreduce:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase(config, t);
+    phase *p = find_or_create_phase((honeycomb_config*)config, t);
     p->before = (char *)malloc(sizeof(char *) * strlen((yyvsp[(3) - (3)].stype)));
     memset(p->before, 0, strlen((yyvsp[(3) - (3)].stype)));
     memcpy(p->before, (yyvsp[(3) - (3)].stype), strlen((yyvsp[(3) - (3)].stype)));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
     break;
 
@@ -1461,11 +1461,11 @@ yyreduce:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase(config, t);
+    phase *p = find_or_create_phase((honeycomb_config*)config, t);
     p->after = (char *)malloc(sizeof(char *) * strlen((yyvsp[(3) - (3)].stype)));
     memset(p->after, 0, strlen((yyvsp[(3) - (3)].stype)));
     memcpy(p->after, (yyvsp[(3) - (3)].stype), strlen((yyvsp[(3) - (3)].stype)));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
     break;
 
@@ -1475,11 +1475,11 @@ yyreduce:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", (yyvsp[(3) - (3)].stype), (yyvsp[(1) - (3)].stype));
     phase_type t = str_to_phase_type((yyvsp[(1) - (3)].stype));
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase(config, t);
+    phase *p = find_or_create_phase((honeycomb_config*)config, t);
     p->after = (char *)malloc(sizeof(char *) * strlen((yyvsp[(3) - (3)].stype)));
     memset(p->after, 0, strlen((yyvsp[(3) - (3)].stype)));
     memcpy(p->after, (yyvsp[(3) - (3)].stype), strlen((yyvsp[(3) - (3)].stype)));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
     break;
 
@@ -1487,8 +1487,8 @@ yyreduce:
 #line 131 "honeycomb.y"
     {
     debug(DEBUG_LEVEL, 4, "Found reserved: %d : %s\n", (yyvsp[(1) - (3)].atype), (yyvsp[(3) - (3)].stype));
-    add_attribute(config, (yyvsp[(1) - (3)].atype), (yyvsp[(3) - (3)].stype));
-    free((yyvsp[(3) - (3)].stype));
+    add_attribute((honeycomb_config*)config, (yyvsp[(1) - (3)].atype), (yyvsp[(3) - (3)].stype));
+    // free($3);
   }
     break;
 

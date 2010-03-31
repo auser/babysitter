@@ -53,32 +53,32 @@ phase:
   phase_decl line           {
     debug(DEBUG_LEVEL, 2, "Found phase\n");
     // Set the phase and attach it to the config object
-    phase *p = find_or_create_phase(config, $1);
+    phase *p = find_or_create_phase((honeycomb_config*)config, $1);
     p->command = (char *) malloc( sizeof(char *) * strlen($2) );
     memset(p->command, 0, strlen($2));
     memcpy(p->command, $2, strlen($2));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
   | phase_decl block        {
     // I think these two can be combined... I hate code duplication
-    phase *p = find_or_create_phase(config, $1);
+    phase *p = find_or_create_phase((honeycomb_config*)config, $1);
     p->command = (char *) malloc( sizeof(char *) * strlen($2) );
     memset(p->command, 0, strlen($2));
     memcpy(p->command, $2, strlen($2));
-    free($2);
+    // free($2);
     // debug(DEBUG_LEVEL, 3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command);
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
   | phase_decl NULLABLE         {
     debug(DEBUG_LEVEL, 3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));
-    phase *p = find_or_create_phase(config, $1);
-    add_phase(config, p);
+    phase *p = find_or_create_phase((honeycomb_config*)config, $1);
+    add_phase((honeycomb_config*)config, p);
   }
   ;
 
 phase_decl:
-  KEYWORD ':'             {$$ = str_to_phase_type($1); free($1);}
-  | KEYWORD               {$$ = str_to_phase_type($1); free($1);}
+  KEYWORD ':'             {$$ = str_to_phase_type($1); } // free($1);
+  | KEYWORD               {$$ = str_to_phase_type($1); } // free($1);
   ;
 
 // Hooks
@@ -88,41 +88,41 @@ hook:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase(config, t);
+    phase *p = find_or_create_phase((honeycomb_config*)config, t);
     p->before = (char *)malloc(sizeof(char *) * strlen($3));
     memset(p->before, 0, strlen($3));
     memcpy(p->before, $3, strlen($3));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
   | BEFORE ':' block        {
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase(config, t);
+    phase *p = find_or_create_phase((honeycomb_config*)config, t);
     p->before = (char *)malloc(sizeof(char *) * strlen($3));
     memset(p->before, 0, strlen($3));
     memcpy(p->before, $3, strlen($3));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
   | AFTER ':' line          {
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase(config, t);
+    phase *p = find_or_create_phase((honeycomb_config*)config, t);
     p->after = (char *)malloc(sizeof(char *) * strlen($3));
     memset(p->after, 0, strlen($3));
     memcpy(p->after, $3, strlen($3));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
   | AFTER ':' block         {
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase(config, t);
+    phase *p = find_or_create_phase((honeycomb_config*)config, t);
     p->after = (char *)malloc(sizeof(char *) * strlen($3));
     memset(p->after, 0, strlen($3));
     memcpy(p->after, $3, strlen($3));
-    add_phase(config, p);
+    add_phase((honeycomb_config*)config, p);
   }
   ;
 
@@ -130,8 +130,8 @@ hook:
 attr:
   RESERVED ':' line              {
     debug(DEBUG_LEVEL, 4, "Found reserved: %d : %s\n", $1, $3);
-    add_attribute(config, $1, $3);
-    free($3);
+    add_attribute((honeycomb_config*)config, $1, $3);
+    // free($3);
   }
   | RESERVED ':' NULLABLE     {
     debug(DEBUG_LEVEL, 4, "Found empty attribute\n");
