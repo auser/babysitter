@@ -51,10 +51,10 @@ decl:
 
 phase:
   phase_decl line           {
-    debug(DEBUG_LEVEL, 2, "Found phase\n");
+    debug(DEBUG_LEVEL, 2, "Found phase: %s\n", $1);
     // Set the phase and attach it to the config object
     phase *p = find_or_create_phase((honeycomb_config*)config, $1);
-    p->command = (char *) malloc( sizeof(char *) * strlen($2) );
+    p->command = (char *) malloc( sizeof(char) * strlen($2) ); // sizeof(char) == 1 anyway, but just for "safetyf"
     memset(p->command, 0, strlen($2));
     memcpy(p->command, $2, strlen($2));
     add_phase((honeycomb_config*)config, p);
