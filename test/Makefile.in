@@ -2,32 +2,45 @@ top_srcdir = @top_srcdir@
 srcdir = @srcdir@
 prefix = @prefix@
 
-C_DIR=${top_srcdir}/c_src
-BUILD_DIR=${top_srcdir}/build
-EXE=${top_srcdir}/run_tests
+SILENCE = @
 
-CMOCKERY_DIR=$(BUILD_DIR)/cmockery
-LIBMOCKERY=$(CMOCKERY_DIR)/lib/libcmockery.a
-INCMOCKERY=$(CMOCKERY_DIR)/include/google
-
-TEST_CFLAGS = $(CFLAGS) -Isrc -Itest -I $(INCMOCKERY)
-
-SRC_SOURCES=$(wildcard $(C_DIR)/utils/*.cpp)
-SRC_OBJECTS=$(patsubst %.c,%.o,$(SRC_SOURCES))
-
-TEST_SOURCES := $(wildcard c_src/test_*.c)
-TEST_OBJECTS := $(patsubst %.c,%.o,$(TEST_SOURCES))
-
-TEST_SRCS=$(wildcard c_src/*.c)
-TEST_OBJ = $(TEST_SRCS:.c=.o)
-
-INCLUDE+=-I $(C_DIR)/parser -I $(C_DIR)/utils -I $(C_DIR)/erl -I $(C_DIR)/babysitter -I ${INCMOCKERY}
-
-.c.o: %.o: %.c
-	$(CC) $(INCLUDE) -c $(TEST_CFLAGS) $< -o $@
+#---- Outputs ----#
+COMPONENT_NAME = BookCode
+TARGET_LIB = \
+	lib/lib$(COMPONENT_NAME).a
 	
-default: clean $(TEST_OBJ)
-	$(LINK.cc) -o $(EXE) $(TEST_OBJ) $(SRC_OBJECTS) $(LIBS) $(LIBMOCKERY)
+TEST_TARGET = \
+	$(COMPONENT_NAME)_tests
 
-clean:
-	rm -rf c_src/*.o $(EXE)
+#--- Inputs ----#
+PROJECT_HOME_DIR = .
+ifeq "$(CPPUTEST_HOME)" ""
+    CPPUTEST_HOME = ../CppUTest
+endif
+CPP_PLATFORM = g++
+
+#CFLAGS are set to override malloc and free to get memory leak detection in C programs
+CFLAGS = -DUT_MALLOC_OVERRIDES_ENABLED -Dmalloc=cpputest_malloc -Dfree=cpputest_free
+CPPFLAGS = -g -Wall -DUT_MALLOC_OVERRIDES_ENABLED
+
+SRC_DIRS = \
+	c_src/utils \
+	c_src/parser \
+	c_src/erl \
+	c_src/babysitter \
+	c_src/bin
+
+TEST_SRC_DIRS = \
+	test/tests \
+	test/mocks
+
+INCLUDE_DIRS = \
+	./ \
+	test/mocks \
+	SRC_DIRS
+
+#Flags to pass to ld
+LDFLAGS +=
+LD_LIBRARIES += -lstdc++
+
+include $(CPPUTEST_HOME)/build/ComponentMakefile
