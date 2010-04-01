@@ -12,6 +12,7 @@
  **/
 /*---------------------------- Includes ------------------------------------*/
 // STL Includes
+#include <stdlib.h>
 #include <list>
 #include <string>
 #include <string.h>
@@ -45,11 +46,12 @@ using std::string;
 #define FS_SLASH '/'
 #endif
 
-#ifndef BEFORE
-#define BEFORE 1001
+#ifndef BEFORE_HOOK
+#define BEFORE_HOOK 1001
 #endif
-#ifndef AFTER
-#define AFTER 1002
+
+#ifndef AFTER_HOOK
+#define AFTER_HOOK 1002
 #endif
 
 /*---------------------------- TYPES ---------------------------------------*/
@@ -176,8 +178,8 @@ public:
   void add_executable(std::string exec) { m_executables.insert(exec); }
   
   // Actions
-  int start();
-  int stop();
+  pid_t start();
+  pid_t stop();
   int bundle();
   
   int valid();
@@ -200,8 +202,8 @@ private:
   void set_rlimits();
   int set_rlimit(const int res, const rlim_t limit);
   // Building
-  int comb_exec(std::string cmd, std::string cd);
-  void exec_hook(std::string action, int stage, phase *p, std::string cd);
+  pid_t comb_exec(std::string cmd, std::string cd);
+  void exec_hook(std::string action, int stage, phase_t *p, std::string cd);
   pid_t fork_and_execute(char *argv[], char* const* env, std::string cd, int running_script);
   void ensure_exists(std::string s);
   std::string replace_vars_with_value(std::string original);

@@ -15,8 +15,9 @@
 #include "string_utils.h"
 #include "process_manager.h"
 #include "babysitter_types.h"
-#include "babysitter_utils.h"
+#include "babysitter_utils.h" 
 #include "hc_support.h"
+#include "callbacks.h"
 
 // Globals
 extern MapChildrenT children;
@@ -73,13 +74,21 @@ void print_help()
   );
 }
 
+void reload(void *data)
+{
+  printf("reload");
+  debug(dbg, 1, "Reloading configs...\n");
+  parse_config_dir(config_file_dir, known_configs); // Parse the config
+}
+
 /**
 * Setup defaults for the program. These can be overriden after the
 * command-line is parsed. This way we don't have variables we expect to be non-NULL 
 * being NULL at runtime.
 **/
 void setup_defaults() {
-  setup_process_manager_defaults();
+  pm_setup();
+  register_callback("pm_reload", reload);
   config_file_dir = "/etc/beehive/configs";
 }
 
@@ -96,6 +105,7 @@ int main (int argc, const char *argv[])
   // static char *line = (char *)NULL;
   char *cmd_buf;
   int terminated = 0;
+  Honeycomb comb;
   
   while (!terminated) {
     // Call the next loop    
@@ -129,15 +139,11 @@ int main (int argc, const char *argv[])
       if (command_argc < 2) {
         fprintf(stderr, "usage: start [command]\n");
       } else {
-        command_argv++;command_argc--;
         // For example: start ./comb_test.sh
         command_argv[command_argc] = 0; // NULL TERMINATE IT
-        const char *cd = NULL;
         // pm_start_child(const char* cmd, const char* cd, char* const* env, int user, int nice)
-        pid_t pid = pm_start_child((const char*)commandify(command_argc, (const char**)command_argv), cd, (const char**)env, run_as_user, 0);
-        //CmdInfo(const char* _cmd, const char* _kill_cmd, pid_t _cmd_pid)
-        CmdInfo ci(*command_argv, "", pid);
-        children[pid] = ci;
+        parse_the_command_line_into_honeycomb_config(command_argc, (char**)command_argv, &comb);
+        comb.start();
       }
     } else if ( !strncmp(command_argv[0], "bundle", 5) ) {
       printf("bundle here\n");

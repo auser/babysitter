@@ -14,6 +14,7 @@
 #include "string_utils.h"
 #include "time_utils.h"
 #include "print_utils.h"
+#include "callbacks.h"
 
 #include "command_info.h"
 #include "process_manager.h"
@@ -80,12 +81,26 @@ int process_child_signal(pid_t pid)
   }
 }   
 
+void pm_reload(void *data)
+{
+  // Nothing yet
+}
+
 void pm_gotsignal(int signal)
 {
   debug(dbg, 4, "Got signal: %d\n", signal);
-  if (signal != SIGCHLD)
-    if (signal == SIGTERM || signal == SIGINT) terminated = 1;
-  if (pm_can_jump) siglongjmp(saved_jump_buf, 1);
+  
+  switch(signal) {
+    case SIGHUP:
+      run_callbacks("pm_reload", &signal);
+      break;
+    case SIGTERM:
+    case SIGINT:
+      terminated = 1;
+    default:
+      if (pm_can_jump) siglongjmp(saved_jump_buf, 1);
+    break;
+  }
 }
 
 void pm_gotsigchild(int signal, siginfo_t* si, void* context)
@@ -117,7 +132,7 @@ int setup_pm_pending_alarm()
   return 0;
 }
 
-pid_t pm_start_child(const char* command_argv, const char *cd, const char** env, int user, int nice)
+pid_t pm_start_child(const char* command_argv, const char *kill_cmd, const char *cd, const char** env, int user, int nice)
 {
   pid_t pid = fork();
   switch (pid) {
@@ -143,6 +158,10 @@ pid_t pm_start_child(const char* command_argv, const char *cd, const char** env,
     if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
       fperror("Cannot set priority of pid %d to %d", pid, nice);
     }
+    if (pid > 0) {
+      CmdInfo ci(command_argv, kill_cmd, pid);
+      children[pid] = ci;
+    }
     return pid;
   }
 }
@@ -158,15 +177,15 @@ int pm_stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
       // There was already an attempt to kill it.
     if (ci.sigterm() && diff < 0) {
       // More than 5 secs elapsed since the last kill attempt
-      kill(ci.cmd_pid(), SIGKILL);
-      kill(ci.kill_cmd_pid(), SIGKILL);
+      if (ci.cmd_pid() > 0) kill(ci.cmd_pid(), SIGKILL);
+      if (ci.kill_cmd_pid() > 0) kill(ci.kill_cmd_pid(), SIGKILL);
       ci.set_sigkill(true);
     }
     if (notify) handle_ok(transId);
     return 0;
   } else if (strncmp(ci.kill_cmd(), "", 1) != 0) {
    // This is the first attempt to kill this pid and kill command is provided.
-   ci.set_kill_cmd_pid(pm_start_child((const char*)ci.kill_cmd(), NULL, NULL, INT_MAX, INT_MAX));
+   ci.set_kill_cmd_pid(pm_start_child((const char*)ci.kill_cmd(), NULL, NULL, NULL, INT_MAX, INT_MAX));
    if (ci.kill_cmd_pid() > 0) {
      transient_pids[ci.kill_cmd_pid()] = ci.cmd_pid();
      time_t ci_time = ci.deadline();
@@ -211,9 +230,10 @@ int pm_stop_child(CmdInfo& ci, int transId, time_t &now, bool notify)
 
 int pm_kill_child(pid_t pid, int signal, int transId, bool notify)
 {
+  if (pid < 0) return -1;
   // We can't use -pid here to kill the whole process group, because our process is
   // the group leader.
-  debug(dbg, 2, "CAlling pm_kill_child on pid: %d\n", (int)pid);
+  debug(dbg, 2, "Calling pm_kill_child on pid: %d\n", (int)pid);
   int err = kill(pid, signal);
   switch (err) {
     case 0:
@@ -271,7 +291,7 @@ void pm_terminate_all()
     
     // Definitely kill the transient_pids
     for(MapKillPidT::iterator it=transient_pids.begin(), end=transient_pids.end(); it != end; ++it) {
-      kill(it->first, SIGKILL);
+      if ((pid_t)it->first > 0) kill(it->first, SIGKILL);
       transient_pids.erase(it);
     }
       
@@ -398,13 +418,14 @@ int pm_check_children(int& isTerminated)
   return 0;
 }
 
-void setup_process_manager_defaults()
-{	
+void pm_setup()
+{
   debug(dbg, 1, "Setting up process manager defaults\n");
   run_as_user = getuid();
   process_pid = (int)getpid();
   exited_children.resize(SIGCHLD_MAX_SIZE);
   setup_signal_handlers();
   debug(dbg, 4, "exited_children (%d) max_size: %d\n", (int)exited_children.size(), (int)exited_children.max_size());
+  // Callbacks
+  register_callback("pm_reload", pm_reload);
 }
-

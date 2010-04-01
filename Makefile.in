@@ -19,6 +19,9 @@ erl:
 c:
 	(cd c_src;$(MAKE))
 
+exec:
+	(cd c_src;$(MAKE) exec)
+	
 clean:
 	(cd c_src;$(MAKE) clean)
 	(cd erl;$(MAKE) clean)
@@ -28,7 +31,7 @@ deep_clean: clean
 	rm -rf autom4te.cache config.log config.status build
 
 tests: all
-	(cd test; $(MAKE))
+	(cd c_src; $(MAKE) test)
  
 install: all
 	(cd c_src; $(MAKE) install)
@@ -37,4 +40,3 @@ install: all
 debug:
 	(cd c_src;$(MAKE) debug)
 	(cd erl;$(MAKE) debug)
-	

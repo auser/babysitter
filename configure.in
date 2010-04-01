@@ -15,8 +15,11 @@ AC_PROG_YACC
 # AC_PATH_PROG(ERL, erl)
 # AC_PATH_PROG(ERLC, erlc)
 
+# TESTS
+CPPUTEST_VERSION=v2.1
+AC_SUBST(CPPUTEST_VERSION)
+
 # Erlang stuff
- 
 m4_define([AC_LANG(Erlang)],
 [ac_ext=erl
  ac_compile='$ERLC $ERLCFLAGS -b beam conftest.$ac_ext >&AS_MESSAGE_LOG_FD'
@@ -42,7 +45,7 @@ AC_SUBST(ERLDIR)
 
 ERL_INTERFACE=`ls ${ERLDIR}/lib | grep erl_interface | tail -n 1`
 
-CPPFLAGS="-O2 -g3 -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -Wall -Werror -fPIC -I./"
+CPPFLAGS="-O2 -g3 -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -fPIC"
 
 EI_LIB_DIR="${ERLDIR}/lib/${ERL_INTERFACE}/lib"
 LIBEI="${EI_LIB_DIR}/libei.a"
@@ -93,7 +96,8 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
 # Checks for library functions.
-AC_FUNC_REALLOC
+# AC_FUNC_MALLOC
+# AC_FUNC_REALLOC
 AC_FUNC_CHOWN
 AC_FUNC_FORK
 AC_TYPE_MODE_T
@@ -102,4 +106,4 @@ AC_TYPE_UID_T
 AC_CHECK_FUNCS([gettimeofday memset alarm atexit mkdir regcomp select strchr strdup strerror sigtimedwait])
 AC_CHECK_FUNCS([setresgid getresgid])
 
-AC_OUTPUT([c_src/Makefile c_src/parser/Makefile erl/Makefile test/Makefile Makefile])
+AC_OUTPUT([c_src/Makefile erl/Makefile Makefile])

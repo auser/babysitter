@@ -46,9 +46,10 @@ function found_msg () {
 }
 
 # Build cmockery
-cmockery_version="0.1.2"
-cmockery_tar="cmockery-${cmockery_version}.tar.gz"
-cmockery_url="http://cmockery.googlecode.com/files/${cmockery_tar}"
+cpputest_version="v2.1"
+cpputest_tar="CppUTest${cpputest_version}.zip"
+cpputest_dir="CppUTest${cpputest_version}"
+cpputest_url="http://sourceforge.net/projects/cpputest/files/cpputest/${cpputest_version}/${cpputest_tar}/download"
 
 # Fix for OSX not finding malloc.h
 if [[ `uname -s` == "Darwin" ]]; then
@@ -59,31 +60,23 @@ if [[ !(-d "./build") ]]; then
     mkdir ./build
 fi
 
-cecho "libcmockery..." $blue no
-if [ -f "build/cmockery/lib/libcmockery.a" ]; then
+cecho "CppUTest..." $blue no
+if [ -f "build/${cpputest_dir}/lib/libCppUTest.a" ]; then
   found_msg
 else
   not_found_msg
-  cecho "Building libcmockery" $green
-  if [ -f "/usr/local/lib/libcmockery.a" ]; then
-      mkdir -p `pwd`/build/cmockery/{lib,include}
-      cp /usr/local/lib/libcmockery.a "$(pwd)/build/cmockery/lib"
-      cp -r /usr/local/include/google "$(pwd)/build/cmockery/include"
-  elif [ -f "/usr/local/lib/libcmockery.a" ]; then
-      mkdir -p `pwd`/build/cmockery/{lib,include}
-      cp /usr/lib/libcmockery.a "$(pwd)/build/cmockery/lib"
-      cp -r /usr/include/google "$(pwd)/build/cmockery/include"
-  else
-      pushd build
-      prefix=`pwd`/cmockery
-      $CURL -o $cmockery_tar $cmockery_url
-      tar -xzf cmockery-${cmockery_version}.tar.gz
-      pushd cmockery-${cmockery_version}
-      ./configure --prefix=$prefix && make && make install
-      popd
-      rm -rf cmockery-${cmockery_version}
-      popd
-  fi
+  cecho "Building CppUTest" $green
+  pushd build
+  prefix=`pwd`/cpputest
+  # echo "$CURL -o $cpputest_tar $cpputest_url"
+  # $CURL -o $cpputest_tar $cpputest_url
+  # echo $cpputest_tar
+  # unzip ${cpputest_tar}
+  pushd ${cpputest_dir}
+  make
+  popd
+  rm -rf ${cpputest_tar}
+  popd
 fi
 
 AUTOCONF_VERSION=2.65

@@ -146,7 +146,7 @@ int handle_command_line(char *a, char *b) {
 * Commands
 **/
 int cmd_start(int transId, CmdOptions& co) {
-  pid_t pid = pm_start_child((const char*)co.cmd(), co.cd(), (const char**)co.env(), co.user(), co.nice());
+  pid_t pid = pm_start_child((const char*)co.cmd(), (const char*)co.kill_cmd(), co.cd(), (const char**)co.env(), co.user(), co.nice());
   if (pid < 0) {
     fperror("pm_start_child");
     send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
@@ -281,7 +281,7 @@ int main (int argc, char const *argv[])
   if (parse_the_command_line(argc, (char **)argv)) return 0;
   
   setup_erl_daemon_signal_handlers();
-  setup_process_manager_defaults();
+  pm_setup();
   
   debug(dbg, 2, "parsing the config directory: %s\n", config_file_dir.c_str());
   parse_config_dir(config_file_dir, known_configs); // Parse the config
