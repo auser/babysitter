@@ -46,7 +46,7 @@ function found_msg () {
   aligned_msg "found" $green
 }
 
-# Build cmockery
+# Build cpputest
 cpputest_git_url="git://github.com/auser/cpputest.git"
 
 # Fix for OSX not finding malloc.h

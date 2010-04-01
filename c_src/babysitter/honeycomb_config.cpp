@@ -36,7 +36,7 @@ honeycomb_config *parse_config_file(std::string conf_file) {
 		return NULL;
 	}
 	
-  if ( (current_parsed_file = (char *) malloc(sizeof(char *) * strlen(filename))) == NULL ) {
+  if ( (current_parsed_file = (char *) malloc(sizeof(char) * strlen(filename))) == NULL ) {
     fprintf(stderr, "Could not allocate a new char. Out of memory\n");
     exit(-1);
   }

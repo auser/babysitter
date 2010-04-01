@@ -62,7 +62,7 @@ phase:
   | phase_decl block        {
     // I think these two can be combined... I hate code duplication
     phase_t *p = find_or_create_phase((honeycomb_config*)config, $1);
-    p->command = (char *) malloc( sizeof(char *) * strlen($2) );
+    p->command = (char *) malloc( sizeof(char) * strlen($2) );
     memset(p->command, 0, strlen($2));
     memcpy(p->command, $2, strlen($2));
     // free($2);
@@ -89,7 +89,7 @@ hook:
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
-    p->before = (char *)malloc(sizeof(char *) * strlen($3));
+    p->before = (char *)malloc(sizeof(char) * strlen($3));
     memset(p->before, 0, strlen($3));
     memcpy(p->before, $3, strlen($3));
     add_phase((honeycomb_config*)config, p);
@@ -99,7 +99,7 @@ hook:
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
-    p->before = (char *)malloc(sizeof(char *) * strlen($3));
+    p->before = (char *)malloc(sizeof(char) * strlen($3));
     memset(p->before, 0, strlen($3));
     memcpy(p->before, $3, strlen($3));
     add_phase((honeycomb_config*)config, p);
@@ -109,7 +109,7 @@ hook:
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
-    p->after = (char *)malloc(sizeof(char *) * strlen($3));
+    p->after = (char *)malloc(sizeof(char) * strlen($3));
     memset(p->after, 0, strlen($3));
     memcpy(p->after, $3, strlen($3));
     add_phase((honeycomb_config*)config, p);
@@ -119,7 +119,7 @@ hook:
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
-    p->after = (char *)malloc(sizeof(char *) * strlen($3));
+    p->after = (char *)malloc(sizeof(char) * strlen($3));
     memset(p->after, 0, strlen($3));
     memcpy(p->after, $3, strlen($3));
     add_phase((honeycomb_config*)config, p);

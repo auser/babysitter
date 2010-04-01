@@ -72,6 +72,7 @@ INCLUDE_DIRS =\
   $(CPPUTEST_HOME)/include/Platforms/$(CPP_PLATFORM) \
 	./ \
 	../test/mocks \
+	../test/helpers \
 	utils \
 	erl \
 	babysitter

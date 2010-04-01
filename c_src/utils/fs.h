@@ -1,14 +1,11 @@
 #ifndef FS_H_FILE
 #define FS_H_FILE
 
-#include <string.h>
-#include <unistd.h>
 #include <stdio.h>
-#include <assert.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
-#include <sys/stat.h>
-
 #include <string>
 
 #include "print_utils.h"

@@ -1,13 +1,15 @@
-#include "CppUTest/TestHarness.h"
 #include "fs.h"
 
-TEST_GROUP(FS)
+#include <CppUTest/TestHarness.h>
+
+TEST_GROUP(FileSystem)
 {
   void setup() {}
   void teardown() {}
-}
+};
 
-TEST(FS, TestMkdirP)
+TEST(FileSystem, TestingCountArgs)
 {
-  printf("hi\n");
+  int size = dir_size_r("../test/fixtures/test_dir");
+  LONGS_EQUAL(241, size);
 }

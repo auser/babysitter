@@ -1,5 +1,6 @@
-#include "CppUTest/TestHarness.h"
 #include "string_utils.h"
+
+#include "CppUTest/TestHarness.h"
 
 TEST_GROUP(StringTest)
 {

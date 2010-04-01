@@ -153,7 +153,7 @@ int Honeycomb::build_env_vars() {
     }
     
     templen = strlen(working_str.c_str());
-    if ((default_env_vars[i] = (char *) malloc(sizeof(char *) * templen)) == NULL ) {
+    if ((default_env_vars[i] = (char *) malloc(sizeof(char) * templen)) == NULL ) {
       fprintf(stderr, "Could not malloc memory for env vars: %s\n", ::strerror(errno));
       return -1;
     }
