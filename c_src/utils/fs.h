@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <assert.h>
 #include <errno.h>
 #include <string>
 

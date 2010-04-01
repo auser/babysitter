@@ -13,7 +13,7 @@ TEST_GROUP(HoneycombConfig)
   
   void setup()
   {
-    config = a_new_honeycomb_config_object();
+    a_new_honeycomb_config_object(&config);
     phase = new_phase(T_BUNDLE);
   }
   void teardown()
