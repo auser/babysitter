@@ -1,5 +1,6 @@
 #!/bin/bash
 CURL=$(which curl)
+GIT=$(which git)
 
 esc=""
 
@@ -46,10 +47,7 @@ function found_msg () {
 }
 
 # Build cmockery
-cpputest_version="v2.1"
-cpputest_tar="CppUTest${cpputest_version}.zip"
-cpputest_dir="CppUTest${cpputest_version}"
-cpputest_url="http://sourceforge.net/projects/cpputest/files/cpputest/${cpputest_version}/${cpputest_tar}/download"
+cpputest_git_url="git://github.com/auser/cpputest.git"
 
 # Fix for OSX not finding malloc.h
 if [[ `uname -s` == "Darwin" ]]; then
@@ -68,11 +66,8 @@ else
   cecho "Building CppUTest" $green
   pushd build
   prefix=`pwd`/cpputest
-  # echo "$CURL -o $cpputest_tar $cpputest_url"
-  # $CURL -o $cpputest_tar $cpputest_url
-  # echo $cpputest_tar
-  # unzip ${cpputest_tar}
-  pushd ${cpputest_dir}
+  $GIT clone ${cpputest_git_url}
+  pushd cpputest
   make
   popd
   rm -rf ${cpputest_tar}

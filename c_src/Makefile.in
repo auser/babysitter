@@ -44,9 +44,8 @@ OUTPUT_DIR = $(top_srcdir)/priv
 
 #--- Inputs ----#
 PROJECT_HOME_DIR = .
-CPPUTEST_VERSION=@CPPUTEST_VERSION@
 ifeq "$(CPPUTEST_HOME)" ""
-	CPPUTEST_HOME = ../build/CppUTest$(CPPUTEST_VERSION)
+	CPPUTEST_HOME = ../build/cpputest
 endif
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
