@@ -52,7 +52,7 @@ typedef struct _phase_ {
   char *before;
   char *command;
   char *after;
-} phase;
+} phase_t;
 
 typedef struct _honeycomb_config_ {
   char *filepath;       // The filepath of the config file (TODO: so we can use relative filepaths)
@@ -73,7 +73,7 @@ typedef struct _honeycomb_config_ {
   char *storage_dir;       // Directory to store the bees in
   // Phases
   size_t num_phases;
-  phase **phases;
+  phase_t **phases;
 } honeycomb_config;
 
 #endif

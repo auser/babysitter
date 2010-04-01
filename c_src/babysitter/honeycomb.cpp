@@ -283,13 +283,13 @@ pid_t Honeycomb::comb_exec(std::string cmd, std::string cd = NULL)
 }
 
 // Execute a hook
-void Honeycomb::exec_hook(std::string action, int stage, phase *p, std::string cd = "")
+void Honeycomb::exec_hook(std::string action, int stage, phase_t *p, std::string cd = "")
 {
-  if (stage == BEFORE) {
+  if (stage == BEFORE_HOOK) {
     debug(m_debug_level, 4, "Running before hook for '%s'\n", action.c_str());
     if (p->before) comb_exec(p->before, cd); //printf("Run before hook for %s: %s\n", action.c_str(), p->before);
     debug(m_debug_level, 4, "Before hook for '%s' has completed\n", action.c_str());
-  } else if (stage == AFTER) {
+  } else if (stage == AFTER_HOOK) {
     debug(m_debug_level, 4, "Running after hook for '%s'\n", action.c_str());
     if (p->after) comb_exec(p->after, cd); //printf("Run after hook for %s %s\n", action.c_str(), p->after);
     debug(m_debug_level, 4, "After hook for '%s' has completed\n", action.c_str());
@@ -474,10 +474,10 @@ int Honeycomb::run_action(std::string action)
   setup_internals();
   temp_drop();
   
-  phase *p = find_phase(m_honeycomb_config, T_BUNDLE, m_debug_level);
+  phase_t *p = find_phase(m_honeycomb_config, T_BUNDLE, m_debug_level);
   
   // Run before hook
-  exec_hook(action, BEFORE, p);
+  exec_hook(action, BEFORE_HOOK, p);
   
   // Change into the working directory
   if (chdir(m_working_dir.c_str())) {
@@ -493,7 +493,7 @@ int Honeycomb::run_action(std::string action)
   }
   restore_perms();
   
-  exec_hook(action, AFTER, p);
+  exec_hook(action, AFTER_HOOK, p);
   
   debug(m_debug_level, 2, "Removing working directory: %s\n", working_dir());
   rmdir_p(m_working_dir);

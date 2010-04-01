@@ -113,9 +113,9 @@ honeycomb_config* a_new_honeycomb_config_object() {
 }
 
 // Create a new phase
-phase* new_phase(phase_type t) {
-  phase *p;
-  p = (phase*)malloc(sizeof(phase));
+phase_t* new_phase(phase_type t) {
+  phase_t *p;
+  p = (phase_t*)malloc(sizeof(phase_t));
   if (p) {
     p->type = t;
     p->before = NULL;
@@ -128,7 +128,7 @@ phase* new_phase(phase_type t) {
 }
 
 // Find a phase of type t on the config object
-phase *find_phase(honeycomb_config *c, phase_type t, int dlvl)
+phase_t *find_phase(honeycomb_config *c, phase_type t, int dlvl)
 {
   unsigned int i = 0;
   for (i = 0; i < c->num_phases; i++) {
@@ -140,14 +140,14 @@ phase *find_phase(honeycomb_config *c, phase_type t, int dlvl)
 }
 
 // Find or create a phase on a config object
-phase *find_or_create_phase(honeycomb_config *c, phase_type t) {
-  phase *p;
+phase_t *find_or_create_phase(honeycomb_config *c, phase_type t) {
+  phase_t *p;
   if ((p = find_phase(c, t, 0))) return p;
   return new_phase(t);
 }
 
 // Modify an existing phase
-int modify_phase(honeycomb_config *c, phase *p) {
+int modify_phase(honeycomb_config *c, phase_t *p) {
   unsigned int i;
   for (i = 0; i < c->num_phases; ++i) {
     if (c->phases[i]->type == p->type) {
@@ -159,11 +159,11 @@ int modify_phase(honeycomb_config *c, phase *p) {
 }
 
 // Add a phase to the honeycomb_config
-int add_phase(honeycomb_config *c, phase *p) {
-  phase *existing_phase;
+int add_phase(honeycomb_config *c, phase_t *p) {
+  phase_t *existing_phase;
   if ((existing_phase = find_phase(c, p->type, 0))) return modify_phase(c, p);
   int n = c->num_phases + 1;
-  phase **nphases = (phase **)malloc(sizeof(phase) * n);
+  phase_t **nphases = (phase_t **)malloc(sizeof(phase_t) * n);
   
   if (!nphases) {
     fprintf(stderr, "Couldn't add phase: '%d', no memory available\n", p->type);
@@ -267,7 +267,7 @@ void free_config(honeycomb_config *c) {
 }
 
 // Free a phase struct
-void free_phase(phase *p) {
+void free_phase(phase_t *p) {
   if (!p) return;
   if (p->before) free(p->before);
   if (p->command) free(p->command);

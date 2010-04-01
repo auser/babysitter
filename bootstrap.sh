@@ -47,8 +47,8 @@ function found_msg () {
 
 # Build cmockery
 cpputest_version="v2.1"
-cpputest_tar="CppUTest${cmockery_version}.zip"
-cpputest_dir="CppUTest${cmockery_version}"
+cpputest_tar="CppUTest${cpputest_version}.zip"
+cpputest_dir="CppUTest${cpputest_version}"
 cpputest_url="http://sourceforge.net/projects/cpputest/files/cpputest/${cpputest_version}/${cpputest_tar}/download"
 
 # Fix for OSX not finding malloc.h

@@ -45,11 +45,12 @@ using std::string;
 #define FS_SLASH '/'
 #endif
 
-#ifndef BEFORE
-#define BEFORE 1001
+#ifndef BEFORE_HOOK
+#define BEFORE_HOOK 1001
 #endif
-#ifndef AFTER
-#define AFTER 1002
+
+#ifndef AFTER_HOOK
+#define AFTER_HOOK 1002
 #endif
 
 /*---------------------------- TYPES ---------------------------------------*/
@@ -201,7 +202,7 @@ private:
   int set_rlimit(const int res, const rlim_t limit);
   // Building
   pid_t comb_exec(std::string cmd, std::string cd);
-  void exec_hook(std::string action, int stage, phase *p, std::string cd);
+  void exec_hook(std::string action, int stage, phase_t *p, std::string cd);
   pid_t fork_and_execute(char *argv[], char* const* env, std::string cd, int running_script);
   void ensure_exists(std::string s);
   std::string replace_vars_with_value(std::string original);

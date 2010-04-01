@@ -15,8 +15,11 @@ AC_PROG_YACC
 # AC_PATH_PROG(ERL, erl)
 # AC_PATH_PROG(ERLC, erlc)
 
+# TESTS
+CPPUTEST_VERSION=v2.1
+AC_SUBST(CPPUTEST_VERSION)
+
 # Erlang stuff
- 
 m4_define([AC_LANG(Erlang)],
 [ac_ext=erl
  ac_compile='$ERLC $ERLCFLAGS -b beam conftest.$ac_ext >&AS_MESSAGE_LOG_FD'

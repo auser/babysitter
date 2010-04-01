@@ -15,7 +15,7 @@ extern char *current_parsed_file;
   char* stype;
   char ctype;
   phase_type ptype;
-  phase *phase;
+  phase_t *phase;
   attr_type atype;
 }
 
@@ -53,7 +53,7 @@ phase:
   phase_decl line           {
     debug(DEBUG_LEVEL, 2, "Found phase: %s\n", $1);
     // Set the phase and attach it to the config object
-    phase *p = find_or_create_phase((honeycomb_config*)config, $1);
+    phase_t *p = find_or_create_phase((honeycomb_config*)config, $1);
     p->command = (char *) malloc( sizeof(char) * strlen($2) ); // sizeof(char) == 1 anyway, but just for "safetyf"
     memset(p->command, 0, strlen($2));
     memcpy(p->command, $2, strlen($2));
@@ -61,7 +61,7 @@ phase:
   }
   | phase_decl block        {
     // I think these two can be combined... I hate code duplication
-    phase *p = find_or_create_phase((honeycomb_config*)config, $1);
+    phase_t *p = find_or_create_phase((honeycomb_config*)config, $1);
     p->command = (char *) malloc( sizeof(char *) * strlen($2) );
     memset(p->command, 0, strlen($2));
     memcpy(p->command, $2, strlen($2));
@@ -71,7 +71,7 @@ phase:
   }
   | phase_decl NULLABLE         {
     debug(DEBUG_LEVEL, 3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));
-    phase *p = find_or_create_phase((honeycomb_config*)config, $1);
+    phase_t *p = find_or_create_phase((honeycomb_config*)config, $1);
     add_phase((honeycomb_config*)config, p);
   }
   ;
@@ -88,7 +88,7 @@ hook:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase((honeycomb_config*)config, t);
+    phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
     p->before = (char *)malloc(sizeof(char *) * strlen($3));
     memset(p->before, 0, strlen($3));
     memcpy(p->before, $3, strlen($3));
@@ -98,7 +98,7 @@ hook:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase((honeycomb_config*)config, t);
+    phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
     p->before = (char *)malloc(sizeof(char *) * strlen($3));
     memset(p->before, 0, strlen($3));
     memcpy(p->before, $3, strlen($3));
@@ -108,7 +108,7 @@ hook:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase((honeycomb_config*)config, t);
+    phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
     p->after = (char *)malloc(sizeof(char *) * strlen($3));
     memset(p->after, 0, strlen($3));
     memcpy(p->after, $3, strlen($3));
@@ -118,7 +118,7 @@ hook:
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
-    phase *p = find_or_create_phase((honeycomb_config*)config, t);
+    phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
     p->after = (char *)malloc(sizeof(char *) * strlen($3));
     memset(p->after, 0, strlen($3));
     memcpy(p->after, $3, strlen($3));
