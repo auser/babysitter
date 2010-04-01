@@ -42,6 +42,6 @@ TEST(HoneycombConfig, parse_config_dir)
   STRCMP_EQUAL("../test/fixtures/configs/rack.conf", rack->filepath);
   STRCMP_EQUAL("ruby /usr/bin/irb /usr/bin/gem thin uuidgen", rack->executables);
   
-  LONGS_EQUAL(6, rack->num_phases);
+  LONGS_EQUAL(5, rack->num_phases);
 }
 
