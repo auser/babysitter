@@ -59,7 +59,7 @@ if [[ !(-d "./build") ]]; then
 fi
 
 cecho "CppUTest..." $blue no
-if [ -f "build/${cpputest_dir}/lib/libCppUTest.a" ]; then
+if [ -f "./build/cpputest/lib/libCppUTest.a" ]; then
   found_msg
 else
   not_found_msg
