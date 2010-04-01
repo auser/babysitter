@@ -184,17 +184,13 @@ int add_phase(honeycomb_config *c, phase_t *p) {
 
 int malloc_and_set_attribute(char **obj, char *value)
 {
-  printf("malloc_and_set_attribute: (TOP): %s\n", value);
-  char *new_obj = (char *) calloc(sizeof(char), strlen(value));
-  printf("checking new_obj\n");
-  if (!new_obj) {
+  obj = (char **) calloc(sizeof(char), strlen(value));
+  if (!obj) {
     perror("malloc_and_set_attribute");
     return -1;
   }
   printf("before memcpy\n");
-  memcpy(new_obj, value, strlen(value));
-  printf("new_obj: %s\n", new_obj);
-  obj = &new_obj;
+  memcpy(&obj, value, strlen(value));
   printf("obj:%s\n", *obj);
   return 0;
 }
@@ -204,7 +200,6 @@ int malloc_and_set_attribute(char **obj, char *value)
 // honeycomb_config struct
 int add_attribute(honeycomb_config *c, attr_type t, char *value)
 {
-  printf("add_attribute: %s\n", value);
   switch (t) {
     case T_FILEPATH:
       malloc_and_set_attribute(&c->filepath, value); break;
