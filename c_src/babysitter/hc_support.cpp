@@ -191,6 +191,7 @@ int malloc_and_set_attribute(char **ptr, char *value)
     return -1;
   }
   strncpy(obj, value, strlen(value));
+  obj[strlen(value)] = (char)'\0';
   *ptr = obj;
   return 0;
 }

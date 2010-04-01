@@ -34,8 +34,12 @@ TEST(HoneycombConfig, initialization)
 
 TEST(HoneycombConfig, add_attribute)
 {
+  STRCMP_EQUAL(NULL, config->filepath);
   add_attribute(config, T_FILEPATH, (char*)"./a_file");
   STRCMP_EQUAL((char*)"./a_file", config->filepath);
+  // LONGS_EQUAL(NULL, *config->stdout);
+  // add_attribute(config, T_STDOUT, (char*)">/dev/null");
+  // STRCMP_EQUAL((char*)">/dev/null", config->stdout);
 }
 
 TEST(HoneycombConfig, phase_type_to_string)
