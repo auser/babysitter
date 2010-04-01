@@ -31,7 +31,8 @@ extern "C" {
   char *collect_to_period(char *str);
   void a_new_honeycomb_config_object(honeycomb_config** c);
   int add_phase(honeycomb_config *c, phase_t *p);
-  int add_attribute(honeycomb_config *c, attr_type t, char *value);
+  int add_config_attribute(honeycomb_config *c, attr_type t, char *value);
+  int add_phase_attribute(phase_t *p, phase_attribute attr, char *val);
   phase_t *find_or_create_phase(honeycomb_config *c, phase_type t);
   phase_t *find_phase(honeycomb_config *c, phase_type t, int dlvl);
   phase_t* new_phase(phase_type t);

@@ -54,19 +54,13 @@ phase:
     debug(DEBUG_LEVEL, 2, "Found phase: %s\n", $1);
     // Set the phase and attach it to the config object
     phase_t *p = find_or_create_phase((honeycomb_config*)config, $1);
-    p->command = (char *) malloc( sizeof(char) * strlen($2) ); // sizeof(char) == 1 anyway, but just for "safetyf"
-    memset(p->command, 0, strlen($2));
-    memcpy(p->command, $2, strlen($2));
+    add_phase_attribute(p, T_COMMAND, $2);
     add_phase((honeycomb_config*)config, p);
   }
   | phase_decl block        {
     // I think these two can be combined... I hate code duplication
     phase_t *p = find_or_create_phase((honeycomb_config*)config, $1);
-    p->command = (char *) malloc( sizeof(char) * strlen($2) );
-    memset(p->command, 0, strlen($2));
-    memcpy(p->command, $2, strlen($2));
-    // free($2);
-    // debug(DEBUG_LEVEL, 3, "Found a phase: [%s %s]\n", phase_type_to_string(p->type), p->command);
+    add_phase_attribute(p, T_COMMAND, $2);
     add_phase((honeycomb_config*)config, p);
   }
   | phase_decl NULLABLE         {
@@ -89,9 +83,7 @@ hook:
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
-    p->before = (char *)malloc(sizeof(char) * strlen($3));
-    memset(p->before, 0, strlen($3));
-    memcpy(p->before, $3, strlen($3));
+    add_phase_attribute(p, T_BEFORE, $3);
     add_phase((honeycomb_config*)config, p);
   }
   | BEFORE ':' block        {
@@ -99,9 +91,7 @@ hook:
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
-    p->before = (char *)malloc(sizeof(char) * strlen($3));
-    memset(p->before, 0, strlen($3));
-    memcpy(p->before, $3, strlen($3));
+    add_phase_attribute(p, T_BEFORE, $3);
     add_phase((honeycomb_config*)config, p);
   }
   | AFTER ':' line          {
@@ -109,9 +99,7 @@ hook:
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
-    p->after = (char *)malloc(sizeof(char) * strlen($3));
-    memset(p->after, 0, strlen($3));
-    memcpy(p->after, $3, strlen($3));
+    add_phase_attribute(p, T_AFTER, $3);
     add_phase((honeycomb_config*)config, p);
   }
   | AFTER ':' block         {
@@ -119,9 +107,7 @@ hook:
     phase_type t = str_to_phase_type($1);
     // Do some error checking on the type. please
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
-    p->after = (char *)malloc(sizeof(char) * strlen($3));
-    memset(p->after, 0, strlen($3));
-    memcpy(p->after, $3, strlen($3));
+    add_phase_attribute(p, T_AFTER, $3);
     add_phase((honeycomb_config*)config, p);
   }
   ;
@@ -130,7 +116,7 @@ hook:
 attr:
   RESERVED ':' line              {
     debug(DEBUG_LEVEL, 4, "Found reserved: %d : %s\n", $1, $3);
-    add_attribute((honeycomb_config*)config, $1, $3);
+    add_config_attribute((honeycomb_config*)config, $1, $3);
     // free($3);
   }
   | RESERVED ':' NULLABLE     {

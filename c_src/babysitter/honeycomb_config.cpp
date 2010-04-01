@@ -50,7 +50,7 @@ honeycomb_config *parse_config_file(std::string conf_file) {
   honeycomb_config *config = NULL;
   a_new_honeycomb_config_object(&config);
   // Set the filepath on the config
-  add_attribute(config, T_FILEPATH, (char*)conf_file.c_str());
+  add_config_attribute(config, T_FILEPATH, (char*)conf_file.c_str());
   
 	// parse through the input until there is no more:
   yydebug = 0;

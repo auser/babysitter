@@ -83,7 +83,7 @@ char *collect_to_period(char *str) {
 // create a new config
 void a_new_honeycomb_config_object(honeycomb_config **ptr)
 {
-  honeycomb_config *c = (honeycomb_config *) malloc(sizeof(honeycomb_config));
+  honeycomb_config *c = (honeycomb_config *) calloc(1, sizeof(honeycomb_config));
   
   if ( !c ) {
     perror("Could not allocate a new honeycomb_config object. Out of memory\n");
@@ -116,7 +116,7 @@ void a_new_honeycomb_config_object(honeycomb_config **ptr)
 // Create a new phase
 phase_t* new_phase(phase_type t) {
   phase_t *p;
-  p = (phase_t*)malloc(sizeof(phase_t));
+  p = (phase_t*) calloc(1, sizeof(phase_t));
   if (p) {
     p->type = t;
     p->before = NULL;
@@ -164,7 +164,7 @@ int add_phase(honeycomb_config *c, phase_t *p) {
   phase_t *existing_phase;
   if ((existing_phase = find_phase(c, p->type, 0))) return modify_phase(c, p);
   int n = c->num_phases + 1;
-  phase_t **nphases = (phase_t **)malloc(sizeof(phase_t) * n);
+  phase_t **nphases = (phase_t **) calloc(n, sizeof(phase_t));
   
   if (!nphases) {
     fprintf(stderr, "Couldn't add phase: '%d', no memory available\n", p->type);
@@ -185,7 +185,7 @@ int add_phase(honeycomb_config *c, phase_t *p) {
 
 int malloc_and_set_attribute(char **ptr, char *value)
 {
-  char *obj = (char *) malloc (sizeof(char) * strlen(value) + 1);
+  char *obj = (char *) calloc (sizeof(char), strlen(value) + 1);
   
   if (!obj) {
     perror("malloc_and_set_attribute");
@@ -200,7 +200,7 @@ int malloc_and_set_attribute(char **ptr, char *value)
 // Add an attribute to the config
 // To add another, add it here, add it to the type and specify it in the
 // honeycomb_config struct
-int add_attribute(honeycomb_config *c, attr_type t, char *value)
+int add_config_attribute(honeycomb_config *c, attr_type t, char *value)
 {
   switch (t) {
     case T_FILEPATH:
@@ -236,6 +236,19 @@ int add_attribute(honeycomb_config *c, attr_type t, char *value)
     default:
       fprintf(stderr, "Unknown attribute: %s = %s on config\n", attribute_type_to_string(t), value);
       return -1;
+  }
+  return 0;
+}
+
+int add_phase_attribute(phase_t *p, phase_attribute attr, char *value)
+{
+  switch (attr) {
+    case T_BEFORE: malloc_and_set_attribute(&p->before, value); break;
+    case T_COMMAND: malloc_and_set_attribute(&p->command, value); break;
+    case T_AFTER: malloc_and_set_attribute(&p->after, value); break;
+    default:
+    return -1;
+    break;
   }
   return 0;
 }

@@ -32,16 +32,15 @@ TEST(HCSupport, initialization)
   STRCMP_EQUAL(NULL, config->stdout);
 }
 
-TEST(HCSupport, add_attribute)
+TEST(HCSupport, add_config_attribute)
 {
   STRCMP_EQUAL(NULL, config->filepath);
-  add_attribute(config, T_FILEPATH, (char*)"./a_file");
+  add_config_attribute(config, T_FILEPATH, (char*)"./a_file");
   STRCMP_EQUAL((char*)"./a_file", config->filepath);
   
   STRCMP_EQUAL(NULL, config->stdout);
-  add_attribute(config, T_STDOUT, (char*)">/dev/null");
+  add_config_attribute(config, T_STDOUT, (char*)">/dev/null");
   STRCMP_EQUAL((char*)">/dev/null", config->stdout);
-  
 }
 
 TEST(HCSupport, phase_type_to_string)
@@ -50,6 +49,13 @@ TEST(HCSupport, phase_type_to_string)
   STRCMP_EQUAL(phase_type_to_string(T_START), "start");
   STRCMP_EQUAL(phase_type_to_string(T_MOUNT), "mount");
   STRCMP_EQUAL(phase_type_to_string(T_STOP), "stop");
+}
+
+TEST(HCSupport, add_phase_attribute)
+{
+  STRCMP_EQUAL(NULL, phase->before);
+  add_phase_attribute(phase, T_BEFORE, (char*)"do something before");
+  STRCMP_EQUAL("do something before", phase->before);
 }
 
 TEST(HCSupport, attribute_type_to_string)

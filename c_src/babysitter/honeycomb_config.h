@@ -47,6 +47,12 @@ typedef enum _attr_type_ {
   T_ROOT_DIR
 } attr_type;
 
+typedef enum _phase_attribute_ {
+  T_BEFORE,
+  T_COMMAND,
+  T_AFTER
+} phase_attribute;
+
 typedef struct _phase_ {
   phase_type type;
   char *before;
