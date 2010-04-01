@@ -121,8 +121,9 @@ OBJ = $(call src_to_o,$(SRC))
 STUFF_TO_CLEAN += $(OBJ)
 
 LEX_SRC  = $(foreach dir, $(CONFIG_DIRS), $(wildcard $(CONFIG_DIRS)/*.l))
-LEX_OBJ  = $(foreach src, $(LEX_SRC), $(subst .l,.tab.o,$(src)))
-CONFIG_SRC= $(LEX_OBJ)
+LEX_OBJ  = $(foreach src, $(LEX_SRC), $(subst .l,.lex.o,$(src)))
+YACC_OBJ = $(foreach src, $(LEX_SRC), $(subst .l,.tab.o,$(src)))
+CONFIG_OBJ= $(LEX_OBJ) $(YACC_OBJ)
 
 STUFF_TO_CLEAN += $(CONFIG_DIRS)/y.tab.c $(CONFIG_DIRS)/y.tab.h $(CONFIG_DIRS)/y.tab.o
 
@@ -138,7 +139,7 @@ MOCKS_SRC = $(call get_src_from_dir_list, $(MOCKS_SRC_DIRS))
 MOCKS_OBJS = $(call src_to_o,$(MOCKS_SRC))
 STUFF_TO_CLEAN += $(MOCKS_OBJS)
 
-ALL_SRC = $(SRC) $(CONFIG_SRC) $(TEST_SRC) $(MOCKS_SRC)
+ALL_SRC = $(SRC) $(CONFIG_OBJ) $(TEST_SRC) $(MOCKS_SRC)
 
 #Test coverage with gcov
 GCOV_OUTPUT = gcov_output.txt
@@ -185,13 +186,13 @@ all: $(ALL_SRC) $(EXECUTABLE_SRC) $(TEST_TARGET)
 .PHONY: all_no_tests
 all_no_tests: $(TEST_TARGET)
 	
-$(TEST_TARGET): $(OBJ) $(CONFIG_SRC) $(TEST_OBJS) $(MOCKS_OBJS)  $(PRODUCTION_CODE_START) $(TARGET_LIB) $(USER_LIBS) $(PRODUCTION_CODE_END) $(CPPUTEST_LIB) $(STDLIB_CODE_START) 
+$(TEST_TARGET): $(OBJ) $(CONFIG_OBJ) $(TEST_OBJS) $(MOCKS_OBJS)  $(PRODUCTION_CODE_START) $(TARGET_LIB) $(USER_LIBS) $(PRODUCTION_CODE_END) $(CPPUTEST_LIB) $(STDLIB_CODE_START) 
 	$(SILENCE)echo Linking $@
 	$(SILENCE)$(CXX) -o $@ $^ $(LDFLAGS) $(LD_LIBRARIES)
 	
-$(EXECUTABLE_SRC): $(OBJ) $(CONFIG_SRC)
+$(EXECUTABLE_SRC): $(OBJ) $(CONFIG_OBJ)
 	$(SILENCE)echo "Compiling executable $@"
-	$(SILENCE)$(CXX) $@ -o $(OUTPUT_DIR)/$(subst .c,,$(subst .cpp,,$@)) $(CPPFLAGS) $(OBJ) $(CONFIG_SRC) $(LDFLAGS) $(LD_LIBRARIES)
+	$(SILENCE)$(CXX) $@ -o $(OUTPUT_DIR)/$(subst .c,,$(subst .cpp,,$@)) $(CPPFLAGS) $(OBJ) $(CONFIG_OBJ) $(LDFLAGS) $(LD_LIBRARIES)
 
 test: $(TEST_TARGET)
 	$(RUN_TEST_TARGET) | tee $(TEST_OUTPUT)
@@ -209,13 +210,14 @@ vtest: $(TEST_TARGET)
 	@echo compiling $(notdir $<)
 	$(SILENCE)$(COMPILE.c) $(OUTPUT_OPTION) $<
 
-%.tab.o: %.l
+.PHONY: %.lex.o
+%.lex.o: %.l
 	$(SILENCE)echo "Compiling lex/yacc pair $<"
 	$(SILENCE)lex -o $(dir $<)lex.yy.c $<
 	$(SILENCE)yacc $(YACCFLAGS) -o $(dir $<)y.tab.c $(subst .l,.y,$<)
-	$(SILENCE)$(CC) -c -o $(LEX_OBJ) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)lex.yy.c
-	$(SILENCE)$(CC) -c -o $(subst .l,.tab.o,$<) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)y.tab.c
-	$(SILENCE)rm $(dir $<)lex.yy.c
+	$(CC) -c -o $(LEX_OBJ) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)lex.yy.c
+	$(CC) -c -o $(subst .l,.tab.o,$<) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)y.tab.c
+	$(SILENCE)rm $(dir $<)lex.yy.c $(dir $<)y.tab.c $(dir $<)y.tab.h
 
 .PHONY: clean
 clean:
