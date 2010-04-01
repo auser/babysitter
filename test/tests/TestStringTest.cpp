@@ -44,3 +44,11 @@ TEST(StringTest, TestCommandify)
   cmd = commandify(cargc, (const char**) cargv);
   STRCMP_EQUAL(cmd, "/bin/bash -c ls -l /var/babysitter");
 }
+
+TEST(StringTest, TestChomp)
+{
+  STRCMP_EQUAL(chomp((char*)"hello world     "), "hello world");
+  STRCMP_EQUAL(chomp((char*)" hello world"), "hello world");
+  STRCMP_EQUAL(chomp((char*)" hello world "), "hello world");
+  STRCMP_EQUAL(chomp((char*)"hello   world "), "hello   world");
+}
