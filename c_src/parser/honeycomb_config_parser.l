@@ -59,8 +59,6 @@ ANYTHING  (.*)
   debug(DEBUG_LEVEL, 3, "next phase: %s\n", yytext);
   
   yylval.stype = (char *) calloc(sizeof(char), strlen(yytext));
-  // memset(yylval.stype, 0, strlen(yytext)); 
-  // memcpy(yylval.stype, yytext, strlen(yytext));
   strncpy(yylval.stype, yytext, strlen(yytext));
 
   return KEYWORD;

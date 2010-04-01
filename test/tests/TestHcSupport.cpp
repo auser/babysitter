@@ -56,6 +56,10 @@ TEST(HCSupport, add_phase_attribute)
   STRCMP_EQUAL(NULL, phase->before);
   add_phase_attribute(phase, T_BEFORE, (char*)"do something before");
   STRCMP_EQUAL("do something before", phase->before);
+  STRCMP_EQUAL(NULL, phase->after);
+  STRCMP_EQUAL(NULL, phase->command);
+  add_phase_attribute(phase, T_COMMAND, (char*)"a serious command");
+  STRCMP_EQUAL("a serious command", phase->command);
 }
 
 TEST(HCSupport, attribute_type_to_string)
