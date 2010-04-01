@@ -34,11 +34,14 @@ TEST(HoneycombConfig, parse_config_dir)
   LONGS_EQUAL(2, known_configs.size());
   ConfigMapT::iterator it;
   it = known_configs.find("rack");
-  honeycomb_config *rack = it->second;
+  std::string name = it->first;
+  STRCMP_EQUAL(name.c_str(), (char*)"rack");
   
+  honeycomb_config *rack = it->second;
   STRCMP_EQUAL("$STORAGE_DIR/$APP_NAME/$BEE_SHA.tgz", rack->image);
   STRCMP_EQUAL("../test/fixtures/configs/rack.conf", rack->filepath);
   STRCMP_EQUAL("ruby /usr/bin/irb /usr/bin/gem thin uuidgen", rack->executables);
   
   LONGS_EQUAL(6, rack->num_phases);
 }
+
