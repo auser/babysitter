@@ -50,8 +50,8 @@ ifeq "$(CPPUTEST_HOME)" ""
 endif
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
-CFLAGS = -DUT_MALLOC_OVERRIDES_ENABLED -Dmalloc=cpputest_malloc -Dfree=cpputest_free
-CPPFLAGS += @CPPFLAGS@ -DUT_MALLOC_OVERRIDES_ENABLED
+CFLAGS = @CFLAGS@
+CPPFLAGS += @CPPFLAGS@
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
 CFLAGS += -Dmalloc=cpputest_malloc -Dfree=cpputest_free
 CPPFLAGS += -Wall

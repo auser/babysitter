@@ -1,16 +1,17 @@
 #ifndef BABYSITTER_TYPES_H
 #define BABYSITTER_TYPES_H
 
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
-
 #ifndef BUF_SIZE
 #define BUF_SIZE 1024
 #endif
 
 #ifdef __cplusplus
 
+#include <stdio.h>
+#include <string.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
 #include <string>
 #include <map>
 #include <set>
