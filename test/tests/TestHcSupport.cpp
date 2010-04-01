@@ -5,7 +5,7 @@
 
 #include <CppUTest/TestHarness.h>
 
-TEST_GROUP(HoneycombConfig)
+TEST_GROUP(HCSupport)
 {
   honeycomb_config* config;
   phase_t *phase;
@@ -22,7 +22,7 @@ TEST_GROUP(HoneycombConfig)
   }
 };
 
-TEST(HoneycombConfig, initialization)
+TEST(HCSupport, initialization)
 {
   LONGS_EQUAL(0, config->num_phases);
   STRCMP_EQUAL(NULL, config->app_type);
@@ -32,7 +32,7 @@ TEST(HoneycombConfig, initialization)
   STRCMP_EQUAL(NULL, config->stdout);
 }
 
-TEST(HoneycombConfig, add_attribute)
+TEST(HCSupport, add_attribute)
 {
   STRCMP_EQUAL(NULL, config->filepath);
   add_attribute(config, T_FILEPATH, (char*)"./a_file");
@@ -41,9 +41,10 @@ TEST(HoneycombConfig, add_attribute)
   STRCMP_EQUAL(NULL, config->stdout);
   add_attribute(config, T_STDOUT, (char*)">/dev/null");
   STRCMP_EQUAL((char*)">/dev/null", config->stdout);
+  
 }
 
-TEST(HoneycombConfig, phase_type_to_string)
+TEST(HCSupport, phase_type_to_string)
 {
   STRCMP_EQUAL(phase_type_to_string(T_BUNDLE), "bundle");
   STRCMP_EQUAL(phase_type_to_string(T_START), "start");
@@ -51,25 +52,25 @@ TEST(HoneycombConfig, phase_type_to_string)
   STRCMP_EQUAL(phase_type_to_string(T_STOP), "stop");
 }
 
-TEST(HoneycombConfig, attribute_type_to_string)
+TEST(HCSupport, attribute_type_to_string)
 {
   STRCMP_EQUAL(attribute_type_to_string(T_STDOUT), "stdout");
 }
 
-TEST(HoneycombConfig, str_to_phase_type)
+TEST(HCSupport, str_to_phase_type)
 {
   LONGS_EQUAL(str_to_phase_type((char*)"bundle"), T_BUNDLE);
   LONGS_EQUAL(str_to_phase_type((char*)"milk"), T_UNKNOWN);
 }
 
-TEST(HoneycombConfig, collect_to_period)
+TEST(HCSupport, collect_to_period)
 {
   STRCMP_EQUAL(collect_to_period((char*)"bundle.before"), "bundle");
   STRCMP_EQUAL(collect_to_period((char*)"bundle"), "bundle");
   STRCMP_EQUAL(collect_to_period((char*)""), "");
 }
 
-TEST(HoneycombConfig, new_phase)
+TEST(HCSupport, new_phase)
 {
   STRCMP_EQUAL(NULL, phase->before);
   STRCMP_EQUAL(NULL, phase->command);
