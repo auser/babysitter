@@ -65,7 +65,7 @@ const char *parse_sha_from_git_directory(std::string root_directory)
   
   FILE *fd = fopen(head_loc.c_str(), "r");
 	if (!fd) {
-    fprintf(stderr, "Could not open the file: '%s'\nCheck the permissions and try again\n", head_loc.c_str());
+    // fperror("Could not open the file: '%s'\nCheck the permissions and try again\n", head_loc.c_str());
 		return NULL;
 	}
 	
@@ -79,7 +79,7 @@ const char *parse_sha_from_git_directory(std::string root_directory)
   std::string sha_loc = git_dir + "/" + file_loc;
   fd = fopen(sha_loc.c_str(), "r");
 	if (!fd) {
-    fprintf(stderr, "Could not open the file: '%s'\nCheck the permissions and try again\n", sha_loc.c_str());
+    // fprintf(stderr, "Could not open the file: '%s'\nCheck the permissions and try again\n", sha_loc.c_str());
 		return NULL;
 	}
 	
