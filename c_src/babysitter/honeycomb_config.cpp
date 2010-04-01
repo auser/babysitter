@@ -36,7 +36,7 @@ honeycomb_config *parse_config_file(std::string conf_file) {
 		return NULL;
 	}
 	  
-  current_parsed_file = (char *) calloc(sizeof(char), strlen(filename) + 1);
+  current_parsed_file = (char *) calloc(sizeof(char), strlen(filename));
   if ( !current_parsed_file ) {
     perror("Could not allocate a new char. Out of memory\n");
     exit(-1);
@@ -55,6 +55,8 @@ honeycomb_config *parse_config_file(std::string conf_file) {
 	// parse through the input until there is no more:
   yydebug = 0;
   yyparse((void *) config);
+  
+  free(current_parsed_file);
   
   return config;
 }
@@ -94,7 +96,6 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
           
           std::string str_name (name);
           std::string file = (directory + "/" + dir->d_name);
-          printf("parse_config_file: %s\n", file.c_str());
           known_configs[str_name] = parse_config_file(file);
         }
       }
