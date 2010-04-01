@@ -52,7 +52,7 @@ int argify(const char *line, char ***argv_ptr)
   if (argc == 0)
       return -1;
   argv = (char **)malloc (sizeof (char *) * argc);
-  if (! argv) return -1;
+  if (!argv) return -1;
   if (copy_args (line, argc, argv) < 0) return -1;
   *argv_ptr = argv;
   

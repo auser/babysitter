@@ -32,13 +32,13 @@ std::string sha;                            // The sha
 std::string name;                           // Name
 std::string scm_url;                        // The scm url
 std::string image;                          // The image to mount
+std::string usr_action_str;                 // Used for error printing
+std::string app_type;                       // Application type
 string_set  execs;                          // Executables to add
 string_set  files;                          // Files to add
 string_set  dirs;                           // Dirs to add
 phase_type  action;
 int         port;                           // Port to run
-char        app_type[BUF_SIZE];             // App type defaults to rack
-char        usr_action_str[BUF_SIZE];       // Used for error printing
 
 ConfigMapT  known_configs;                  // Map containing all the known application configurations (in /etc/beehive/apps)
 
@@ -175,108 +175,128 @@ int usage(int c, bool detailed)
   return c;
 }
 
+std::string cli_argument_required(int argc, char *argv[], const char* msg) {
+  if (argv[2] == NULL) {
+    fprintf(stderr, "A second argument is required for argument %s\n", msg);
+    usage(1);
+  }
+  std::string ret(argv[2]);
+  argc--; argv++;
+  return ret;
+}
 /**
  * Relatively inefficient command-line parsing, but... 
  * this isn't speed-critical, so it doesn't matter
 **/
 int parse_the_command_line(int argc, char *argv[], int c)
 {
-  char *opt;
+  std::string opt;
+  std::string arg;
   while (argc > 1) {
     opt = argv[1];
-    handle_command_line(opt, argv[2]);
+    handle_command_line((char*)opt.c_str(), argv[2]);
     // OPTIONS
-    if (!strncmp(opt, "--debug", 7) || !strncmp(opt, "-D", 2)) {
-      if (argv[2] == NULL) {
-        fprintf(stderr, "You must pass a level with the debug flag\n");
-        usage(1);
-      }
+    if (opt == "--debug" || opt == "-D") {
+      arg = cli_argument_required(argc, argv, "debug. Must be an integer.");
       char * pEnd;
-      dbg = strtol(argv[2], &pEnd, 10);
-      argc--; argv++;
-    } else if (!strncmp(opt, "--help", 6) || !strncmp(opt, "-h", 2)) {
-      if(argc - 1 > 1 && argv[2] != NULL && (!strncmp(argv[2], "d", 1) || !strncmp(argv[2], "detailed", 8)))
-        usage(c, true);
-      else 
-        usage(c, false);
-      return 1;
-    } else if (!strncmp(opt, "--name", 6) || !strncmp(opt, "-n", 2)) {
-      name = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--port", 6) || !strncmp(opt, "-p", 2)) {
-      port = atoi(argv[2]);
-      argc--; argv++;
-    } else if (!strncmp(opt, "--run_dir", 9) || !strncmp(opt, "-r", 2)) {
-      run_dir = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
-      memset(app_type, 0, BUF_SIZE);
-      strncpy(app_type, argv[2], strlen(argv[2]));
-      argc--; argv++;
-    } else if (!strncmp(opt, "--image", 7) || !strncmp(opt, "-i", 2)) {
-      image = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--storage_dir", 10) || !strncmp(opt, "-b", 2)) {
-      storage_dir = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--sha", 6) || !strncmp(opt, "-s", 2)) {
-      sha = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--exec", 6) || !strncmp(opt, "-e", 2)) {
-      execs.insert(argv[2]);
-      argc--; argv++;      
-    } else if (!strncmp(opt, "--file", 6) || !strncmp(opt, "-f", 2)) {
-      files.insert(argv[2]);
-      argc--; argv++;
-    } else if (!strncmp(opt, "--dir", 6) || !strncmp(opt, "-d", 2)) {
-      dirs.insert(argv[2]);
-      argc--; argv++;
-    } else if (!strncmp(opt, "--scm_url", 9) || !strncmp(opt, "-m", 2)) {
-      scm_url = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--config", 8) || !strncmp(opt, "-c", 2)) {
-      config_file_dir = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--root", 6) || !strncmp(opt, "-o", 2)) {
-      root_dir = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--working_dir", 13) || !strncmp(opt, "-w", 2)) {
-      working_dir = argv[2];
-      argc--; argv++;
-    } else if (!strncmp(opt, "--user", 6) || !strncmp(opt, "-u", 2)) {
-      struct passwd *pw;
-      if ((pw = getpwnam(argv[2])) == 0) {
-        to_set_user_id = (uid_t)pw->pw_uid;
-      } else {
-        fprintf(stderr, "Could not get name for user: %s: %s\n", argv[2], ::strerror(errno));
-      }
-      argc--; argv++;
-    // ACTIONS
-    } else if (!strncmp(opt, "bundle", 6)) {
-      action = T_BUNDLE;
-    } else if (!strncmp(opt, "start", 5)) {
-      action = T_START;
-    } else if (!strncmp(opt, "stop", 4)) {
-      action = T_STOP;
-    } else if (!strncmp(opt, "mount", 5)) {
-      action = T_MOUNT;
-    } else if (!strncmp(opt, "unmount", 7)) {
-      action = T_UNMOUNT;
-    } else if (!strncmp(opt, "cleanup", 7)) {
-      action = T_CLEANUP;
-    } else {
-      if(action == T_EMPTY)
-      {
-        action = T_UNKNOWN;
-        memset(usr_action_str, 0, BUF_SIZE);
-        strncpy(usr_action_str, opt, strlen(opt));
-      } else {
-        fprintf(stderr, "Unknown switch: %s. Try passing --help for help options\n", opt);
-        usage(1);
-      }
+      dbg = strtol(arg.c_str(), &pEnd, 10);
+    } else if (opt == "--port" || opt == "-p") {
+      arg = cli_argument_required(argc, argv, "port");
+      port = atoi(arg.c_str());
+    } else if (opt == "--name" || opt == "-n") {
+      name = cli_argument_required(argc, argv, "name");
     }
     argc--; argv++;
   }
+  //   if (!strncmp(opt, "--debug", 7) || !strncmp(opt, "-D", 2)) {
+  //     if (argv[2] == NULL) {
+  //       fprintf(stderr, "You must pass a level with the debug flag\n");
+  //       usage(1);
+  //     }
+  //     char * pEnd;
+  //     dbg = strtol(argv[2], &pEnd, 10);
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--help", 6) || !strncmp(opt, "-h", 2)) {
+  //     if(argc - 1 > 1 && argv[2] != NULL && (!strncmp(argv[2], "d", 1) || !strncmp(argv[2], "detailed", 8)))
+  //       usage(c, true);
+  //     else 
+  //       usage(c, false);
+  //     return 1;
+  //   } else if (!strncmp(opt, "--name", 6) || !strncmp(opt, "-n", 2)) {
+  //     name = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--port", 6) || !strncmp(opt, "-p", 2)) {
+  //     port = atoi(argv[2]);
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--run_dir", 9) || !strncmp(opt, "-r", 2)) {
+  //     run_dir = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--type", 6) || !strncmp(opt, "-t", 2)) {
+  //     app_type = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--image", 7) || !strncmp(opt, "-i", 2)) {
+  //     image = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--storage_dir", 10) || !strncmp(opt, "-b", 2)) {
+  //     storage_dir = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--sha", 6) || !strncmp(opt, "-s", 2)) {
+  //     sha = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--exec", 6) || !strncmp(opt, "-e", 2)) {
+  //     execs.insert(argv[2]);
+  //     argc--; argv++;      
+  //   } else if (!strncmp(opt, "--file", 6) || !strncmp(opt, "-f", 2)) {
+  //     files.insert(argv[2]);
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--dir", 6) || !strncmp(opt, "-d", 2)) {
+  //     dirs.insert(argv[2]);
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--scm_url", 9) || !strncmp(opt, "-m", 2)) {
+  //     scm_url = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--config", 8) || !strncmp(opt, "-c", 2)) {
+  //     config_file_dir = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--root", 6) || !strncmp(opt, "-o", 2)) {
+  //     root_dir = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--working_dir", 13) || !strncmp(opt, "-w", 2)) {
+  //     working_dir = argv[2];
+  //     argc--; argv++;
+  //   } else if (!strncmp(opt, "--user", 6) || !strncmp(opt, "-u", 2)) {
+  //     struct passwd *pw;
+  //     if ((pw = getpwnam(argv[2])) == 0) {
+  //       to_set_user_id = (uid_t)pw->pw_uid;
+  //     } else {
+  //       fprintf(stderr, "Could not get name for user: %s: %s\n", argv[2], ::strerror(errno));
+  //     }
+  //     argc--; argv++;
+  //   // ACTIONS
+  //   } else if (!strncmp(opt, "bundle", 6)) {
+  //     action = T_BUNDLE;
+  //   } else if (!strncmp(opt, "start", 5)) {
+  //     action = T_START;
+  //   } else if (!strncmp(opt, "stop", 4)) {
+  //     action = T_STOP;
+  //   } else if (!strncmp(opt, "mount", 5)) {
+  //     action = T_MOUNT;
+  //   } else if (!strncmp(opt, "unmount", 7)) {
+  //     action = T_UNMOUNT;
+  //   } else if (!strncmp(opt, "cleanup", 7)) {
+  //     action = T_CLEANUP;
+  //   } else {
+  //     if(action == T_EMPTY)
+  //     {
+  //       action = T_UNKNOWN;
+  //       usr_action_str = opt;
+  //     } else {
+  //       fprintf(stderr, "Unknown switch: %s. Try passing --help for help options\n", opt);
+  //       usage(1);
+  //     }
+  //   }
+  //   argc--; argv++;
+  // }
   return 0;
 }
 
@@ -288,7 +308,7 @@ int parse_the_command_line_into_honeycomb_config(int argc, char **argv, Honeycom
   parse_config_dir(config_file_dir, known_configs);
   
   debug(dbg, 1, "--- running action: %s ---\n", action_str);
-  debug(dbg, 1, "\tapp type: %s\n", app_type);
+  debug(dbg, 1, "\tapp type: %s\n", app_type.c_str());
   debug(dbg, 1, "\troot dir: %s\n", root_dir.c_str());
   debug(dbg, 1, "\tsha: %s\n", sha.c_str());
   debug(dbg, 1, "\tconfig dir: %s\n", config_file_dir.c_str());
@@ -323,17 +343,17 @@ int parse_the_command_line_into_honeycomb_config(int argc, char **argv, Honeycom
   }
   
   // Honeycomb
-  if (known_configs.count(app_type) < 1) {
-    fprintf(stderr, "There is no config file set for this application type.\nPlease set the application type properly, or consult the administrator to support the application type: %s\n", app_type);
+  if (known_configs.count(app_type.c_str()) < 1) {
+    fprintf(stderr, "There is no config file set for this application type.\nPlease set the application type properly, or consult the administrator to support the application type: %s\n", app_type.c_str());
     usage(1);
   }
-  debug(dbg, 2, "\tconfig for %s app found\n", app_type);
+  debug(dbg, 2, "\tconfig for %s app found\n", app_type.c_str());
   
   ConfigMapT::iterator it;
-  it = known_configs.find(app_type);
+  it = known_configs.find(app_type.c_str());
   honeycomb_config *c = it->second;
   comb->set_config(c);
-  comb->set_app_type(app_type);
+  comb->set_app_type(app_type.c_str());
   
   for(string_set::iterator it=files.begin(); it != files.end(); it++)   comb->add_file(it->c_str());
   for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++)     comb->add_dir(it->c_str());
