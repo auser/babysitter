@@ -19,6 +19,9 @@ erl:
 c:
 	(cd c_src;$(MAKE))
 
+exec:
+	(cd c_src;$(MAKE) exec)
+	
 clean:
 	(cd c_src;$(MAKE) clean)
 	(cd erl;$(MAKE) clean)

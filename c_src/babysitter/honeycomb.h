@@ -12,6 +12,10 @@
  **/
 /*---------------------------- Includes ------------------------------------*/
 // STL Includes
+#include <stdlib.h>
+#include <cstdlib>
+#include <new>
+#include <iostream>
 #include <list>
 #include <string>
 #include <string.h>

@@ -61,10 +61,10 @@ CPPFLAGS += -g
 SRC_DIRS = \
 	utils \
 	erl \
-	babysitter \
-	../test
+	babysitter
 
 TEST_SRC_DIRS = \
+	../test \
 	../test/tests \
 	../test/mocks
 

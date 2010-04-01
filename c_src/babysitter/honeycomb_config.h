@@ -90,6 +90,8 @@ typedef struct _honeycomb_config_ {
 // because we compile in c and c++ while including this file
 // we have to separate out the available functions. This is done for
 // compatability purposes. 
+#include <cstdlib>
+#include <stdlib.h>
 #include "honeycomb.h"
 
 typedef std::map <std::string, honeycomb_config*> ConfigMapT;
