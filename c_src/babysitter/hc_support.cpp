@@ -182,16 +182,16 @@ int add_phase(honeycomb_config *c, phase_t *p) {
   return 0;
 }
 
-int malloc_and_set_attribute(char **obj, char *value)
+int malloc_and_set_attribute(char **ptr, char *value)
 {
-  obj = (char **) calloc(sizeof(char), strlen(value));
+  char *obj = (char *) malloc (sizeof(char) * strlen(value) + 1);
+  
   if (!obj) {
     perror("malloc_and_set_attribute");
     return -1;
   }
-  printf("before memcpy\n");
-  memcpy(&obj, value, strlen(value));
-  printf("obj:%s\n", *obj);
+  strncpy(obj, value, strlen(value));
+  *ptr = obj;
   return 0;
 }
 
