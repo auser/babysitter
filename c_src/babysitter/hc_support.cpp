@@ -82,9 +82,9 @@ char *collect_to_period(char *str) {
 
 // create a new config
 void a_new_honeycomb_config_object(honeycomb_config **ptr)
-{  
+{
   honeycomb_config *c = (honeycomb_config *) malloc(sizeof(honeycomb_config));
-
+  
   if ( !c ) {
     perror("Could not allocate a new honeycomb_config object. Out of memory\n");
     return;

@@ -25,10 +25,10 @@ TEST_GROUP(HoneycombConfig)
 
 TEST(HoneycombConfig, parse_config_dir_fails_on_non_existant_dir)
 {
-  LONGS_EQUAL(parse_config_dir("/non/existant/directory", known_configs), 1);
+  LONGS_EQUAL(1, parse_config_dir("/non/existant/directory", known_configs));
 }
 
 TEST(HoneycombConfig, parse_config_dir)
 {
-  LONGS_EQUAL(parse_config_dir("../test/fixtures/configs", known_configs), 1);
+  LONGS_EQUAL(0, parse_config_dir("../test/fixtures/configs", known_configs));
 }

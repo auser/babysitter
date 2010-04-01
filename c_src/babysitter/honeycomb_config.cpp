@@ -35,19 +35,19 @@ honeycomb_config *parse_config_file(std::string conf_file) {
     fprintf(stderr, "Could not open the file: '%s'\nCheck the permissions and try again\n", filename);
 		return NULL;
 	}
-	
-  if ( (current_parsed_file = (char *) malloc(sizeof(char) * strlen(filename))) == NULL ) {
-    fprintf(stderr, "Could not allocate a new char. Out of memory\n");
+	  
+  current_parsed_file = (char *) calloc(sizeof(char), strlen(filename) + 1);
+  if ( !current_parsed_file ) {
+    perror("Could not allocate a new char. Out of memory\n");
     exit(-1);
   }
-  memset(current_parsed_file, 0, BUF_SIZE);
-  memcpy(current_parsed_file, conf_file.c_str(), conf_file.length());
+  strncpy(current_parsed_file, filename, strlen(filename));
 	// set lex to read from it instead of defaulting to STDIN:
 	yyin = fd;
   yylineno = 0;
 	
 	// Clear out the config struct for now
-  honeycomb_config *config;
+  honeycomb_config *config = NULL;
   a_new_honeycomb_config_object(&config);
   // Set the filepath on the config
   add_attribute(config, T_FILEPATH, (char*)conf_file.c_str());
@@ -94,6 +94,7 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
           
           std::string str_name (name);
           std::string file = (directory + "/" + dir->d_name);
+          printf("parse_config_file: %s\n", file.c_str());
           known_configs[str_name] = parse_config_file(file);
         }
       }

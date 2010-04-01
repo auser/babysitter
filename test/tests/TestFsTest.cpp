@@ -11,5 +11,5 @@ TEST_GROUP(FileSystem)
 TEST(FileSystem, TestingCountArgs)
 {
   int size = dir_size_r("../test/fixtures/test_dir");
-  LONGS_EQUAL(241, size);
+  LONGS_EQUAL(275, size);
 }
