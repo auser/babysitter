@@ -52,7 +52,7 @@ honeycomb_config *parse_config_file(std::string conf_file) {
   add_attribute(config, T_FILEPATH, (char*)conf_file.c_str());
   
 	// parse through the input until there is no more:
-  yydebug = 1;
+  yydebug = 0;
   yyparse((void *) &config);
   
   return config;

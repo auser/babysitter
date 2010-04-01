@@ -61,13 +61,16 @@ CPPFLAGS += -g
 SRC_DIRS = \
 	utils \
 	erl \
-	babysitter
+	babysitter \
+	../test
 
 TEST_SRC_DIRS = \
 	../test/tests \
 	../test/mocks
 
-INCLUDE_DIRS = \
+INCLUDE_DIRS =\
+  $(CPPUTEST_HOME)/include \
+  $(CPPUTEST_HOME)/include/Platforms/$(CPP_PLATFORM) \
 	./ \
 	../test/mocks \
 	utils \
@@ -180,8 +183,10 @@ STUFF_TO_CLEAN += $(STDLIB_CODE_START) + $(MAP_FILE) + cpputest_*.xml junit_run_
 
 # Targets
 .PHONY: all
-all: $(ALL_SRC) $(EXECUTABLE_SRC) $(TEST_TARGET)
+all: $(ALL_SRC) $(TEST_TARGET)
 	$(RUN_TEST_TARGET)
+
+exec: $(EXECUTABLE_SRC)
 
 .PHONY: all_no_tests
 all_no_tests: $(TEST_TARGET)
@@ -215,8 +220,8 @@ vtest: $(TEST_TARGET)
 	$(SILENCE)echo "Compiling lex/yacc pair $<"
 	$(SILENCE)lex -o $(dir $<)lex.yy.c $<
 	$(SILENCE)yacc $(YACCFLAGS) -o $(dir $<)y.tab.c $(subst .l,.y,$<)
-	$(CC) -c -o $(LEX_OBJ) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)lex.yy.c
-	$(CC) -c -o $(subst .l,.tab.o,$<) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)y.tab.c
+	$(SILENCE)$(CC) -c -o $(LEX_OBJ) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)lex.yy.c
+	$(SILENCE)$(CC) -c -o $(subst .l,.tab.o,$<) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)y.tab.c
 	$(SILENCE)rm $(dir $<)lex.yy.c $(dir $<)y.tab.c $(dir $<)y.tab.h
 
 .PHONY: clean

@@ -28,7 +28,7 @@ deep_clean: clean
 	rm -rf autom4te.cache config.log config.status build
 
 tests: all
-	(cd test; $(MAKE))
+	(cd c_src; $(MAKE) test)
  
 install: all
 	(cd c_src; $(MAKE) install)
