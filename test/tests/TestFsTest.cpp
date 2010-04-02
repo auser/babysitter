@@ -10,5 +10,6 @@ TEST_GROUP(FileSystem)
 
 TEST(FileSystem, TestingCountArgs)
 {
-  LONGS_EQUAL(0, dir_size_r("./non/existent/dir"));
+  int size = dir_size_r("../test/fixtures/test_dir");
+  LONGS_EQUAL(309, size);
 }
