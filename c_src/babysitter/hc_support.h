@@ -27,7 +27,7 @@ extern "C" {
   char *phase_type_to_string(phase_type t);
   char *attribute_type_to_string(attr_type t);
 
-  phase_type str_to_phase_type(char *str);
+  phase_type str_to_phase_type(const char *str);
   char *collect_to_period(char *str);
   void a_new_honeycomb_config_object(honeycomb_config** c);
   int add_phase(honeycomb_config *c, phase_t *p);

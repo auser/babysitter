@@ -51,7 +51,7 @@ char *attribute_type_to_string(attr_type t) {
   }
 }
 
-phase_type str_to_phase_type(char *str) {
+phase_type str_to_phase_type(const char *str) {
   if      (strncmp(str,"bundle", 6) == 0) return T_BUNDLE;
   else if (strncmp(str,"start", 5) == 0) return T_START;
   else if (strncmp(str,"stop", 4) == 0) return T_STOP;
