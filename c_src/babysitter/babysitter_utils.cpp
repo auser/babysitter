@@ -58,9 +58,9 @@ int babysitter_system_error(int err, const char *fmt, ...)
 
 // Parse sha
 // Pass the root directory of the git repos
-const char *parse_sha_from_git_directory(std::string root_directory)
+const char *parse_sha_from_git_directory(std::string root_directory, std::string git_dir)
 {
-  std::string git_dir = root_directory + "/.git";
+  git_dir = root_directory + "/" + git_dir;
   std::string head_loc = git_dir + "/HEAD";
   
   FILE *fd = fopen(head_loc.c_str(), "r");

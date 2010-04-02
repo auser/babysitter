@@ -10,7 +10,7 @@
 //---
 // Functions
 //---
-const char *parse_sha_from_git_directory(std::string root_directory);
+const char *parse_sha_from_git_directory(std::string root_directory, std::string git_dir = ".git");
 int babysitter_system_error(int err, const char *fmt, ...);
 
 void version(FILE *fp);
