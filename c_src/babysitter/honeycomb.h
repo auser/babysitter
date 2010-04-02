@@ -109,7 +109,7 @@ public:
     new (this) Honeycomb(app_type);
     set_config(c);
   }
-  Honeycomb(std::string app_type) : m_port(80),m_nice(INT_MAX),m_size(0),m_user(-1),m_cenv(NULL),m_scm_url(""),m_debug_level(0) {
+  Honeycomb(std::string app_type) : m_port(8080),m_nice(INT_MAX),m_size(0),m_user(-1),m_group(-1),m_cenv(NULL),m_cenv_c(0),m_debug_level(0) {
     m_root_dir = "/var/beehive";
     m_run_dir = m_root_dir + "/run";
     m_storage_dir = m_root_dir + "/storage";
@@ -121,6 +121,7 @@ public:
     new (this) Honeycomb("rack");
   }
   ~Honeycomb() { 
+    delete [] m_cenv; 
     m_cenv = NULL;
   }
   
@@ -134,7 +135,8 @@ public:
   const char*   name()    const { return m_name.c_str(); }
   int           port()     const { return m_port; }
   int           nice()     const { return m_nice; }
-  char* const*  env()      const { return (char* const*)m_cenv; }
+  char* const*  env();
+  int           env_size() const { return m_cenv_c; }
   string_set    executables() const { return m_executables; }
   string_set    directories() const { return m_dirs; }
   uid_t         user()     const { return m_user; }
@@ -168,11 +170,7 @@ public:
   void set_skel_dir(std::string i) { m_skel_dir = i; }
   
   void set_sha(std::string sha) { m_sha = sha; }
-  void add_env(std::string s) { 
-    m_env.push_back(s); 
-    m_cenv[m_cenv_c++] = s.c_str();
-    m_cenv[m_cenv_c] = NULL;
-  }
+  void add_env(std::string s);
   void add_file(std::string file) { m_files.insert(file); }
   void add_dir(std::string dir) { m_dirs.insert(dir); }
   void add_executable(std::string exec) { m_executables.insert(exec); }

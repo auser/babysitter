@@ -18,7 +18,7 @@ struct CmdInfo {
   bool            m_sigterm;        // <true> if sigterm was issued.
   bool            m_sigkill;        // <true> if sigkill was issued.
 
-  CmdInfo() : m_cmd_pid(-1), m_kill_cmd_pid(-1), m_sigterm(false), m_sigkill(false) {}
+  CmdInfo() : m_cmd_pid(-1), m_kill_cmd_pid(-1), m_deadline(4), m_sigterm(false), m_sigkill(false) {}
   CmdInfo(const CmdInfo& ci) {
     new (this) CmdInfo(ci.cmd(), ci.kill_cmd(), ci.cmd_pid());
   }

@@ -1,47 +1,65 @@
-#include "babysitter_types.h"
 #include "honeycomb.h"
-#include "honeycomb_config.h"
-#include "hc_support.h"
+#include "string_utils.h"
 
 #include <CppUTest/TestHarness.h>
 
-TEST_GROUP(HoneycombConfig)
+TEST_GROUP(Honeycomb)
 {
-  honeycomb_config* config;
-  phase_t *phase;
-  ConfigMapT  known_configs;
-  
   void setup()
   {
-    a_new_honeycomb_config_object(&config);
-    phase = new_phase(T_BUNDLE);
   }
   void teardown()
   {
-    free_config(config);
-    free_phase(phase);
   }
 };
 
-TEST(HoneycombConfig, parse_config_dir_fails_on_non_existant_dir)
+TEST(Honeycomb, initialized_defaults)
 {
-  LONGS_EQUAL(1, parse_config_dir("/non/existant/directory", known_configs));
+  Honeycomb comb;
+  STRCMP_EQUAL("rack", comb.app_type());
+  STRCMP_EQUAL("/var/beehive/working", comb.working_dir());
+  STRCMP_EQUAL("/var/beehive/run", comb.run_dir());
+  STRCMP_EQUAL("/var/beehive/storage", comb.storage_dir());
+  STRCMP_EQUAL("", comb.scm_url());
+  STRCMP_EQUAL("", comb.skel());
+  STRCMP_EQUAL("", comb.sha());
+  STRCMP_EQUAL("", comb.image());
+  STRCMP_EQUAL("", comb.name());
+  
+  LONGS_EQUAL(8080, comb.port());
+  LONGS_EQUAL(INT_MAX, comb.nice());
+  LONGS_EQUAL(-1, (int)comb.user());
+  LONGS_EQUAL(-1, (int)comb.group());
 }
 
-TEST(HoneycombConfig, parse_config_dir)
+TEST(Honeycomb, set_root_dir)
 {
-  LONGS_EQUAL(0, parse_config_dir("../test/fixtures/configs", known_configs));
-  LONGS_EQUAL(2, known_configs.size());
-  ConfigMapT::iterator it;
-  it = known_configs.find("rack");
-  std::string name = it->first;
-  STRCMP_EQUAL(name.c_str(), (char*)"rack");
-  
-  honeycomb_config *rack = it->second;
-  STRCMP_EQUAL("$STORAGE_DIR/$APP_NAME/$BEE_SHA.tgz", rack->image);
-  STRCMP_EQUAL("../test/fixtures/configs/rack.conf", rack->filepath);
-  STRCMP_EQUAL("ruby /usr/bin/irb /usr/bin/gem thin uuidgen", rack->executables);
-  
-  LONGS_EQUAL(5, rack->num_phases);
+  Honeycomb comb;
+  comb.set_root_dir("/var/other/directory");
+  STRCMP_EQUAL("/var/other/directory/working", comb.working_dir());
+  STRCMP_EQUAL("/var/other/directory/run", comb.run_dir());
+  STRCMP_EQUAL("/var/other/directory/storage", comb.storage_dir());
 }
 
+TEST(Honeycomb, set_sha)
+{
+  Honeycomb comb;
+  comb.set_sha("SHASHASHA");
+  STRCMP_EQUAL("SHASHASHA", comb.sha());
+}
+
+TEST(Honeycomb, add_env_count)
+{
+  Honeycomb comb;
+  LONGS_EQUAL(0, comb.env_size());
+  comb.add_env("HAIRS=not nice");
+  LONGS_EQUAL(1, comb.env_size());
+  comb.add_env("BOXES=cartons");
+  LONGS_EQUAL(2, comb.env_size());
+  comb.add_env("PRESIDENTS=alive");
+  LONGS_EQUAL(3, comb.env_size());
+  // char * const *env = comb.env();
+  // while(env != NULL) {
+  //   STRCMP_EQUAL("HAIRS= not nice", env);
+  // }
+}

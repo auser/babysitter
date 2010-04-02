@@ -25,14 +25,16 @@ TEST(BabysitterUtils, parse_the_command_line)
 {
   char **argv = {0};
   
-  int argc = argify("start --name bob_test --port 90010 --type rack --image bob.img", &argv);
+  int argc = argify("start --name bob_test --port 90010 --type rack --image bob.img --run_dir /var/beehive/apps/rack", &argv);
   Honeycomb comb;
   parse_the_command_line_into_honeycomb_config(argc, argv, &comb);
   
-  LONGS_EQUAL(9, argc);
+  LONGS_EQUAL(11, argc);
   LONGS_EQUAL(90010, (int)comb.port());
   STRCMP_EQUAL("bob_test", comb.name());
   STRCMP_EQUAL("rack", comb.app_type());
   STRCMP_EQUAL("bob.img", comb.image());
   STRCMP_EQUAL("/var/beehive/storage", comb.storage_dir());
+  STRCMP_EQUAL("/var/beehive/apps/rack", comb.run_dir());
+  STRCMP_EQUAL("", comb.scm_url());
 }

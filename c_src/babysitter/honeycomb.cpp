@@ -40,6 +40,31 @@ extern void process_died_callback(int _p);
 
 #define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
+void Honeycomb::add_env(std::string s) { 
+  m_env.push_back(s);
+  m_cenv_c++;
+}
+
+/**
+* Get the list of environment variables
+* as a char* const* list
+*
+* Kind of an expensive function and it rebuilds everytime
+**/
+char* const* Honeycomb::env() {
+  delete [] m_cenv;
+  m_cenv = NULL;
+  if ((m_cenv = (const char**) new char* [m_cenv_c+1]) == NULL) {
+    perror("out of memory");
+  } else {
+    int i = 0;
+    for ( std::list<std::string>::iterator it = m_env.begin() ; it != m_env.end(); it++ )
+      m_cenv[i++] = m_env.back().c_str();
+  }
+  m_cenv[m_cenv_c] = NULL;
+  return (char *const*)m_cenv;
+}
+
 std::string Honeycomb::map_char_to_value(std::string f_name) {
   if (f_name == "APP_NAME" && m_name != "") return m_name;
   else if (f_name == "BEE_SHA" && m_sha != "") return m_sha;

@@ -142,23 +142,6 @@ int handle_command_line(char *a, char *b) {
   return 0;
 }
 
-/**
-* Commands
-**/
-int cmd_start(int transId, CmdOptions& co) {
-  pid_t pid = pm_start_child((const char*)co.cmd(), (const char*)co.kill_cmd(), co.cd(), (const char**)co.env(), co.user(), co.nice());
-  if (pid < 0) {
-    fperror("pm_start_child");
-    send_error_str(transId, false, "Couldn't start pid: %s", strerror(errno));
-    return -1;
-  } else {
-    CmdInfo ci(co.cmd(), co.kill_cmd(), pid);
-    children[pid] = ci;
-    send_ok(transId, pid);
-    return 0;
-  }
-}
-
 /*
 
 */
