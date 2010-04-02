@@ -20,7 +20,7 @@
 #include "process_manager.h"
 
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 4
+#define DEBUG_LEVEL 0
 #endif
 
 // Globals

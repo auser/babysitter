@@ -1,5 +1,6 @@
 #include "babysitter_utils.h"
 #include "string_utils.h"
+#include "honeycomb.h"
 
 #include <CppUTest/TestHarness.h>
 
@@ -39,9 +40,10 @@ TEST(BabysitterUtils, parse_the_command_line)
 {
   char **argv = {0};
   
-  int argc = argify("start --name bob_test --port 90010 --type rack", &argv);
-  parse_the_command_line(argc, argv, 2);
+  int argc = argify("start --name bob_test --port 90010 --type rack --image bob.img", &argv);
+  Honeycomb comb;
+  parse_the_command_line_into_honeycomb_config(argc, argv, &comb);
   
-  LONGS_EQUAL(7, argc);
+  LONGS_EQUAL(9, argc);
   LONGS_EQUAL(port, 90010);
 }

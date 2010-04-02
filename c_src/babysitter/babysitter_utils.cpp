@@ -176,7 +176,7 @@ int usage(int c, bool detailed)
 }
 
 const char* cli_argument_required(int& argc, char **argv[], std::string msg) {
-  if (!*argv[2]) {
+  if (!(*argv)[2]) {
     fprintf(stderr, "A second argument is required for argument %s\n", msg.c_str());
     return NULL;
   }
@@ -298,8 +298,9 @@ int parse_the_command_line_into_honeycomb_config(int argc, char **argv, Honeycom
   
   // Honeycomb
   if (known_configs.count(app_type.c_str()) < 1) {
-    fprintf(stderr, "There is no config file set for this application type.\nPlease set the application type properly, or consult the administrator to support the application type: %s\n", app_type.c_str());
-    usage(1);
+    debug(dbg, 1, "There is no config file set for this application type %s.\nPlease set the application type properly, or consult the administrator to support the application type\n", app_type.c_str());
+    // usage(1);
+    return -1;
   }
   debug(dbg, 2, "\tconfig for %s app found\n", app_type.c_str());
   
