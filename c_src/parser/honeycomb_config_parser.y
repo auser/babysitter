@@ -56,12 +56,14 @@ phase:
     phase_t *p = find_or_create_phase((honeycomb_config*)config, $1);
     add_phase_attribute(p, T_COMMAND, $2);
     add_phase((honeycomb_config*)config, p);
+    free($2);
   }
   | phase_decl block        {
     // I think these two can be combined... I hate code duplication
     phase_t *p = find_or_create_phase((honeycomb_config*)config, $1);
     add_phase_attribute(p, T_COMMAND, $2);
     add_phase((honeycomb_config*)config, p);
+    free($2);
   }
   | phase_decl NULLABLE         {
     debug(DEBUG_LEVEL, 3, "Found a nullable phase_decl: %s\n", phase_type_to_string($1));
@@ -85,6 +87,7 @@ hook:
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
     add_phase_attribute(p, T_BEFORE, $3);
     add_phase((honeycomb_config*)config, p);
+    free($1); free($3);
   }
   | BEFORE ':' block        {
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
@@ -93,6 +96,7 @@ hook:
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
     add_phase_attribute(p, T_BEFORE, $3);
     add_phase((honeycomb_config*)config, p);
+    free($1); free($3);
   }
   | AFTER ':' line          {
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
@@ -101,6 +105,7 @@ hook:
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
     add_phase_attribute(p, T_AFTER, $3);
     add_phase((honeycomb_config*)config, p);
+    free($1); free($3);
   }
   | AFTER ':' block         {
     debug(DEBUG_LEVEL, 3, "Found a hook phrase: %s (%s)\n", $3, $1);
@@ -109,6 +114,7 @@ hook:
     phase_t *p = find_or_create_phase((honeycomb_config*)config, t);
     add_phase_attribute(p, T_AFTER, $3);
     add_phase((honeycomb_config*)config, p);
+    free($1); free($3);
   }
   ;
 
@@ -117,7 +123,7 @@ attr:
   RESERVED ':' line              {
     debug(DEBUG_LEVEL, 4, "Found reserved: %d : %s\n", $1, $3);
     add_config_attribute((honeycomb_config*)config, $1, $3);
-    // free($3);
+    free($3);
   }
   | RESERVED ':' NULLABLE     {
     debug(DEBUG_LEVEL, 4, "Found empty attribute\n");

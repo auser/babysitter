@@ -73,6 +73,8 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
   struct dirent *dir;
   const char *conf_ext = ".conf";
   unsigned int conf_len = strlen(conf_ext);
+  std::string str_name;
+  std::string file;
   
   d = opendir( directory.c_str() );
   if( d == NULL ) {
@@ -94,8 +96,8 @@ int parse_config_dir(std::string directory, ConfigMapT &known_configs) {
           char *name = (char *) malloc (sizeof(char) * (len - conf_len));
           memcpy(name, dir->d_name, (len - conf_len));
           
-          std::string str_name (name);
-          std::string file = (directory + "/" + dir->d_name);
+          str_name = name;
+          file = (directory + "/" + dir->d_name);
           known_configs[str_name] = parse_config_file(file);
         }
       }

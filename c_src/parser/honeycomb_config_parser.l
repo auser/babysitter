@@ -18,7 +18,6 @@ char buf[BUF_SIZE];
 char *s;
 int i, len;
 
-
 %}
 /* Keywords */
 KEYWORDS      (bundle|start|stop|mount|unmount|cleanup)
@@ -58,8 +57,9 @@ ANYTHING  (.*)
 ^{KEYWORDS}          {
   debug(DEBUG_LEVEL, 3, "next phase: %s\n", yytext);
   
-  yylval.stype = (char *) calloc(sizeof(char), strlen(yytext));
-  strncpy(yylval.stype, yytext, strlen(yytext));
+  // yylval.stype = (char *) calloc(sizeof(char), strlen(yytext));
+  // strncpy(yylval.stype, yytext, strlen(yytext));
+  yylval.stype = strdup(yytext);
 
   return KEYWORD;
 }

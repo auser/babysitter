@@ -34,4 +34,5 @@ TEST(BabysitterUtils, parse_the_command_line)
   STRCMP_EQUAL("bob_test", comb.name());
   STRCMP_EQUAL("rack", comb.app_type());
   STRCMP_EQUAL("bob.img", comb.image());
+  STRCMP_EQUAL("/var/beehive/storage", comb.storage_dir());
 }
