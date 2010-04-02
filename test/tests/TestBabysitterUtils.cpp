@@ -6,21 +6,6 @@
 
 // Stubs
 int handle_command_line(char *b, char*c) {return 0;}
-// Externs
-extern std::string config_file_dir;                // The directory containing configs
-extern std::string root_dir;                       // The root directory to work from within
-extern std::string run_dir;                        // The directory to run the bees
-extern std::string working_dir;                    // Working directory
-extern std::string storage_dir;                    // Storage dir
-extern std::string sha;                            // The sha
-extern std::string name;                           // Name
-extern std::string scm_url;                        // The scm url
-extern std::string image;                          // The image to mount
-extern string_set  execs;                          // Executables to add
-extern string_set  files;                          // Files to add
-extern string_set  dirs;                           // Dirs to add
-extern phase_type  action;
-extern int         port;                           // Port to run
 
 TEST_GROUP(BabysitterUtils)
 {
@@ -45,5 +30,8 @@ TEST(BabysitterUtils, parse_the_command_line)
   parse_the_command_line_into_honeycomb_config(argc, argv, &comb);
   
   LONGS_EQUAL(9, argc);
-  LONGS_EQUAL(port, 90010);
+  LONGS_EQUAL(90010, (int)comb.port());
+  STRCMP_EQUAL("bob_test", comb.name());
+  STRCMP_EQUAL("rack", comb.app_type());
+  STRCMP_EQUAL("bob.img", comb.image());
 }

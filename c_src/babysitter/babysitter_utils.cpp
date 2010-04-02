@@ -256,7 +256,85 @@ int parse_the_command_line(int argc, char *argv[], int c)
 
 int parse_the_command_line_into_honeycomb_config(int argc, char **argv, Honeycomb *comb)
 {
-  if (parse_the_command_line(argc, argv, 0)) return -1;
+  // if (parse_the_command_line(argc, argv, 0)) return -1;
+  std::string config_file_dir;                // The directory containing configs
+  std::string root_dir;                       // The root directory to work from within
+  std::string run_dir;                        // The directory to run the bees
+  std::string working_dir;                    // Working directory
+  std::string storage_dir;                    // Storage dir
+  std::string sha;                            // The sha
+  std::string name;                           // Name
+  std::string scm_url;                        // The scm url
+  std::string image;                          // The image to mount
+  std::string usr_action_str;                 // Used for error printing
+  std::string app_type;                       // Application type
+  string_set  execs;                          // Executables to add
+  string_set  files;                          // Files to add
+  string_set  dirs;                           // Dirs to add
+  phase_type  action = T_UNKNOWN;
+  int         port = 8080;                           // Port to run
+  
+  
+  std::string opt;
+  std::string arg;
+  while (argc > 1) {
+    opt = argv[1];
+    handle_command_line((char*)opt.c_str(), argv[2]);
+    // OPTIONS
+    if (opt == "--debug" || opt == "-D") {
+      arg = cli_argument_required(argc, &argv, "debug. Must be an integer.");
+      char * pEnd;
+      dbg = strtol(arg.c_str(), &pEnd, 10);
+    } else if (opt == "--port" || opt == "-p") {
+      arg = cli_argument_required(argc, &argv, "port");
+      port = atoi(arg.c_str());
+    } else if (opt == "--help" || opt == "-h") {
+      if(argc - 1 > 1 && argv[2] != NULL && (!strncmp(argv[2], "d", 1) || !strncmp(argv[2], "detailed", 8)))
+        usage(2, true);
+      else 
+        usage(2, false);
+      return -1;
+    } else if (opt == "--name" || opt == "-n") {
+      name = cli_argument_required(argc, &argv, "name");
+    } else if (opt == "--run_dir" || opt == "-r") {
+      run_dir = cli_argument_required(argc, &argv, "run_dir");
+    } else if (opt == "--type" || opt == "-t") {
+      app_type = cli_argument_required(argc, &argv, "type");
+    } else if (opt == "--image" || opt == "-i") {
+      image = cli_argument_required(argc, &argv, "image");
+    } else if (opt == "--storage_dir" || opt == "-b") {
+      storage_dir = cli_argument_required(argc, &argv, "storage_dir");
+    } else if (opt == "--sha" || opt == "-s") {
+      sha = cli_argument_required(argc, &argv, "sha");
+    } else if (opt == "--scm_url" || opt == "-m") {
+      scm_url = cli_argument_required(argc, &argv, "scm_url");
+    } else if (opt == "--working_dir" || opt == "-w") {
+      working_dir = cli_argument_required(argc, &argv, "working_dir");
+    } else if (opt == "--root_dir" || opt == "-o") {
+      root_dir = cli_argument_required(argc, &argv, "root_dir");
+    } else if (opt == "--user" || opt == "-u") {
+      struct passwd *pw;
+      if ((pw = getpwnam(argv[2])) == 0) {
+        to_set_user_id = (uid_t)pw->pw_uid;
+      } else {
+        fprintf(stderr, "Could not get name for user: %s: %s\n", argv[2], ::strerror(errno));
+      }
+    } else if (opt == "--exec" || opt == "-e") {
+      execs.insert (cli_argument_required(argc, &argv, "exec"));
+    } else if (opt == "--file" || opt == "-f") {
+      files.insert (cli_argument_required(argc, &argv, "file"));
+    } else if (opt == "--dir" || opt == "-d") {
+      dirs.insert (cli_argument_required(argc, &argv, "dir"));
+    } else if (opt == "--config" || opt == "-c") {
+      config_file_dir = cli_argument_required(argc, &argv, "config");
+    } else if (opt == "bundle" || opt == "start" || opt == "stop" || opt == "mount" || opt == "unmount" || opt == "cleanup") {
+      action = str_to_phase_type(opt.c_str());
+    } else {
+      fprintf(stderr, "Unknown switch: %s. Try passing --help for help options\n", opt.c_str());
+      usage(1);
+    }
+    argc--; argv++;
+  }
   
   char *action_str = phase_type_to_string(action);
   parse_config_dir(config_file_dir, known_configs);
@@ -299,17 +377,15 @@ int parse_the_command_line_into_honeycomb_config(int argc, char **argv, Honeycom
   // Honeycomb
   if (known_configs.count(app_type.c_str()) < 1) {
     debug(dbg, 1, "There is no config file set for this application type %s.\nPlease set the application type properly, or consult the administrator to support the application type\n", app_type.c_str());
-    // usage(1);
-    return -1;
+  } else {
+    ConfigMapT::iterator it;
+    it = known_configs.find(app_type.c_str());
+    honeycomb_config *c = it->second;
+    comb->set_config(c);
+    comb->set_app_type(app_type.c_str());
   }
   debug(dbg, 2, "\tconfig for %s app found\n", app_type.c_str());
-  
-  ConfigMapT::iterator it;
-  it = known_configs.find(app_type.c_str());
-  honeycomb_config *c = it->second;
-  comb->set_config(c);
-  comb->set_app_type(app_type.c_str());
-  
+    
   for(string_set::iterator it=files.begin(); it != files.end(); it++)   comb->add_file(it->c_str());
   for(string_set::iterator it=dirs.begin(); it != dirs.end(); it++)     comb->add_dir(it->c_str());
   for(string_set::iterator it=execs.begin(); it != execs.end(); it++)   comb->add_executable(it->c_str());
