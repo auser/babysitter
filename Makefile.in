@@ -1,6 +1,7 @@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 RELDIR = releases/$(PACKAGE_NAME)-$(PACKAGE_VERSION)
+export ROOT_DIR = @abs_srcdir@
  
 ifeq ($(shell uname),Linux)
 	ARCH = linux

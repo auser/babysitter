@@ -1,7 +1,7 @@
 SHELL = /bin/sh
  
-top_srcdir = ..
-srcdir = .
+top_srcdir = @top_srcdir@
+srcdir = @srcdir@
 prefix = /usr/local
 exec_prefix = ${prefix}
 bindir = $(exec_prefix)/bin
@@ -9,91 +9,45 @@ infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 
-# Test stuff
-#---------
-#
-# ComponentMakefile
-#
-# Include this file in your makefile
-# It makes
-#    A static library
-#    A test executable
-#
-# The necessary parameters are shown in 
-#    ComponentMakefileExampleParameters
-#
-# Inputs 
-#	SRC - source code built into the executable
-#	TEST_SRC - unit test code build into the unit test runner
-#	MOCKS_SRC - mock objects build into the test runner
-#	INCLUDES - List of -I files
-#	CPPFLAGS - flags for the C++ compiler
-#	CFLAGS - C complier
-#	LDFLAGS - Linker flags
-#	TARGET_LIB -  the created executable
-#	TEST_TARGET - the created test executable
-#	OTHER_MAKEFILE_TO_INCLUDE - a hook to use this makefile to make 
-#		other targets. Like CSlim, which is part of fitnesse
-#----------
+# Set this to '@' for silence
 SILENCE = @
 
 #---- Outputs ----#
-COMPONENT_NAME = babysitter
-TEST_TARGET = $(COMPONENT_NAME)_tests
-OUTPUT_DIR = $(top_srcdir)/priv
-
-#--- Inputs ----#
-PROJECT_HOME_DIR = .
-ifeq "$(CPPUTEST_HOME)" ""
-	CPPUTEST_HOME = ../build/cpputest
-endif
+OUTPUT_DIR = $(ROOT_DIR)/priv
+OUTPUT     = $(OUTPUT_DIR)/bin/babysitter
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
 CFLAGS = @CFLAGS@
 CPPFLAGS += @CPPFLAGS@
+
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
-CFLAGS += -Dmalloc=cpputest_malloc -Dfree=cpputest_free
 CPPFLAGS += -Wall
 CPPFLAGS += -Werror
 CPPFLAGS += -g
 
 SRC_DIRS = \
-	utils \
-	erl \
-	babysitter
-
-TEST_SRC_DIRS = \
-	../test \
-	../test/tests \
-	../test/mocks
+	./src
 
 INCLUDE_DIRS =\
-  $(CPPUTEST_HOME)/include \
-  $(CPPUTEST_HOME)/include/Platforms/$(CPP_PLATFORM) \
-	./ \
-	../test/mocks \
-	../test/helpers \
-	utils \
-	erl \
-	babysitter
+	./include
 
-CONFIG_DIRS = \
-	parser
+EXECUTABLE_DIRS =\
+	./bin
 	
-EXECUTABLE_DIRS = bin
+TARGET_LIB=\
+	$(OUTPUT_DIR)/babysitter_exec.so
 
 #Flags to pass to ld
 ifeq ($(shell uname),Linux)
 	ARCH=linux
-	LDFLAGS=$(LDFLAGS_COMMON) 
+	LDFLAGS=$(LDFLAGS_COMMON) -shared -fno-common -Wall
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON) -dynamic -undefined suppress -flat_namespace
+	LDFLAGS=$(LDFLAGS_COMMON) -bundle -flat_namespace -undefined suppress -fno-common -Wall
 endif
-LDFLAGS += -L@EI_LIB_DIR@
-LD_LIBRARIES += -lerl_interface -lei -lstdc++ -lcurses -lreadline -lfl -lm -ll
-YACCFLAGS=--debug -t -d
+LDFLAGS += -L/usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/lib
+LD_LIBRARIES += -lerl_interface -lei -lstdc++
 
 # DONT TOUCH BELOW HERE!
 #
@@ -112,142 +66,46 @@ get_src_from_dir  = $(wildcard $1/*.cpp) $(wildcard $1/*.c)
 get_dirs_from_dirspec  = $(wildcard $1)
 get_src_from_dir_list = $(foreach dir, $1, $(call get_src_from_dir,$(dir)))				        
 src_to_o = $(subst .c,.o, $(subst .cpp,.o,$1))
-src_to_d = $(subst .c,.d, $(subst .cpp,.d,$1))
-#move_file_location = $(patsubst %.d,build/%.d, $1)
 src_to = $(subst .c,$1, $(subst .cpp,$1,$2))
-
-#Derived
-STUFF_TO_CLEAN += $(TEST_TARGET) $(TEST_TARGET).exe $(TARGET_LIB)
 
 SRC = $(call get_src_from_dir_list, $(SRC_DIRS))
 OBJ = $(call src_to_o,$(SRC))
-STUFF_TO_CLEAN += $(OBJ)
-
-LEX_SRC  = $(foreach dir, $(CONFIG_DIRS), $(wildcard $(CONFIG_DIRS)/*.l))
-LEX_OBJ  = $(foreach src, $(LEX_SRC), $(subst .l,.lex.o,$(src)))
-YACC_OBJ = $(foreach src, $(LEX_SRC), $(subst .l,.tab.o,$(src)))
-CONFIG_OBJ= $(LEX_OBJ) $(YACC_OBJ)
-
-STUFF_TO_CLEAN += $(CONFIG_DIRS)/y.tab.c $(CONFIG_DIRS)/y.tab.h $(CONFIG_DIRS)/y.tab.o
+STUFF_TO_CLEAN += $(OBJ) $(TARGET_LIB)
 
 EXECUTABLE_SRC = $(call get_src_from_dir_list, $(EXECUTABLE_DIRS))
 EXECUTABLE_OBJ = $(call src_to_o, $(EXECUTABLE_SRC))
 STUFF_TO_CLEAN += $(EXECUTABLE_OBJ)
 
-TEST_SRC = $(call get_src_from_dir_list, $(TEST_SRC_DIRS))
-TEST_OBJS = $(call src_to_o,$(TEST_SRC))
-STUFF_TO_CLEAN += $(TEST_OBJS)
+TARGET_LIBS_SRC = $(call get_src_from_dir_list, $(TARGET_LIB_DIRS))
+TARGET_LIBS_OBJ = $(call src_to,.so, $(TARGET_LIBS_SRC))
+STUFF_TO_CLEAN += $(TARGET_LIBS_OBJ)
 
-MOCKS_SRC = $(call get_src_from_dir_list, $(MOCKS_SRC_DIRS))
-MOCKS_OBJS = $(call src_to_o,$(MOCKS_SRC))
-STUFF_TO_CLEAN += $(MOCKS_OBJS)
-
-ALL_SRC = $(SRC) $(CONFIG_OBJ) $(TEST_SRC) $(MOCKS_SRC)
-
-#Test coverage with gcov
-GCOV_OUTPUT = gcov_output.txt
-GCOV_REPORT = gcov_report.txt
-GCOV_ERROR = gcov_error.txt
-GCOV_GCDA_FILES = $(call src_to,.gcda, $(ALL_SRC))
-GCOV_GCNO_FILES = $(call src_to,.gcno, $(ALL_SRC))
-TEST_OUTPUT = $(TEST_TARGET).txt
-STUFF_TO_CLEAN += \
-	$(GCOV_OUTPUT)\
-	$(GCOV_REPORT)\
-	$(GCOV_ERROR)\
-	$(GCOV_GCDA_FILES)\
-	$(GCOV_GCNO_FILES)\
-	$(TEST_OUTPUT)
-
-
-#Other stuff needed
-CPPUTEST_LIB = $(CPPUTEST_HOME)/lib/libCppUTest.a 
-
-CPPFLAGS +=  $(INCLUDES) $(GCOVFLAGS)
-CFLAGS += $(INCLUDES) $(GCOVFLAGS)
-
-#The gcda files for gcov need to be deleted before each run
-#To avoid annoying messages.
-GCOV_CLEAN = $(SILENCE)rm -f $(GCOV_GCDA_FILES) $(GCOV_OUTPUT) $(GCOV_REPORT) $(GCOV_ERROR)
-RUN_TEST_TARGET = $(SILENCE)  $(GCOV_CLEAN) ; echo "Running $(TEST_TARGET)"; ./$(TEST_TARGET)
+ALL_SRC = $(SRC) $(EXECUTABLE_SRC)
+ALL_OBJ = $(OBJ) $(EXECUTABLE_OBJ)
 
 INCLUDES_DIRS_EXPANDED = $(call get_dirs_from_dirspec, $(INCLUDE_DIRS))
 INCLUDES += $(foreach dir, $(INCLUDES_DIRS_EXPANDED), -I$(dir))
-MOCK_DIRS_EXPANDED = $(call get_dirs_from_dirspec, $(MOCKS_SRC_DIRS))
-INCLUDES += $(foreach dir, $(MOCK_DIRS_EXPANDED), -I$(dir))
 
-
-DEP_FILES = $(call src_to_d, $(ALL_SRC))
-STUFF_TO_CLEAN += $(DEP_FILES) + $(PRODUCTION_CODE_START) + $(PRODUCTION_CODE_END)
-STUFF_TO_CLEAN += $(STDLIB_CODE_START) + $(MAP_FILE) + cpputest_*.xml junit_run_output
+CPPFLAGS +=  $(INCLUDES)
+CFLAGS += $(INCLUDES)
 
 # Targets
 .PHONY: all
-all: $(ALL_SRC) $(TEST_TARGET)
-	$(RUN_TEST_TARGET)
-
-exec: $(EXECUTABLE_SRC)
-
-.PHONY: all_no_tests
-all_no_tests: $(TEST_TARGET)
+all: $(ALL_OBJ) $(TARGET_LIBS_OBJ)
+	$(SILENCE)mkdir -p `dirname $(OUTPUT)`
+	$(SILENCE)$(CC) -o $(OUTPUT) $(OBJ) $(LDFLAGS) $(LD_LIBRARIES) $(EXECUTABLE_OBJ)
 	
-$(TEST_TARGET): $(OBJ) $(CONFIG_OBJ) $(TEST_OBJS) $(MOCKS_OBJS)  $(PRODUCTION_CODE_START) $(TARGET_LIB) $(USER_LIBS) $(PRODUCTION_CODE_END) $(CPPUTEST_LIB) $(STDLIB_CODE_START) 
+$(TARGET_LIBS_OBJ): $(OBJ)
 	$(SILENCE)echo Linking $@
-	$(SILENCE)$(CXX) -o $@ $^ $(LDFLAGS) $(LD_LIBRARIES)
+	$(SILENCE)mkdir -p `dirname $(OUTPUT_DIR)/$@`
+	$(SILENCE)$(LINK.o) -o $(OUTPUT_DIR)/$@ $^ $(LD_LIBRARIES) 
 	
-$(EXECUTABLE_SRC): $(OBJ) $(CONFIG_OBJ)
-	$(SILENCE)echo "Compiling executable $@"
-	$(SILENCE)$(CXX) $@ -o $(OUTPUT_DIR)/$(subst .c,,$(subst .cpp,,$@)) $(CPPFLAGS) $(OBJ) $(CONFIG_OBJ) $(LDFLAGS) $(LD_LIBRARIES)
-
-test: $(TEST_TARGET)
-	$(RUN_TEST_TARGET) | tee $(TEST_OUTPUT)
-	
-vtest: $(TEST_TARGET)
-	$(RUN_TEST_TARGET) -v  | tee $(TEST_OUTPUT)
-
-# $(SILENCE)$(COMPILE.cpp) -M -MF $(subst .o,.d,$@) -MT "$@ $(subst .o,.d,$@)" $<
-%.o: %.cpp
-	@echo compiling $(notdir $<)
-	$(SILENCE)$(COMPILE.cpp) $(OUTPUT_OPTION) $<
-
 # $(SILENCE)$(COMPILE.c) -M -MF $(subst .o,.d,$@) -MT "$@ $(subst .o,.d,$@)" $<
 %.o: %.c
-	@echo compiling $(notdir $<)
+	$(SILENCE)echo compiling $(notdir $<)
 	$(SILENCE)$(COMPILE.c) $(OUTPUT_OPTION) $<
-
-.PHONY: %.lex.o
-%.lex.o: %.l
-	$(SILENCE)echo "Compiling lex/yacc pair $<"
-	$(SILENCE)lex -o $(dir $<)lex.yy.c $<
-	$(SILENCE)yacc $(YACCFLAGS) -o $(dir $<)y.tab.c $(subst .l,.y,$<)
-	$(SILENCE)$(CC) -c -o $(LEX_OBJ) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)lex.yy.c
-	$(SILENCE)$(CC) -c -o $(subst .l,.tab.o,$<) -O2 -g3 -Wall -I ./ $(INCLUDES) $(dir $<)y.tab.c
-	$(SILENCE)rm $(dir $<)lex.yy.c $(dir $<)y.tab.c $(dir $<)y.tab.h
 
 .PHONY: clean
 clean:
-	$(SILENCE)echo Making clean
+	$(SILENCE)echo House cleaning...
 	$(SILENCE)$(RM) $(STUFF_TO_CLEAN)
-	$(SILENCE)find . -name \*.gcov | xargs rm -f
-
-gcov: test
-	$(SILENCE)for d in $(SRC_DIRS) ; do \
-		gcov -o $$d $$d/*.c $$d/*.cpp >> $(GCOV_OUTPUT) 2>>$(GCOV_ERROR) ; \
-	done
-	$(CPPUTEST_HOME)/scripts/filterGcov.sh $(GCOV_OUTPUT) $(GCOV_ERROR) $(GCOV_REPORT) $(TEST_OUTPUT)
-	cat $(GCOV_REPORT)
- 
-debug:
-	@echo Stuff to clean
-	$(SILENCE)for f in $(STUFF_TO_CLEAN) ; do \
-		echo "$$f" ; \
-	done
-	@echo Includes
-	$(SILENCE)for i in $(INCLUDES) ; do \
-		echo "$$i" ; \
-	done
-	@echo Objects
-	$(SILENCE)for i in $(OBJ) ; do \
-		echo "$$i" ; \
-	done
-	
