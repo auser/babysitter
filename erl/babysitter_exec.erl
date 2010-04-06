@@ -7,15 +7,16 @@
 % 
 -module (babysitter_exec).
 
+-define (NIF_ERROR_MSG, "NIF Library not laoded").
 
 -on_load(init/0).
 
 -export ([
   test/0,
-  test_pid/1
+  test_pid/1,
+  test_args/1
 ]).
 
-% babysitter_exec:test_pid(2).
 init() ->
   Lib = filename:join([
     filename:dirname(code:which(?MODULE)),
@@ -27,6 +28,11 @@ init() ->
 test() ->
   "Hello world".
   
+% babysitter_exec:test_args([1,2,2]).
+test_args(_X) ->
+  ?NIF_ERROR_MSG.
+
+% babysitter_exec:test_pid(2).
 test_pid(_Pid) ->
-  "NIF Library not loaded".
+  ?NIF_ERROR_MSG.
   

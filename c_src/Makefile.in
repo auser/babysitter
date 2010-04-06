@@ -99,6 +99,10 @@ $(TARGET_LIBS_OBJ): $(OBJ)
 	$(SILENCE)echo Linking $@
 	$(SILENCE)mkdir -p `dirname $(OUTPUT_DIR)/$@`
 	$(SILENCE)$(LINK.o) -o $(OUTPUT_DIR)/$@ $^ $(CFLAGS) $(LD_LIBRARIES) $(subst .so,.c,$@)
+
+%.o: %.cpp
+	$(SILENCE)echo compiling $(notdir $<)
+	$(SILENCE)$(COMPILE.c) $(OUTPUT_OPTION) $<
 	
 # $(SILENCE)$(COMPILE.c) -M -MF $(subst .o,.d,$@) -MT "$@ $(subst .o,.d,$@)" $<
 %.o: %.c

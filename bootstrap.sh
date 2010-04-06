@@ -54,25 +54,25 @@ if [[ `uname -s` == "Darwin" ]]; then
     export CFLAGS=-I/usr/include/malloc
 fi
 
-if [[ !(-d "./build") ]]; then
-    mkdir ./build
-fi
+# if [[ !(-d "./build") ]]; then
+#     mkdir ./build
+# fi
 
-cecho "CppUTest..." $blue no
-if [ -f "./build/cpputest/lib/libCppUTest.a" ]; then
-  found_msg
-else
-  not_found_msg
-  cecho "Building CppUTest" $green
-  pushd build
-  prefix=`pwd`/cpputest
-  $GIT clone ${cpputest_git_url}
-  pushd cpputest
-  make
-  popd
-  rm -rf ${cpputest_tar}
-  popd
-fi
+# cecho "CppUTest..." $blue no
+# if [ -f "./build/cpputest/lib/libCppUTest.a" ]; then
+#   found_msg
+# else
+#   not_found_msg
+#   cecho "Building CppUTest" $green
+#   pushd build
+#   prefix=`pwd`/cpputest
+#   $GIT clone ${cpputest_git_url}
+#   pushd cpputest
+#   make
+#   popd
+#   rm -rf ${cpputest_tar}
+#   popd
+# fi
 
 AUTOCONF_VERSION=2.65
 cecho "autoconf..." $blue no
