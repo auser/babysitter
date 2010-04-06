@@ -34,8 +34,8 @@ INCLUDE_DIRS =\
 EXECUTABLE_DIRS =\
 	./bin
 	
-TARGET_LIB=\
-	$(OUTPUT_DIR)/babysitter_exec.so
+TARGET_LIB_DIRS = \
+	./lib	
 
 #Flags to pass to ld
 ifeq ($(shell uname),Linux)
@@ -70,7 +70,7 @@ src_to = $(subst .c,$1, $(subst .cpp,$1,$2))
 
 SRC = $(call get_src_from_dir_list, $(SRC_DIRS))
 OBJ = $(call src_to_o,$(SRC))
-STUFF_TO_CLEAN += $(OBJ) $(TARGET_LIB)
+STUFF_TO_CLEAN += $(OBJ)
 
 EXECUTABLE_SRC = $(call get_src_from_dir_list, $(EXECUTABLE_DIRS))
 EXECUTABLE_OBJ = $(call src_to_o, $(EXECUTABLE_SRC))
@@ -98,7 +98,7 @@ all: $(ALL_OBJ) $(TARGET_LIBS_OBJ)
 $(TARGET_LIBS_OBJ): $(OBJ)
 	$(SILENCE)echo Linking $@
 	$(SILENCE)mkdir -p `dirname $(OUTPUT_DIR)/$@`
-	$(SILENCE)$(LINK.o) -o $(OUTPUT_DIR)/$@ $^ $(LD_LIBRARIES) 
+	$(SILENCE)$(LINK.o) -o $(OUTPUT_DIR)/$@ $^ $(CFLAGS) $(LD_LIBRARIES) $(subst .so,.c,$@)
 	
 # $(SILENCE)$(COMPILE.c) -M -MF $(subst .o,.d,$@) -MT "$@ $(subst .o,.d,$@)" $<
 %.o: %.c

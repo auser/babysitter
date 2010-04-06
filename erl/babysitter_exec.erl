@@ -19,7 +19,7 @@
 init() ->
   Lib = filename:join([
     filename:dirname(code:which(?MODULE)),
-    "..", "priv", ?MODULE
+    "..", "priv", "lib", ?MODULE
   ]),
   erlang:load_nif(Lib, 0).
 

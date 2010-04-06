@@ -13,10 +13,6 @@ AC_PROG_CXX
 # AC_PATH_PROG(ERL, erl)
 # AC_PATH_PROG(ERLC, erlc)
 
-# TESTS
-CPPUTEST_VERSION=v2.1
-AC_SUBST(CPPUTEST_VERSION)
-
 # Erlang stuff
 m4_define([AC_LANG(Erlang)],
 [ac_ext=erl
@@ -44,7 +40,8 @@ AC_SUBST(ERLDIR)
 ERL_INTERFACE=`ls ${ERLDIR}/lib | grep erl_interface | tail -n 1`
 ERL_ROOT_INC=${ERLDIR}/usr/include
 
-CPPFLAGS="-O2 -g3 -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -I ${ERL_ROOT_INC} -fPIC"
+CFLAGS="-O2 -g3 -I ${ERLDIR}/lib/${ERL_INTERFACE}/include -I ${ERL_ROOT_INC} -fPIC"
+CPPFLAGS="${CFLAGS}"
 
 EI_LIB_DIR="${ERLDIR}/lib/${ERL_INTERFACE}/lib"
 LIBEI="${EI_LIB_DIR}/libei.a"

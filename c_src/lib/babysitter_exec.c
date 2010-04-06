@@ -35,4 +35,4 @@ static ErlNifFunc nif_funcs[] =
   {"test_pid", 1, test_pid}
 };
 
-ERL_NIF_INIT(babysitter, nif_funcs, load, reload, upgrade, unload)
+ERL_NIF_INIT(babysitter_exec, nif_funcs, load, reload, upgrade, unload)
