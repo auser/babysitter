@@ -1,4 +1,16 @@
 #include "ei_decode.h"
+#include "process_manager.h"
+
+/**
+* Decode the arguments into a new_process
+**/
+int decode_into_process(process_t **ptr)
+{
+  // Instantiate a new process
+  if (pm_new_process(ptr))
+    return -1;
+  return 0;
+}
 
 /**
 * Decode the erlang term into known enum of ERL_T_
@@ -15,6 +27,9 @@ erl_type decode_erl_type(ErlNifEnv* env, ERL_NIF_TERM term)
   else return ERL_T_UNKNOWN;
 }
 
+/**
+* Turn an erl_type into a user-readable string
+**/
 const char* erl_type_to_string(erl_type t)
 {
   switch (t) {
@@ -29,6 +44,9 @@ const char* erl_type_to_string(erl_type t)
   }
 }
 
+/**
+* error
+**/
 ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...)
 {
   char str[MAXATOMLEN];

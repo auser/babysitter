@@ -7,6 +7,8 @@
 #include <stdarg.h>
 #include <errno.h>
 
+#include "process_manager.h"
+
 /* Defines */
 #ifndef MAXATOMLEN
 #define MAXATOMLEN 256
