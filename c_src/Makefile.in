@@ -40,13 +40,12 @@ TARGET_LIB_DIRS = \
 #Flags to pass to ld
 ifeq ($(shell uname),Linux)
 	ARCH=linux
-	LDFLAGS=$(LDFLAGS_COMMON) -shared -fno-common -Wall
+	LDFLAGS=@LDFLAGS_COMMON@ -shared -fno-common -Wall
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON) -bundle -flat_namespace -undefined suppress -fno-common -Wall
+	LDFLAGS=@LDFLAGS_COMMON@ -bundle -flat_namespace -undefined suppress -fno-common -Wall
 endif
-LDFLAGS += -L/usr/local/homebrew/Cellar/erlang/R13B03/lib/erlang/lib/erl_interface-3.6.4/lib
 LD_LIBRARIES += -lerl_interface -lei -lstdc++
 
 # DONT TOUCH BELOW HERE!
