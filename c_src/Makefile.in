@@ -38,13 +38,14 @@ TARGET_LIB_DIRS = \
 	./lib	
 
 #Flags to pass to ld
+LDFLAGS_COMMON=@LDFLAGS_COMMON@
 ifeq ($(shell uname),Linux)
 	ARCH=linux
-	LDFLAGS=@LDFLAGS_COMMON@ -shared -fno-common -Wall
+	LDFLAGS=$(LDFLAGS_COMMON) -shared -fno-common -Wall
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=@LDFLAGS_COMMON@ -bundle -flat_namespace -undefined suppress -fno-common -Wall
+	LDFLAGS=$(LDFLAGS_COMMON) -bundle -flat_namespace -undefined suppress -fno-common -Wall
 endif
 LD_LIBRARIES += -lerl_interface -lei -lstdc++
 
@@ -82,6 +83,11 @@ STUFF_TO_CLEAN += $(TARGET_LIBS_OBJ)
 ALL_SRC = $(SRC) $(EXECUTABLE_SRC)
 ALL_OBJ = $(OBJ) $(EXECUTABLE_OBJ)
 
+# Tests
+TEST_SRC	= $(call get_src_from_dir_list,$(TEST_DIRS))
+TEST_OBJ	= $(call src_to_o,$(TEST_SRC))
+STUFF_TO_CLEAN += $(TEST_OBJ)
+
 INCLUDES_DIRS_EXPANDED = $(call get_dirs_from_dirspec, $(INCLUDE_DIRS))
 INCLUDES += $(foreach dir, $(INCLUDES_DIRS_EXPANDED), -I$(dir))
 
@@ -90,7 +96,13 @@ CFLAGS += $(INCLUDES)
 
 # Targets
 .PHONY: all
-all: $(ALL_OBJ) $(TARGET_LIBS_OBJ)
+all: $(ALL_OBJ) $(TARGET_LIBS_OBJ) build_tests build_executable
+
+build_tests:
+	$(SILENCE)echo "Building tests"
+	$(CC) $(INCLUDES) -o run_tests $(OBJ) $(LDFLAGS_COMMON) $(LD_LIBRARIES) $(TEST_SRC)
+
+build_executable:
 	$(SILENCE)mkdir -p `dirname $(OUTPUT)`
 	$(SILENCE)$(CC) -o $(OUTPUT) $(OBJ) $(LDFLAGS) $(LD_LIBRARIES) $(EXECUTABLE_OBJ)
 	

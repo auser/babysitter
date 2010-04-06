@@ -1,3 +1,5 @@
+#include <erl_nif.h>
+
 #include "ei_decode.h"
 #include "process_manager.h"
 
