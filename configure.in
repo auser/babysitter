@@ -47,7 +47,7 @@ EI_LIB_DIR="${ERLDIR}/lib/${ERL_INTERFACE}/lib"
 LIBEI="${EI_LIB_DIR}/libei.a"
 AC_SUBST(LIBEI)
 
-LDFLAGS_COMMON="-L${EI_LIB_DIR}"
+LDFLAGS_COMMON="-L${EI_LIB_DIR} -fno-common -Wall"
 AC_SUBST(LDFLAGS_COMMON)
 
 AC_CHECK_LIB(stdc++, main,,AC_MSG_ERROR(gdu requires libstdc++))

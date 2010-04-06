@@ -36,16 +36,19 @@ EXECUTABLE_DIRS =\
 	
 TARGET_LIB_DIRS = \
 	./lib	
+	
+TEST_DIRS = \
+	./tests
 
 #Flags to pass to ld
 LDFLAGS_COMMON=@LDFLAGS_COMMON@
 ifeq ($(shell uname),Linux)
 	ARCH=linux
-	LDFLAGS=$(LDFLAGS_COMMON) -shared -fno-common -Wall
+	LDFLAGS=$(LDFLAGS_COMMON) -shared
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON) -bundle -flat_namespace -undefined suppress -fno-common -Wall
+	LDFLAGS=$(LDFLAGS_COMMON) -bundle -flat_namespace -undefined suppress
 endif
 LD_LIBRARIES += -lerl_interface -lei -lstdc++
 
@@ -97,10 +100,11 @@ CFLAGS += $(INCLUDES)
 # Targets
 .PHONY: all
 all: $(ALL_OBJ) $(TARGET_LIBS_OBJ) build_tests build_executable
+	./run_tests
 
 build_tests:
 	$(SILENCE)echo "Building tests"
-	$(CC) $(INCLUDES) -o run_tests $(OBJ) $(LDFLAGS_COMMON) $(LD_LIBRARIES) $(TEST_SRC)
+	$(SILENCE)$(CC) $(INCLUDES) -o run_tests src/process_manager.o $(LDFLAGS_COMMON) $(LD_LIBRARIES) $(TEST_SRC)
 
 build_executable:
 	$(SILENCE)mkdir -p `dirname $(OUTPUT)`
