@@ -12,7 +12,6 @@
 -on_load(init/0).
 
 -export ([
-  test/0,
   test_pid/1,
   test_args/2
 ]).
@@ -23,10 +22,6 @@ init() ->
     "..", "priv", "lib", ?MODULE
   ]),
   erlang:load_nif(Lib, 0).
-
-% Exports
-test() ->
-  "Hello world".
   
 % babysitter_exec:test_args("hello", [{do_before, "ls"},{do_after, "ls -l"}, {env, "HELLO=world"}, {env, "BOBBY=boy"}]).
 -spec(test_args/2 :: (string(), list()) -> any()).

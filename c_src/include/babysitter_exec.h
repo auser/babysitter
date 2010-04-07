@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "ei_decode.h"
 

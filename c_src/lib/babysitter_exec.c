@@ -22,8 +22,9 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   process_t *process = NULL;
   decode_command_call_into_process(env, argc, argv, &process);
   // Do something with the process
-  erlRes = enif_make_string(env, process->command, ERL_NIF_LATIN1);
   // erlRes = enif_make_atom(env, "ok");
+  pid_t pid = getpid(); // Dummy pid
+  erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
   pm_free_process(process);
   return erlRes;
 }
