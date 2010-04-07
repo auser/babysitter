@@ -7,7 +7,7 @@
 *
 * @params
 * {Cmd::string(), [Option]}
-*     Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
+*     Option = {env, Strings} | {cd, Dir} | {do_before, Cmd} | {do_after, Cmd}
 **/
 int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[], process_t **ptr)
 {
@@ -44,7 +44,6 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
     } else if (!strcmp(key, "cd")) {
       pm_malloc_and_set_attribute(&process->cd, value);
     } else if (!strcmp(key, "env")) {
-      printf("env: %s\n", value);
       pm_add_env(&process, value);
     }
     list = tail;
