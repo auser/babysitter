@@ -18,10 +18,11 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
   process_t *process = *ptr;
   
   // The first command is a string
-  char command[MAX_BUFFER_SZ], key[MAX_BUFFER_SZ];
-  ei_list_to_string(env, argv[0], command);
-  malloc_and_set_attribute(&process->command, command);
-  printf("process->command: %s\n", process->command);
+  char command[MAX_BUFFER_SZ], key[MAX_BUFFER_SZ], value[MAX_BUFFER_SZ];
+  memset(&command, '\0', sizeof(command));
+  
+  if (enif_get_string(env, argv[0], command, sizeof(command), ERL_NIF_LATIN1) < 0) return -1;
+  pm_malloc_and_set_attribute(&process->command, command);
   
   // The second element of the tuple is a list of options
   const ERL_NIF_TERM* tuple;
@@ -31,15 +32,20 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
   // int enif_get_tuple(ErlNifEnv* env, ERL_NIF_TERM term, int* arity, const ERL_NIF_TERM** array)
   while(enif_get_list_cell(env, list, &head, &tail)) {
     // Get the tuple
-    if(!enif_get_tuple(env, head, &arity, &tuple)) {
-      return -1;
-    }
-    printf("got a tuple\n");
+    if(!enif_get_tuple(env, head, &arity, &tuple)) return -1;
     // First element is an atom
-    if (!enif_get_atom(env, tuple[0], key, sizeof(key))) {
-      return -2;
+    if (!enif_get_atom(env, tuple[0], key, sizeof(key))) return -2;
+    if (enif_get_string(env, tuple[1], value, sizeof(value), ERL_NIF_LATIN1) < 0) return -3;
+    if (!strcmp(key, "do_before")) {
+      // Do before
+      pm_malloc_and_set_attribute(&process->before, value);
+    } else if (!strcmp(key, "do_after")) {
+      pm_malloc_and_set_attribute(&process->after, value);
+    } else if (!strcmp(key, "cd")) {
+      pm_malloc_and_set_attribute(&process->cd, value);
+    } else if (!strcmp(key, "env")) {
+      pm_add_env(&process, value);
     }
-    printf("Key: %s\n", key);
     list = tail;
   }
   return 0;

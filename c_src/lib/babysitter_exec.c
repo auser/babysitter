@@ -22,7 +22,11 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   process_t *process = NULL;
   decode_command_call_into_process(env, argc, argv, &process);
   
-  printf("process: %p (%d)\n", process, process->env_c);
+  printf("--- process %p ---\n", process);
+  printf("\t before: %s\n", process->before);
+  printf("\t command: %s\n", process->command);
+  printf("\t after: %s\n", process->after);
+  
   
   // erlRes = enif_make_string(env, process->command, ERL_NIF_LATIN1);
   erlRes = enif_make_atom(env, "ok");
