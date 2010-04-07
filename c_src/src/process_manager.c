@@ -19,14 +19,22 @@ int pm_add_env(process_t **ptr, char* value)
   char **new_env = (char **) calloc(sizeof(char*), p->env_c + 1);
   
   int i = 0;
-  for (i = 0; i < p->env_c; i++) new_env[i] = p->env[i];
+  for (i = 0; i < p->env_c; i++) {
+    // Copy old envs to new_env
+    // new_env[i] = (char *)calloc(sizeof(char), strlen(p->env[i]));
+    // strncpy(new_env[i], p->env[i], strlen(p->env[i]));
+    new_env[i] = p->env[i];
+    printf("\tcopying %s to %s (%d)\n", p->env[i], new_env[i], i);
+  }
   // Copy new env
-  new_env[p->env_c] = value;
+  new_env[p->env_c] = (char *)calloc(sizeof(char), strlen(value));
+  strncpy(new_env[p->env_c], value, strlen(value));
+  printf("new value: %s\n", new_env[p->env_c]);
+  // new_env[p->env_c] = value;
   
   new_env[++p->env_c] = NULL;
-  p->env = new_env;
   
-  *ptr = p;
+  (*ptr)->env = new_env;
   return 0;
 }
 

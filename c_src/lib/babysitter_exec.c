@@ -27,6 +27,10 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   printf("\t command: %s\n", process->command);
   printf("\t after: %s\n", process->after);
   
+  printf("\t env_c: %d\n", process->env_c);
+  int i = 0;
+  for (i = 0; i < process->env_c; i++)
+    printf("\t\t env[%d] = %s\n", i, process->env[i]);
   
   // erlRes = enif_make_string(env, process->command, ERL_NIF_LATIN1);
   erlRes = enif_make_atom(env, "ok");
