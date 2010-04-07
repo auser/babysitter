@@ -14,7 +14,7 @@
 -export ([
   test/0,
   test_pid/1,
-  test_args/1
+  test_args/2
 ]).
 
 init() ->
@@ -28,11 +28,12 @@ init() ->
 test() ->
   "Hello world".
   
-% babysitter_exec:test_args([1,2,2]).
-test_args(_X) ->
-  ?NIF_ERROR_MSG.
+% babysitter_exec:test_args("hello", [{before, "ls"}]).
+-spec(test_args/2 :: (string(), list()) -> any()).
+test_args(_X, _Y) -> 
+  exit(?NIF_ERROR_MSG).
 
 % babysitter_exec:test_pid(2).
+-spec(test_pid/1 :: (integer()) -> any()).
 test_pid(_Pid) ->
-  ?NIF_ERROR_MSG.
-  
+  exit(?NIF_ERROR_MSG).

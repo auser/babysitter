@@ -1,50 +1,82 @@
-#include <erl_nif.h>
 
 #include "ei_decode.h"
 #include "process_manager.h"
 
 /**
 * Decode the arguments into a new_process
+*
+* @params
+* {Cmd::string(), [Option]}
+*     Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
 **/
-int decode_into_process(process_t **ptr)
+int decode_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[], process_t **ptr)
 {
   // Instantiate a new process
   if (pm_new_process(ptr))
     return -1;
+  
+  char command[MAX_BUFFER_SZ];
+  (void)memset(&command, '\0', sizeof(command));
+  
+  if (enif_get_string(env, argv[0], command, sizeof(command), ERL_NIF_LATIN1) < 0) {
+    return error(env, "Unable to decode command");
+  }
+  process_t *process = *ptr;
+  malloc_and_set_attribute(&process->command, command);
+  
+  printf("process->command: %s\n", process->command);
   return 0;
 }
 
-/**
-* Decode the erlang term into known enum of ERL_T_
-**/
-erl_type decode_erl_type(ErlNifEnv* env, ERL_NIF_TERM term)
-{
-       if (!enif_is_atom(env, term)) return ERL_T_ATOM;
-  else if (!enif_is_binary(env, term)) return ERL_T_BINARY;
-  else if (!enif_is_empty_list(env, term)) return ERL_T_EMPTY_LIST;
-  else if (!enif_is_fun(env, term)) return ERL_T_FUN;
-  else if (!enif_is_pid(env, term)) return ERL_T_PID;
-  else if (!enif_is_port(env, term)) return ERL_T_PORT;
-  else if (!enif_is_ref(env, term)) return ERL_T_REF;
-  else return ERL_T_UNKNOWN;
-}
+//---- Decoders ----//
+char read_buf[BUFFER_SZ];
+int  read_index = 0;
 
-/**
-* Turn an erl_type into a user-readable string
-**/
-const char* erl_type_to_string(erl_type t)
+void ei_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, char *string)
 {
-  switch (t) {
-    case ERL_T_ATOM: return "atom"; break;
-    case ERL_T_BINARY: return "binary"; break;
-    case ERL_T_EMPTY_LIST: return "empty_list"; break;
-    case ERL_T_FUN: return "function"; break;
-    case ERL_T_PID: return "pid"; break;
-    case ERL_T_PORT: return "port"; break;
-    case ERL_T_REF: return "ref"; break;
-    default: return "other";
-  }
-}
+  ERL_NIF_TERM head, tail;
+  int character;
+
+  while(enif_get_list_cell(env, list, &head, &tail)) {
+    if(!enif_get_int(env, head, &character)) {
+      return;
+    }
+    
+    *string++ = (char)character;
+    list = tail;
+  };
+
+  *string = '\0';
+};
+
+char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size)
+{
+  ERL_NIF_TERM head, tail;
+  char str_length[PREFIX_LEN], *args;
+  int i, length, character;
+
+  for(i=0; i<PREFIX_LEN; i++) {
+    if(enif_get_list_cell(env, list, &head, &tail)) {
+      if(!enif_get_int(env, head, &character)) {
+        return NULL;
+      }
+      str_length[i] = (char)character;
+      list = tail;
+    } else {
+      return NULL;
+    }
+  };
+
+  fprintf(stderr, "here...\n");
+  length = atoi(str_length)+1;
+  args = (char *)calloc(length, sizeof(char));
+
+  ei_list_to_string(env, list, args);
+  *arg_size = length;
+
+  return args;
+};
+
 
 /**
 * error

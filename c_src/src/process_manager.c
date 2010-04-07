@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "process_manager.h"
 
@@ -25,5 +26,21 @@ int pm_new_process(process_t **ptr)
   p->command = NULL;
   
   *ptr = p;
+  return 0;
+}
+
+// Privates
+int malloc_and_set_attribute(char **ptr, char *value)
+{
+  char *obj = (char *) calloc (sizeof(char), strlen(value) + 1);
+  
+  if (!obj) {
+    perror("malloc_and_set_attribute");
+    return -1;
+  }
+  printf("setting obj (%p) to %s\n", obj, value);
+  strncpy(obj, value, strlen(value));
+  obj[strlen(value)] = (char)'\0';
+  *ptr = obj;
   return 0;
 }
