@@ -28,7 +28,7 @@ init() ->
 test() ->
   "Hello world".
   
-% babysitter_exec:test_args("hello", [{before, "ls"}]).
+% babysitter_exec:test_args("hello", [{do_before, "ls"},{do_after, "ls -l"}]).
 -spec(test_args/2 :: (string(), list()) -> any()).
 test_args(_X, _Y) -> 
   exit(?NIF_ERROR_MSG).

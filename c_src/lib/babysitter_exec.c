@@ -20,7 +20,7 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
   ERL_NIF_TERM erlRes;
   process_t *process = NULL;
-  decode_into_process(env, argc, argv, &process);
+  decode_command_call_into_process(env, argc, argv, &process);
   
   printf("process: %p (%d)\n", process, process->env_c);
   

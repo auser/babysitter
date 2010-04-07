@@ -9,22 +9,39 @@
 * {Cmd::string(), [Option]}
 *     Option = {env, Strings} | {cd, Dir} | {kill, Cmd}
 **/
-int decode_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[], process_t **ptr)
+int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[], process_t **ptr)
 {
   // Instantiate a new process
   if (pm_new_process(ptr))
     return -1;
   
-  char command[MAX_BUFFER_SZ];
-  (void)memset(&command, '\0', sizeof(command));
-  
-  if (enif_get_string(env, argv[0], command, sizeof(command), ERL_NIF_LATIN1) < 0) {
-    return error(env, "Unable to decode command");
-  }
   process_t *process = *ptr;
-  malloc_and_set_attribute(&process->command, command);
   
+  // The first command is a string
+  char command[MAX_BUFFER_SZ], key[MAX_BUFFER_SZ];
+  ei_list_to_string(env, argv[0], command);
+  malloc_and_set_attribute(&process->command, command);
   printf("process->command: %s\n", process->command);
+  
+  // The second element of the tuple is a list of options
+  const ERL_NIF_TERM* tuple;
+  ERL_NIF_TERM head, tail, list = argv[1];
+  int arity = 2;
+  
+  // int enif_get_tuple(ErlNifEnv* env, ERL_NIF_TERM term, int* arity, const ERL_NIF_TERM** array)
+  while(enif_get_list_cell(env, list, &head, &tail)) {
+    // Get the tuple
+    if(!enif_get_tuple(env, head, &arity, &tuple)) {
+      return -1;
+    }
+    printf("got a tuple\n");
+    // First element is an atom
+    if (!enif_get_atom(env, tuple[0], key, sizeof(key))) {
+      return -2;
+    }
+    printf("Key: %s\n", key);
+    list = tail;
+  }
   return 0;
 }
 
