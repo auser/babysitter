@@ -16,6 +16,15 @@ ERL_NIF_TERM test_pid(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   return enif_make_string(env, "Hello world!", ERL_NIF_LATIN1); 
 } 
 
+/**
+* Test the arguments of the erlang call
+*
+* @params
+*   {Cmd::string(), Options:list()}
+*     Options = {do_before, string()} | {do_after, string()} | {env, string()} | {cd, string()}
+* @return
+*   {pid, Pid:long()} | {error, Reason:string()}
+**/
 ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
   ERL_NIF_TERM erlRes;
@@ -24,7 +33,11 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   // Do something with the process
   // erlRes = enif_make_atom(env, "ok");
   pid_t pid = getpid(); // Dummy pid
-  erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
+  if (pid >0)
+    erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
+  else
+    erlRes = enif_make_tuple2(env, enif_make_atom(env,"error"), enif_make_string(env, "failure to launch"));
+    
   pm_free_process(process);
   return erlRes;
 }
