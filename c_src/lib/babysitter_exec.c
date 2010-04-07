@@ -36,7 +36,7 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   if (pid >0)
     erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
   else
-    erlRes = enif_make_tuple2(env, enif_make_atom(env,"error"), enif_make_string(env, "failure to launch"));
+    erlRes = enif_make_tuple2(env, enif_make_atom(env,"error"), enif_make_string(env, "failure to launch", ERL_NIF_LATIN1));
     
   pm_free_process(process);
   return erlRes;
