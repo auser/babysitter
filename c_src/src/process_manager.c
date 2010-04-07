@@ -15,26 +15,12 @@ int pm_check_pid_status(pid_t pid)
 int pm_add_env(process_t **ptr, char* value)
 {
   process_t *p = *ptr;
-  // p->env[p->env_c] = calloc(1, strlen(str) * sizeof(char)); // Yes, sizeof(char) is redundant
-  char **new_env = (char **) calloc(sizeof(char*), p->env_c + 1);
-  
-  int i = 0;
-  for (i = 0; i < p->env_c; i++) {
-    // Copy old envs to new_env
-    // new_env[i] = (char *)calloc(sizeof(char), strlen(p->env[i]));
-    // strncpy(new_env[i], p->env[i], strlen(p->env[i]));
-    new_env[i] = p->env[i];
-    printf("\tcopying %s to %s (%d)\n", p->env[i], new_env[i], i);
+  // Expand space, if necessary
+  if (p->env_c == p->env_capacity) {
+    if (p->env_capacity == 0) p->env_capacity = 1;
+    p->env = (char**)realloc(p->env, (p->env_capacity *= 2) * sizeof(char*));
   }
-  // Copy new env
-  new_env[p->env_c] = (char *)calloc(sizeof(char), strlen(value));
-  strncpy(new_env[p->env_c], value, strlen(value));
-  printf("new value: %s\n", new_env[p->env_c]);
-  // new_env[p->env_c] = value;
-  
-  new_env[++p->env_c] = NULL;
-  
-  (*ptr)->env = new_env;
+  p->env[p->env_c++] = strdup(value);
   return 0;
 }
 
@@ -47,6 +33,7 @@ int pm_new_process(process_t **ptr)
   }
   
   p->env_c = 0;
+  p->env_capacity = 0;
   p->env = NULL;
   p->cd = NULL;
   
@@ -65,6 +52,8 @@ int pm_free_process(process_t *p)
   if (p->after) free(p->after);
   if (p->cd) free(p->cd);
   
+  int i = 0;
+  for (i = 0; i < p->env_c; i++) free(p->env[i]);
   if (p->env) free(p->env);
   
   free(p);

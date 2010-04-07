@@ -5,6 +5,7 @@
 typedef struct _process_t_ {
   char**  env;
   int     env_c;
+  int     env_capacity;
   char*   command;
   char*   before;
   char*   after;
