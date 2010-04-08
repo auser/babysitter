@@ -8,14 +8,13 @@
 * @params
 *   {pid, Int}
 * @return
-*   0 - Alive
-*   Else - Not alive
+*   up
+*   down
 **/
 ERL_NIF_TERM test_pid(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
   if (argc != 1) return error(env, "Wrong argument signature");
   
-  int n = -1;
   long pid;
   char atom[MAX_BUFFER_SZ];
   const ERL_NIF_TERM* tuple;
@@ -31,8 +30,10 @@ ERL_NIF_TERM test_pid(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     if (pid < 1)
       return error(env, "Invalid pid: %d", (int)pid);
     
-    n = pm_check_pid_status(pid);
-    return enif_make_ulong(env, n);
+    if (pm_check_pid_status(pid) == 0)
+      return enif_make_atom(env, "up");
+    else
+      return enif_make_atom(env, "down");
   } else {
     return error(env, "Wrong signature");
   }

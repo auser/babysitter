@@ -9,7 +9,7 @@
 int pm_check_pid_status(pid_t pid)
 {
   if (pid < 1) return -1; // Illegal
-  return kill(pid, 0);
+  return ((kill(pid, 0) == 0) ? 0 : -1);
 }
 
 int pm_add_env(process_t **ptr, char* value)
