@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <paths.h>
+#include <ctype.h>
 #include <errno.h>
 
 /* Defines */
@@ -30,5 +31,6 @@
 /* prototypes */
 int pm_abs_path(const char *path);
 const char *find_binary(const char *file);
+int argify(const char *line, char ***argv_ptr);
 
 #endif

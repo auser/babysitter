@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "process_manager.h"
 #include "minunit.h"
 #include "test_helper.h"

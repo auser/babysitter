@@ -114,6 +114,21 @@ void setup_signal_handlers()
   sigaction(SIGCHLD, &sact, NULL);
 }
 
+int pm_execute(const char* command, const char** env)
+{
+  char **command_argv = {0};
+  int command_argc = 0;
+  if ((command_argc = argify(command, &command_argv)) < 1) return -1;
+  
+  const char* full_filepath;
+  full_filepath = find_binary(command_argv[0]);
+  command_argv[command_argc] = 0;
+  if (execve((const char*)full_filepath, (char* const*)command_argv, (char* const*) env) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
 pid_t pm_run_process(process_t *process)
 {
   // pid_t pid = fork();
