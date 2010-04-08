@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "process_manager.h"
+#include "pm_helpers.h"
 
 int pm_check_pid_status(pid_t pid)
 {
@@ -122,8 +123,8 @@ pid_t pm_run_process(process_t *process)
   // case 0: {
   //   // We are in the child process
   //   setup_signal_handlers();
-  //   const char* const argv[] = { getenv("SHELL"), "-c", command_argv, (char*)NULL };
-  //   if (cd != NULL && cd[0] != '\0' && chdir(cd) < 0) {
+  //   const char* const argv[] = { getenv("SHELL"), "-c", process->command, (char*)NULL };
+  //   if (process->cd != NULL && process->cd[0] != '\0' && chdir(process->cd) < 0) {
   //     fperror("Cannot chdir to '%s'", cd);
   //     return EXIT_FAILURE;
   //   }
