@@ -28,33 +28,8 @@
 #define PREFIX_LEN 8
 #endif
 
-
-#define NEW_FLOAT_EXT 'F'
-typedef enum _erl_type_ {
-  etSmallInt    = ERL_SMALL_INTEGER_EXT // 'a'
- ,etInt         = ERL_INTEGER_EXT       // 'b'
- ,etFloatOld    = ERL_FLOAT_EXT         // 'c'
- ,etFloat       = NEW_FLOAT_EXT         // 'F'
- ,etAtom        = ERL_ATOM_EXT          // 'd'
- ,etRefOld      = ERL_REFERENCE_EXT     // 'e'
- ,etRef         = ERL_NEW_REFERENCE_EXT // 'r'
- ,etPort        = ERL_PORT_EXT          // 'f'
- ,etPid         = ERL_PID_EXT           // 'g'
- ,etTuple       = ERL_SMALL_TUPLE_EXT   // 'h'
- ,etTupleLarge  = ERL_LARGE_TUPLE_EXT   // 'i'
- ,etNil         = ERL_NIL_EXT           // 'j'
- ,etString      = ERL_STRING_EXT        // 'k'
- ,etList        = ERL_LIST_EXT          // 'l'
- ,etBinary      = ERL_BINARY_EXT        // 'm'
- ,etBignum      = ERL_SMALL_BIG_EXT     // 'n'
- ,etBignumLarge = ERL_LARGE_BIG_EXT     // 'o'
- ,etFun         = ERL_NEW_FUN_EXT       // 'p'
- ,etFunOld      = ERL_FUN_EXT           // 'u'
- ,etNewCache    = ERL_NEW_CACHE         // 'N' /* c nodes don't know these two */
- ,etAtomCached  = ERL_CACHED_ATOM       // 'C'
-} erl_type_t;
-
 /* Exports */
+ERL_NIF_TERM ok(ErlNifEnv* env, const char* atom, const char *fmt, ...);
 ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...);
 
 // Decoders

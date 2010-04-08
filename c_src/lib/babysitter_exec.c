@@ -6,14 +6,36 @@
 * Test if the pid is up or not
 *
 * @params
-*   {test_pid, Int}
+*   {pid, Int}
 * @return
-*   1 - Alive
-*   -1 - Not alive
+*   0 - Alive
+*   Else - Not alive
 **/
 ERL_NIF_TERM test_pid(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-  return enif_make_string(env, "Hello world!", ERL_NIF_LATIN1); 
+  if (argc != 1) return error(env, "Wrong argument signature");
+  
+  int n = -1;
+  long pid;
+  char atom[MAX_BUFFER_SZ];
+  const ERL_NIF_TERM* tuple;
+  int arity = 2;
+  
+  if(!enif_get_tuple(env, argv[0], &arity, &tuple)) return -1;
+  
+  memset(&atom, '\0', sizeof(atom));
+  if (!enif_get_atom(env, tuple[0], atom, sizeof(atom)) < 0) return -1;
+  
+  if (!strncmp(atom, "pid", 3)) {
+    enif_get_long(env, tuple[1], &pid);
+    if (pid < 1)
+      return error(env, "Invalid pid: %d", (int)pid);
+    
+    n = pm_check_pid_status(pid);
+    return enif_make_ulong(env, n);
+  } else {
+    return error(env, "Wrong signature");
+  }
 } 
 
 /**
@@ -36,7 +58,7 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   if (pid >0)
     erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
   else
-    erlRes = enif_make_tuple2(env, enif_make_atom(env,"error"), enif_make_string(env, "failure to launch", ERL_NIF_LATIN1));
+    erlRes = error(env, "failure to launch");
     
   pm_free_process(process);
   return erlRes;

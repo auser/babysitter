@@ -90,7 +90,6 @@ char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size)
     }
   };
 
-  fprintf(stderr, "here...\n");
   length = atoi(str_length)+1;
   args = (char *)calloc(length, sizeof(char));
 
@@ -100,6 +99,19 @@ char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size)
   return args;
 };
 
+/**
+* ok
+**/
+ERL_NIF_TERM ok(ErlNifEnv* env, const char* atom, const char *fmt, ...)
+{
+  char str[MAXATOMLEN];
+  va_list vargs;
+  va_start (vargs, fmt);
+  vsnprintf(str, sizeof(str), fmt, vargs);
+  va_end   (vargs);
+  
+  return enif_make_tuple2(env, enif_make_atom(env,atom), enif_make_atom(env, str));
+}
 
 /**
 * error

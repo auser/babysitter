@@ -23,7 +23,7 @@ init() ->
   ]),
   erlang:load_nif(Lib, 0).
   
-% babysitter_exec:test_args("hello", [{do_before, "ls"},{do_after, "ls -l"}, {env, "HELLO=world"}, {env, "BOBBY=boy"}, {cd, "/var/babysitter/mine/app/123"}]).
+% A = babysitter_exec:test_args("hello", [{do_before, "ls"},{do_after, "ls -l"}, {env, "HELLO=world"}, {env, "BOBBY=boy"}, {cd, "/var/babysitter/mine/app/123"}]). babysitter_exec:test_pid(A).
 -spec(test_args/2 :: (string(), list()) -> any()).
 test_args(_X, _Y) -> 
   exit(?NIF_ERROR_MSG).
