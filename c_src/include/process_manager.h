@@ -18,6 +18,7 @@ int pm_new_process(process_t **ptr);
 /* External exports */
 int pm_check_pid_status(pid_t pid);
 int pm_add_env(process_t **ptr, char *str);
+int pm_process_valid(process_t **ptr);
 
 int pm_free_process(process_t *p);
 int pm_malloc_and_set_attribute(char **ptr, char *value);

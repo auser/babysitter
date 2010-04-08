@@ -45,6 +45,16 @@ int pm_new_process(process_t **ptr)
   return 0;
 }
 
+/**
+* Check if the process is valid
+**/
+int pm_process_valid(process_t **ptr)
+{
+  process_t* p = *ptr;
+  if (p->command == NULL) return -1;
+  return 0;
+}
+
 int pm_free_process(process_t *p)
 {
   if (p->command) free(p->command);

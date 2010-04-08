@@ -20,6 +20,17 @@ char *test_pm_check_pid_status() {
   return 0;
 }
 
+char *test_pm_valid_process() {
+  process_t *test_process = NULL;
+  pm_new_process(&test_process);
+  
+  mu_assert(pm_process_valid(&test_process) == -1, "process shouldn't be valid, but is");
+  mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "ls -l"), "copy command failed");
+  mu_assert(pm_process_valid(&test_process) == 0, "process should be valid");
+  
+  pm_free_process(test_process); return 0;
+}
+
 char *test_pm_malloc_and_set_attribute() {
   process_t *test_process = NULL;
   pm_new_process(&test_process);

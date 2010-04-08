@@ -40,6 +40,33 @@ ERL_NIF_TERM test_pid(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 } 
 
 /**
+* Launch a new process
+*
+* @params
+*   {Cmd::string(), Options:list()}
+*     Options = {do_before, string()} | {do_after, string()} | {env, string()} | {cd, string()}
+* @return
+*   {pid, Pid:long()} | {error, Reason:string()}
+**/
+ERL_NIF_TERM run_and_monitor(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+  ERL_NIF_TERM erlRes;
+  process_t *process = NULL;
+  decode_command_call_into_process(env, argc, argv, &process);
+  // Do something with the process
+  if (pm_process_valid(&process)) return error(env, "invalid process specification");
+  pid_t pid = getpid(); // Dummy pid
+  if (pid > 0)
+    erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
+  else
+    erlRes = error(env, "failure to launch");
+    
+  pm_free_process(process);
+  return erlRes;
+  
+}
+
+/**
 * Test the arguments of the erlang call
 *
 * @params
@@ -56,7 +83,7 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   // Do something with the process
   // erlRes = enif_make_atom(env, "ok");
   pid_t pid = getpid(); // Dummy pid
-  if (pid >0)
+  if (pid > 0)
     erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
   else
     erlRes = error(env, "failure to launch");
