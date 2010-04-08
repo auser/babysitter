@@ -29,7 +29,7 @@ init() ->
 test_args({_X, _Y}) -> 
   ?NIF_ERROR_MSG.
 
-% A = babysitter_exec:run_and_monitor({"hello", [{do_before, "ls"},{do_after, "ls -l"}, {env, "HELLO=world"}, {env, "BOBBY=boy"}, {cd, "/var/babysitter/mine/app/123"}]}). babysitter_exec:test_pid(A).
+% A = babysitter_exec:run_and_monitor({"env", [{do_before, "ls"},{do_after, "ls -l"}, {env, "HELLO=world"}, {env, "BOBBY=boy"}, {cd, "/var/babysitter/mine/app/123"}]}). babysitter_exec:test_pid(A).
 -spec(run_and_monitor/1 :: ({string(), list()}) -> any()).
 run_and_monitor({_Cmd, _Options}) ->
   ?NIF_ERROR_MSG.

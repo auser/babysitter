@@ -125,6 +125,7 @@ int pm_execute(const char* command, char** env)
   const char* full_filepath;
   full_filepath = find_binary(command_argv[0]);
   command_argv[command_argc] = 0;
+  printf("executing: %s\n", full_filepath);
   if (execve((const char*)full_filepath, (char* const*)command_argv, (char* const*) env) < 0) {
     return -1;
   }
@@ -133,7 +134,7 @@ int pm_execute(const char* command, char** env)
 
 pid_t pm_run_process(process_t *process)
 {
-  if (process->before) pm_execute((const char*)process->before, process->env);
+  if (process->before) if (fork() == 0) {pm_execute((const char*)process->before, process->env);exit(0);}
   pid_t pid = fork();
   switch (pid) {
   case -1: 
@@ -145,6 +146,7 @@ pid_t pm_run_process(process_t *process)
     if (process->cd != NULL && process->cd[0] != '\0' && chdir(process->cd) < 0) {
       return EXIT_FAILURE;
     }
+    printf("executing command: %s\n", argv[0]);
     pm_execute((const char*)argv, process->env);
     exit(-1);
   }
@@ -153,7 +155,7 @@ pid_t pm_run_process(process_t *process)
     if (process->nice != INT_MAX && setpriority(PRIO_PROCESS, pid, process->nice) < 0) {
     }
     
-    if (process->after) pm_execute((const char*)process->after, process->env);
+    if (process->after) if (!fork()) {pm_execute((const char*)process->after, process->env); exit(0);}
     return pid;
   }
 }
