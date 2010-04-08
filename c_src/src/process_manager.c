@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "process_manager.h"
 #include "pm_helpers.h"
@@ -38,6 +39,7 @@ int pm_new_process(process_t **ptr)
   p->env_capacity = 0;
   p->env = NULL;
   p->cd = NULL;
+  p->nice = 0;
   
   p->command = NULL;
   p->before = NULL;
@@ -114,7 +116,7 @@ void setup_signal_handlers()
   sigaction(SIGCHLD, &sact, NULL);
 }
 
-int pm_execute(const char* command, const char** env)
+int pm_execute(const char* command, char** env)
 {
   char **command_argv = {0};
   int command_argc = 0;
@@ -131,38 +133,29 @@ int pm_execute(const char* command, const char** env)
 
 pid_t pm_run_process(process_t *process)
 {
-  // pid_t pid = fork();
-  // switch (pid) {
-  // case -1: 
-  //   return -1;
-  // case 0: {
-  //   // We are in the child process
-  //   setup_signal_handlers();
-  //   const char* const argv[] = { getenv("SHELL"), "-c", process->command, (char*)NULL };
-  //   if (process->cd != NULL && process->cd[0] != '\0' && chdir(process->cd) < 0) {
-  //     fperror("Cannot chdir to '%s'", cd);
-  //     return EXIT_FAILURE;
-  //   }
-  //   
-  //   if (execve((const char*)argv[0], (char* const*)argv, (char* const*) env) < 0) {
-  //     fperror("Cannot execute %s: %s\n", argv[0], strerror(errno));
-  //     exit(-1);
-  //   }
-  //   debug(dbg, 1, "There was an error in execve\n");
-  //   exit(-1);
-  // }
-  // default:
-  //   // In parent process
-  //   if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
-  //     fperror("Cannot set priority of pid %d to %d", pid, nice);
-  //   }
-  //   if (pid > 0) {
-  //     CmdInfo ci(command_argv, kill_cmd, pid);
-  //     children[pid] = ci;
-  //   }
-  //   return pid;
-  // }
-  return -1;
+  if (process->before) pm_execute((const char*)process->before, process->env);
+  pid_t pid = fork();
+  switch (pid) {
+  case -1: 
+    return -1;
+  case 0: {
+    // We are in the child process
+    setup_signal_handlers();
+    const char* argv[] = { getenv("SHELL"), "-c", find_binary(process->command), (char*)NULL };
+    if (process->cd != NULL && process->cd[0] != '\0' && chdir(process->cd) < 0) {
+      return EXIT_FAILURE;
+    }
+    pm_execute((const char*)argv, process->env);
+    exit(-1);
+  }
+  default:
+    // In parent process
+    if (process->nice != INT_MAX && setpriority(PRIO_PROCESS, pid, process->nice) < 0) {
+    }
+    
+    if (process->after) pm_execute((const char*)process->after, process->env);
+    return pid;
+  }
 }
 
 // Privates

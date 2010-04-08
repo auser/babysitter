@@ -7,7 +7,7 @@
 *
 * @params
 * {Cmd::string(), [Option]}
-*     Option = {env, Strings} | {cd, Dir} | {do_before, Cmd} | {do_after, Cmd}
+*     Option = {env, Strings} | {cd, Dir} | {do_before, Cmd} | {do_after, Cmd} | {nice, int()}
 **/
 int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[], process_t **ptr)
 {
@@ -49,6 +49,8 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
       pm_malloc_and_set_attribute(&process->cd, value);
     } else if (!strcmp(key, "env")) {
       pm_add_env(&process, value);
+    } else if (!strcmp(key, "nice")) {
+      process->nice = atoi(value);
     }
     list = tail;
   }

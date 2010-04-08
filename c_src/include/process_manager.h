@@ -10,6 +10,7 @@ typedef struct _process_t_ {
   char*   before;
   char*   after;
   char*   cd;
+  int     nice;
 } process_t;
 
 /* Helpers */
@@ -24,6 +25,6 @@ int pm_free_process(process_t *p);
 int pm_malloc_and_set_attribute(char **ptr, char *value);
 
 /* Mainly private exports */
-int pm_execute(const char* command, const char** env);
+int pm_execute(const char* command, char** env);
 
 #endif
