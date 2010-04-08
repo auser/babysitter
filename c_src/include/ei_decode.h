@@ -10,23 +10,7 @@
 #include <errno.h>
 
 #include "process_manager.h"
-
-/* Defines */
-#ifndef MAXATOMLEN
-#define MAXATOMLEN 256
-#endif
-
-#ifndef BUFFER_SZ
-#define BUFFER_SZ 1024
-#endif
-
-#ifndef MAX_BUFFER_SZ
-#define MAX_BUFFER_SZ 4096
-#endif
-
-#ifndef PREFIX_LEN
-#define PREFIX_LEN 8
-#endif
+#include "pm_helpers.h"
 
 /* Exports */
 ERL_NIF_TERM ok(ErlNifEnv* env, const char* atom, const char *fmt, ...);

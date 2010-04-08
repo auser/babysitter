@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "process_manager.h"
 
@@ -68,6 +69,84 @@ int pm_free_process(process_t *p)
   
   free(p);
   return 0;
+}
+
+/*--- Run process ---*/
+void pm_gotsignal(int signal)
+{ 
+  switch(signal) {
+    case SIGHUP:
+      break;
+    case SIGTERM:
+    case SIGINT:
+    default:
+    break;
+  }
+}
+
+void pm_gotsigchild(int signal, siginfo_t* si, void* context)
+{
+  // If someone used kill() to send SIGCHLD ignore the event
+  if (signal != SIGCHLD) return;
+  
+  // process_child_signal(si->si_pid);
+}
+/**
+* Setup signal handlers for the process
+**/
+void setup_signal_handlers()
+{
+  struct sigaction                sact, sterm;
+  sterm.sa_handler = pm_gotsignal;
+  sigemptyset(&sterm.sa_mask);
+  sigaddset(&sterm.sa_mask, SIGCHLD);
+  sterm.sa_flags = 0;
+  sigaction(SIGINT,  &sterm, NULL);
+  sigaction(SIGTERM, &sterm, NULL);
+  sigaction(SIGHUP,  &sterm, NULL);
+  sigaction(SIGPIPE, &sterm, NULL);
+  
+  sact.sa_handler = NULL;
+  sact.sa_sigaction = pm_gotsigchild;
+  sigemptyset(&sact.sa_mask);
+  sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
+  sigaction(SIGCHLD, &sact, NULL);
+}
+
+pid_t pm_run_process(process_t *process)
+{
+  // pid_t pid = fork();
+  // switch (pid) {
+  // case -1: 
+  //   return -1;
+  // case 0: {
+  //   // We are in the child process
+  //   setup_signal_handlers();
+  //   const char* const argv[] = { getenv("SHELL"), "-c", command_argv, (char*)NULL };
+  //   if (cd != NULL && cd[0] != '\0' && chdir(cd) < 0) {
+  //     fperror("Cannot chdir to '%s'", cd);
+  //     return EXIT_FAILURE;
+  //   }
+  //   
+  //   if (execve((const char*)argv[0], (char* const*)argv, (char* const*) env) < 0) {
+  //     fperror("Cannot execute %s: %s\n", argv[0], strerror(errno));
+  //     exit(-1);
+  //   }
+  //   debug(dbg, 1, "There was an error in execve\n");
+  //   exit(-1);
+  // }
+  // default:
+  //   // In parent process
+  //   if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
+  //     fperror("Cannot set priority of pid %d to %d", pid, nice);
+  //   }
+  //   if (pid > 0) {
+  //     CmdInfo ci(command_argv, kill_cmd, pid);
+  //     children[pid] = ci;
+  //   }
+  //   return pid;
+  // }
+  return -1;
 }
 
 // Privates

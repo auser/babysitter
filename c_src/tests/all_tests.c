@@ -4,6 +4,7 @@
 #include "test_helper.h"
 #include "ei_decode_test.h"
 #include "process_manager_test.h"
+#include "pm_helpers_test.h"
 
 static char * all_tests() {
   mu_run_test(test_new_process);
@@ -11,6 +12,8 @@ static char * all_tests() {
   mu_run_test(test_pm_malloc_and_set_attribute);
   mu_run_test(test_pm_add_env);
   mu_run_test(test_pm_valid_process);
+  mu_run_test(test_pm_abs_path);
+  mu_run_test(test_find_binary);
   return 0;
 }
 

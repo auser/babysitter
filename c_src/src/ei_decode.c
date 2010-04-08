@@ -16,18 +16,22 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
     return -1;
   
   process_t *process = *ptr;
+  const ERL_NIF_TERM* big_tuple;
+  int arity = 2;
+  // Get the outer tuple
+  if(!enif_get_tuple(env, argv[0], &arity, &big_tuple)) return -1;
   
   // The first command is a string
   char command[MAX_BUFFER_SZ], key[MAX_BUFFER_SZ], value[MAX_BUFFER_SZ];
   memset(&command, '\0', sizeof(command));
   
-  if (enif_get_string(env, argv[0], command, sizeof(command), ERL_NIF_LATIN1) < 0) return -1;
+  // Get the command
+  if (enif_get_string(env, big_tuple[0], command, sizeof(command), ERL_NIF_LATIN1) < 0) return -1;
   pm_malloc_and_set_attribute(&process->command, command);
   
   // The second element of the tuple is a list of options
   const ERL_NIF_TERM* tuple;
-  ERL_NIF_TERM head, tail, list = argv[1];
-  int arity = 2;
+  ERL_NIF_TERM head, tail, list = big_tuple[1];
   
   // int enif_get_tuple(ErlNifEnv* env, ERL_NIF_TERM term, int* arity, const ERL_NIF_TERM** array)
   while(enif_get_list_cell(env, list, &head, &tail)) {

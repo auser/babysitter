@@ -104,7 +104,7 @@ all: $(ALL_OBJ) $(TARGET_LIBS_OBJ) build_tests build_executable
 
 build_tests:
 	$(SILENCE)echo "Building tests"
-	$(SILENCE)$(CC) $(INCLUDES) -o run_tests src/process_manager.o $(LDFLAGS_COMMON) $(LD_LIBRARIES) $(TEST_SRC)
+	$(SILENCE)$(CC) $(INCLUDES) -o run_tests src/process_manager.o src/pm_helpers.o $(LDFLAGS_COMMON) $(LD_LIBRARIES) $(TEST_SRC)
 
 build_executable:
 	$(SILENCE)mkdir -p `dirname $(OUTPUT)`

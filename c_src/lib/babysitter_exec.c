@@ -51,11 +51,13 @@ ERL_NIF_TERM test_pid(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 ERL_NIF_TERM run_and_monitor(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
   ERL_NIF_TERM erlRes;
+  pid_t pid;
   process_t *process = NULL;
   decode_command_call_into_process(env, argc, argv, &process);
   // Do something with the process
   if (pm_process_valid(&process)) return error(env, "invalid process specification");
-  pid_t pid = getpid(); // Dummy pid
+  
+  pid = pm_run_process(process);
   if (pid > 0)
     erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
   else
@@ -82,6 +84,7 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   decode_command_call_into_process(env, argc, argv, &process);
   // Do something with the process
   // erlRes = enif_make_atom(env, "ok");
+  if (pm_process_valid(&process)) return error(env, "invalid process specification");
   pid_t pid = getpid(); // Dummy pid
   if (pid > 0)
     erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
@@ -95,7 +98,8 @@ ERL_NIF_TERM test_args(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 static ErlNifFunc nif_funcs[] =
 {
   {"test_pid", 1, test_pid},
-  {"test_args", 2, test_args},
+  {"test_args", 1, test_args},
+  {"run_and_monitor", 1, run_and_monitor}
 };
 
 ERL_NIF_INIT(babysitter_exec, nif_funcs, load, reload, upgrade, unload)
