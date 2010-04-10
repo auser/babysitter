@@ -12,10 +12,6 @@
 #include <errno.h>
 
 /* Defines */
-#ifndef MAXATOMLEN
-#define MAXATOMLEN 256
-#endif
-
 #ifndef BUFFER_SZ
 #define BUFFER_SZ 1024
 #endif

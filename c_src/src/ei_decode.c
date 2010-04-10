@@ -133,3 +133,65 @@ ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...)
   return enif_make_tuple2(env, enif_make_atom(env,"error"), enif_make_atom(env, str));
 }
 
+
+/**
+* Data marshalling functions
+**/
+
+
+ 
+int read_cmd(byte **buf, int *size, int fd)
+{
+  int len;
+  if (read_exact(*buf, 2, fd) != 2) return(-1);
+  len = (*buf[0] << 8) | *buf[1];
+
+  if (len > *size) {
+    byte* tmp = (byte *) realloc(*buf, len);
+    if (tmp == NULL)
+      return -1;
+    else
+      *buf = tmp;
+      
+    *size = len;
+  }
+  return read_exact(*buf, len, fd);
+}
+
+int write_cmd(ei_x_buff *buff, int fd)
+{
+  byte li;
+
+  li = (buff->index >> 8) & 0xff; 
+  write_exact(&li, 1, fd);
+  li = buff->index & 0xff;
+  write_exact(&li, 1, fd);
+
+  return write_exact(buff->buff, buff->index, fd);
+}
+
+int read_exact(byte *buf, int len, int fd)
+{
+  int i, got=0;
+
+  do {
+    if ((i = read(fd, buf+got, len-got)) <= 0)
+      return i;
+    got += i;
+  } while (got<len);
+
+  return len;
+}
+
+int write_exact(byte *buf, int len, int fd)
+{
+  int i, wrote = 0;
+
+  do {
+    if ((i = write(fd, buf+wrote, len-wrote)) <= 0)
+      return i;
+    wrote += i;
+  } while (wrote<len);
+
+  return len;
+}

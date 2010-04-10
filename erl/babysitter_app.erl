@@ -15,8 +15,8 @@ start(_Type, Args) ->
   io:format("Args: ~p~n", [Args]),
   lists:map(fun(A) ->
     io:format("Starting ~p...~n", [A]),
-    A:start([{config, "./docs/apps"}])
-  end, []),
+    A:start_link([{config, "./docs/apps"}])
+  end, [babysitter_port]),
   io:format("Starting babysitter~n"),
   babysitter_sup:start_link().
 

@@ -12,6 +12,9 @@
 #include "process_manager.h"
 #include "pm_helpers.h"
 
+// Defines
+typedef char byte;
+
 /* Exports */
 ERL_NIF_TERM ok(ErlNifEnv* env, const char* atom, const char *fmt, ...);
 ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...);
@@ -20,5 +23,11 @@ ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...);
 int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[], process_t **ptr);
 void ei_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, char *string);
 char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size);
+
+// Binary stuff
+int read_cmd(byte **buf, int *size, int fd);
+int write_cmd(ei_x_buff* x, int fd);
+int read_exact(byte *buf, int len, int fd);
+int write_exact(byte *buf, int len, int fd);
 
 #endif

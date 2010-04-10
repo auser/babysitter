@@ -1,6 +1,26 @@
 #ifndef PROCESS_MANAGER_H
 #define PROCESS_MANAGER_H
 
+#include <signal.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <limits.h>
+#include <signal.h>
+#include <sys/time.h>             // For timeval struct
+#include <sys/wait.h>             // For waitpid
+#include <time.h>                 // For time function
+
+#include <setjmp.h>
+#include "uthash.h"
+#include "pm_helpers.h"
+
+#include "print_helpers.h"
+
 /* Types */
 typedef struct _process_t_ {
   char**  env;
@@ -13,6 +33,12 @@ typedef struct _process_t_ {
   int     nice;
 } process_t;
 
+typedef struct _process_struct_ {
+    int pid;                    /* key */
+    process_t process;
+    UT_hash_handle hh;         /* makes this structure hashable */
+} process_struct;
+
 /* Helpers */
 int pm_new_process(process_t **ptr);
 
@@ -20,11 +46,17 @@ int pm_new_process(process_t **ptr);
 int pm_check_pid_status(pid_t pid);
 int pm_add_env(process_t **ptr, char *str);
 int pm_process_valid(process_t **ptr);
-pid_t pm_run_process(process_t *process);
 int pm_free_process(process_t *p);
 int pm_malloc_and_set_attribute(char **ptr, char *value);
 
+/* extra helpers */
+int pm_setup(int read_handle, int write_handle);
+
 /* Mainly private exports */
-int pm_execute(const char* command, char** env);
+pid_t pm_run_process(process_t *process);
+pid_t pm_execute(int wait, const char* command, const char *cd, int nice, char** env);
+int pm_check_children(int isTerminated);
+int pm_check_pending_processes();
+int pm_next_loop();
 
 #endif

@@ -44,11 +44,13 @@ TEST_DIRS = \
 LDFLAGS_COMMON=@LDFLAGS_COMMON@
 ifeq ($(shell uname),Linux)
 	ARCH=linux
-	LDFLAGS=$(LDFLAGS_COMMON) -shared
+	LDFLAGS=$(LDFLAGS_COMMON)
+	LDBUNDLE_FLAGS=$(LDFLAGS) -shared
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON) -bundle -flat_namespace -undefined suppress
+	LDFLAGS=$(LDFLAGS_COMMON) -flat_namespace -undefined suppress
+	LDBUNDLE_FLAGS=$(LDFLAGS) -bundle
 endif
 LD_LIBRARIES += -lerl_interface -lei -lstdc++
 
