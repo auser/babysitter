@@ -140,9 +140,11 @@ int main (int argc, char const *argv[])
       exit(9);
     } else if (FD_ISSET (read_handle, &readfds) ) {
       // Read from fin a command sent by Erlang
-      int  arity, index, version;
-      long transId;
-      
+      int   arity, index, version;
+      long  transId;
+      char* buf;
+      if ((buf = (char *) malloc( sizeof(buf) )) == NULL) return -1;
+        
       /* Reset the index, so that ei functions can decode terms from the 
        * beginning of the buffer */
       index = 0;

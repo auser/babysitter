@@ -57,24 +57,42 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
   return 0;
 }
 
-int ei_decode_command_call_into_process(process_t **ptr)
+/**
+* Translate ei buffer into a process_t object
+**/
+int ei_decode_command_call_into_process(char *buf, process_t **ptr)
 {
   // Instantiate a new process
   if (pm_new_process(ptr))
     return -1;
   
-  process_t *process = *ptr;
-  const ERL_NIF_TERM* big_tuple;
-  int arity = 2;
-  // Get the outer tuple
-  if(!enif_get_tuple(env, argv[0], &arity, &big_tuple)) return -1;
+  int   arity, index, version;
+  long  transId;
+  char* buf;
+  if ((buf = (char *) malloc( sizeof(buf) )) == NULL) return -1;
+    
+  // Reset the index, so that ei functions can decode terms from the 
+  // beginning of the buffer
+  index = 0;
+
+  /* Ensure that we are receiving the binary term by reading and 
+   * stripping the version byte */
+  if (ei_decode_version(buf, &index, &version)) return -2;
+  // Decode the tuple header and make sure that the arity is 2
+  // as the tuple spec requires it to contain a tuple: {TransId, {Cmd::atom(), Arg1, Arg2, ...}}
+  if (ei_decode_tuple_header(buf, &index, &arity) != 2) return -3; // decode the tuple and capture the arity
+  if (ei_decode_long(buf, &index, &transId) < 0) return -4; // Get the transId
+  if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 2) return -5; 
   
+  process_t *process = *ptr;
+  
+  // Get the outer tuple  
   // The first command is a string
   char command[MAX_BUFFER_SZ], key[MAX_BUFFER_SZ], value[MAX_BUFFER_SZ];
   memset(&command, '\0', sizeof(command));
   
   // Get the command
-  if (enif_get_string(env, big_tuple[0], command, sizeof(command), ERL_NIF_LATIN1) < 0) return -1;
+  if (ei_decode_atom(buf, &index, command)) return -6;
   pm_malloc_and_set_attribute(&process->command, command);
   
   // The second element of the tuple is a list of options
