@@ -24,7 +24,7 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
 void ei_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, char *string);
 char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size);
 
-// Binary stuff
+// Ei
 int read_cmd(byte **buf, int *size, int fd);
 int write_cmd(ei_x_buff* x, int fd);
 int read_exact(byte *buf, int len, int fd);

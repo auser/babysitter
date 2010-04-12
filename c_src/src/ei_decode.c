@@ -137,18 +137,31 @@ ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...)
 /**
 * Data marshalling functions
 **/
-int ei_ok((void *) value, int type)
+int ei_write_atom(int fd, const char* first, const char* fmt, ...)
 {
   ei_x_buff result;
   if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
-  if (ei_x_encode_atom(&result, "ok") ) return -2;
-  // Encode other type HERE
+  if (ei_x_encode_atom(&result, first) ) return -2;
+  // Encode string
+  char str[MAXATOMLEN];
+  va_list vargs;
+  va_start (vargs, fmt);
+  vsnprintf(str, sizeof(str), fmt, vargs);
+  va_end   (vargs);
   
-  write_cmd(&result);
+  if (ei_x_encode_string_len(&result, str, strlen(str))) return -3;
+  
+  write_cmd(&result, fd);
   ei_x_free(&result);
   return 0;
 }
- 
+
+int ei_ok(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "ok", fmt, vargs);}
+int ei_error(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "error", fmt, vargs);}
+
+/**
+* Data i/o
+**/
 int read_cmd(byte **buf, int *size, int fd)
 {
   int len;
