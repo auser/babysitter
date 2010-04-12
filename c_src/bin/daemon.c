@@ -150,15 +150,15 @@ int main (int argc, char const *argv[])
       /* Ensure that we are receiving the binary term by reading and 
        * stripping the version byte */
       debug(dbg, 1, "decoding version...\n");
-      if (ei_decode_version(buf, &index, &version)) return -1;
+      if (ei_decode_version(buf, &index, &version)) continue;
       // Decode the tuple header and make sure that the arity is 2
       // as the tuple spec requires it to contain a tuple: {TransId, {Cmd::atom(), Arg1, Arg2, ...}}
       debug(dbg, 1, "decoding header...\n");
-      if (ei_decode_tuple_header(buf, &index, &arity) != 2) return -2;
+      if (ei_decode_tuple_header(buf, &index, &arity) != 2) continue;
       debug(dbg, 1, "decoding long\n");
-      if (ei_decode_long(buf, &index, &transId) < 0) return -3;
+      if (ei_decode_long(buf, &index, &transId) < 0) continue;
       debug(dbg, 1, "decoding ei_decode_tuple_header\n");
-      if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 1) return -4;
+      if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 1) continue;
       
       fprintf(stderr, "arity: %d\n", arity);
     }

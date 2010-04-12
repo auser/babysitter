@@ -137,8 +137,17 @@ ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...)
 /**
 * Data marshalling functions
 **/
-
-
+int ei_ok((void *) value, int type)
+{
+  ei_x_buff result;
+  if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
+  if (ei_x_encode_atom(&result, "ok") ) return -2;
+  // Encode other type HERE
+  
+  write_cmd(&result);
+  ei_x_free(&result);
+  return 0;
+}
  
 int read_cmd(byte **buf, int *size, int fd)
 {
