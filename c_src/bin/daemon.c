@@ -158,7 +158,7 @@ int main (int argc, char const *argv[])
       debug(dbg, 1, "decoding long\n");
       if (ei_decode_long(buf, &index, &transId) < 0) continue;
       debug(dbg, 1, "decoding ei_decode_tuple_header\n");
-      if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 1) continue;
+      if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 2) continue;
       
       fprintf(stderr, "arity: %d\n", arity);
     }
