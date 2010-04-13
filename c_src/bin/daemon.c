@@ -64,7 +64,7 @@ int parse_the_command_line(int argc, const char** argv)
       arg = argv[2]; argc--; argv++; char * pEnd;
       write_handle = strtol(arg, &pEnd, 10);
     } else if (!strncmp(argv[1], "--non-standard", 14) || !strncmp(argv[1], "-n", 2)) {
-      read_handle = 2;
+      read_handle = 3;
       write_handle = read_handle + 1;
     }
     argc--; argv++;
@@ -159,11 +159,10 @@ int main (int argc, char const *argv[])
       debug(dbg, 1, "decoding version: %d...\n", version);
       // Decode the tuple header and make sure that the arity is 2
       // as the tuple spec requires it to contain a tuple: {TransId, {Cmd::atom(), Arg1, Arg2, ...}}
-      debug(dbg, 1, "decoding header...\n");
       if (ei_decode_tuple_header(buf, &index, &arity) != 2) break;
-      debug(dbg, 1, "decoding long\n");
-      if (ei_decode_long(buf, &index, &transId) < 0) continue;
-      debug(dbg, 1, "decoding ei_decode_tuple_header\n");
+      debug(dbg, 1, "decoding header arity: %d\n", arity);
+      if (ei_decode_long(buf, &index, &transId) < 0) break;
+      debug(dbg, 1, "decoding long transId: %d\n", transId);
       if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 2) break;
       
       fprintf(stderr, "arity: %d\n", arity);
