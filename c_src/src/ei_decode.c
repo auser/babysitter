@@ -66,7 +66,7 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   if (pm_new_process(ptr))
     return -1;
   
-  int   arity, index, version;
+  int   arity, index, version, size;
   long  transId;
   char* buf;
   if ((buf = (char *) malloc( sizeof(buf) )) == NULL) return -1;
@@ -96,9 +96,12 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   pm_malloc_and_set_attribute(&process->command, command);
   
   // The second element of the tuple is a list of options
-  const ERL_NIF_TERM* tuple;
-  ERL_NIF_TERM head, tail, list = big_tuple[1];
+  if (ei_decode_list_header(buf, &index, &size) < 0) return -6;
   
+  int i = 0;
+  for (i = 0; i < size; i++) {
+    
+  }
   // int enif_get_tuple(ErlNifEnv* env, ERL_NIF_TERM term, int* arity, const ERL_NIF_TERM** array)
   while(enif_get_list_cell(env, list, &head, &tail)) {
     // Get the tuple
