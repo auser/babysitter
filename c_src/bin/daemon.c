@@ -63,6 +63,9 @@ int parse_the_command_line(int argc, const char** argv)
     } else if (!strncmp(argv[1], "--write_handle", 14) || !strncmp(argv[1], "-w", 2)) {
       arg = argv[2]; argc--; argv++; char * pEnd;
       write_handle = strtol(arg, &pEnd, 10);
+    } else if (!strncmp(argv[1], "--non-standard", 14) || !standard(argv[1], "-n", 2)) {
+      read_handle = 2;
+      write_handle = read_handle + 1;
     }
     argc--; argv++;
   }
@@ -147,8 +150,9 @@ int main (int argc, char const *argv[])
       /* Reset the index, so that ei functions can decode terms from the 
        * beginning of the buffer */
       index = 0;
-      
-      if (ei_read(buf, read_handle) < 0) return -1;
+      int len = 0;
+      if ((len = ei_read(buf, read_handle)) < 0) return -1;
+      debug(dbg, 1, "decoding len: %d...\n", len);
       /* Ensure that we are receiving the binary term by reading and 
        * stripping the version byte */
       if (ei_decode_version(buf, &index, &version) < 0) break;
