@@ -28,7 +28,6 @@
 int pm_abs_path(const char *path);
 const char *find_binary(const char *file);
 int string_index(const char* cmds[], const char *cmd);
-int decode_atom_index(const char** cmds, char *cmd);
 int argify(const char *line, char ***argv_ptr);
 
 #endif

@@ -9,11 +9,6 @@ int string_index(const char* cmds[], const char *cmd)
   return -1;
 }
 
-int decode_atom_index(const char** cmds, char *cmd)
-{
-  return 0;
-}
-
 int pm_abs_path(const char *path)
 {
   if ((path[0] == '/') || ((path[0] == '.') && (path[1] == '/')))

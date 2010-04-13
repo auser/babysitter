@@ -105,8 +105,6 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
     // enum OptionT            { CD,   ENV,   NICE,   DO_BEFORE,   DO_AFTER } opt;
     // const char* options[] = {"cd", "env", "nice", "do_before", "do_after"};
     
-    char atom_name[MAXATOMLEN]; memset(&atom_name, '\0', sizeof(atom_name));
-    if (ei_decode_atom(buf, &index, atom_name)) return -8;
     
   }
   // // int enif_get_tuple(ErlNifEnv* env, ERL_NIF_TERM term, int* arity, const ERL_NIF_TERM** array)
@@ -235,6 +233,14 @@ int ei_write_atom(int fd, const char* first, const char* fmt, ...)
 
 int ei_ok(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "ok", fmt, vargs);}
 int ei_error(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "error", fmt, vargs);}
+
+int decode_atom_index(char* buf, int index, const char* cmds[], const char *cmd)
+{
+  char atom_name[MAXATOMLEN]; memset(&atom_name, '\0', sizeof(atom_name));
+  if (ei_decode_atom(buf, &index, atom_name)) return -8;
+  
+  return string_index(cmds, cmd);
+}
 
 /**
 * Data i/o
