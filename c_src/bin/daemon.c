@@ -146,7 +146,7 @@ int main (int argc, char const *argv[])
       int   arity, index, version;
       long  transId;
       char* buf;
-      if ((buf = (char *) malloc( sizeof(buf) )) == NULL) return -1;
+      if ((buf = (char *) malloc( BUF_SIZE )) == NULL) return -1;
       /* Reset the index, so that ei functions can decode terms from the 
        * beginning of the buffer */
       index = 0;
