@@ -63,7 +63,7 @@ int parse_the_command_line(int argc, const char** argv)
     } else if (!strncmp(argv[1], "--write_handle", 14) || !strncmp(argv[1], "-w", 2)) {
       arg = argv[2]; argc--; argv++; char * pEnd;
       write_handle = strtol(arg, &pEnd, 10);
-    } else if (!strncmp(argv[1], "--non-standard", 14) || !standard(argv[1], "-n", 2)) {
+    } else if (!strncmp(argv[1], "--non-standard", 14) || !strncmp(argv[1], "-n", 2)) {
       read_handle = 2;
       write_handle = read_handle + 1;
     }
