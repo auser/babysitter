@@ -68,8 +68,6 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   
   int   arity, index, version, size;
   long  transId;
-  char* buf;
-  if ((buf = (char *) malloc( sizeof(buf) )) == NULL) return -1;
     
   // Reset the index, so that ei functions can decode terms from the 
   // beginning of the buffer
@@ -88,7 +86,7 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   
   // Get the outer tuple  
   // The first command is a string
-  char command[MAX_BUFFER_SZ], key[MAX_BUFFER_SZ], value[MAX_BUFFER_SZ];
+  char command[MAX_BUFFER_SZ];
   memset(&command, '\0', sizeof(command));
   
   // Get the command
@@ -99,30 +97,39 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   if (ei_decode_list_header(buf, &index, &size) < 0) return -6;
   
   int i = 0;
+  int tuple_size = 0;
   for (i = 0; i < size; i++) {
+    // Decode the tuple of the form {atom, string()|int()};
+    if (ei_decode_tuple_header(buf, &index, &tuple_size) < 0) return -7;
+          
+    // enum OptionT            { CD,   ENV,   NICE,   DO_BEFORE,   DO_AFTER } opt;
+    // const char* options[] = {"cd", "env", "nice", "do_before", "do_after"};
+    
+    char atom_name[MAXATOMLEN]; memset(&atom_name, '\0', sizeof(atom_name));
+    if (ei_decode_atom(buf, &index, atom_name)) return -8;
     
   }
-  // int enif_get_tuple(ErlNifEnv* env, ERL_NIF_TERM term, int* arity, const ERL_NIF_TERM** array)
-  while(enif_get_list_cell(env, list, &head, &tail)) {
-    // Get the tuple
-    if(!enif_get_tuple(env, head, &arity, &tuple)) return -1;
-    // First element is an atom
-    if (!enif_get_atom(env, tuple[0], key, sizeof(key))) return -2;
-    if (enif_get_string(env, tuple[1], value, sizeof(value), ERL_NIF_LATIN1) < 0) return -3;
-    if (!strcmp(key, "do_before")) {
-      // Do before
-      pm_malloc_and_set_attribute(&process->before, value);
-    } else if (!strcmp(key, "do_after")) {
-      pm_malloc_and_set_attribute(&process->after, value);
-    } else if (!strcmp(key, "cd")) {
-      pm_malloc_and_set_attribute(&process->cd, value);
-    } else if (!strcmp(key, "env")) {
-      pm_add_env(&process, value);
-    } else if (!strcmp(key, "nice")) {
-      process->nice = atoi(value);
-    }
-    list = tail;
-  }
+  // // int enif_get_tuple(ErlNifEnv* env, ERL_NIF_TERM term, int* arity, const ERL_NIF_TERM** array)
+  // while(enif_get_list_cell(env, list, &head, &tail)) {
+  //   // Get the tuple
+  //   if(!enif_get_tuple(env, head, &arity, &tuple)) return -1;
+  //   // First element is an atom
+  //   if (!enif_get_atom(env, tuple[0], key, sizeof(key))) return -2;
+  //   if (enif_get_string(env, tuple[1], value, sizeof(value), ERL_NIF_LATIN1) < 0) return -3;
+  //   if (!strcmp(key, "do_before")) {
+  //     // Do before
+  //     pm_malloc_and_set_attribute(&process->before, value);
+  //   } else if (!strcmp(key, "do_after")) {
+  //     pm_malloc_and_set_attribute(&process->after, value);
+  //   } else if (!strcmp(key, "cd")) {
+  //     pm_malloc_and_set_attribute(&process->cd, value);
+  //   } else if (!strcmp(key, "env")) {
+  //     pm_add_env(&process, value);
+  //   } else if (!strcmp(key, "nice")) {
+  //     process->nice = atoi(value);
+  //   }
+  //   list = tail;
+  // }
   return 0;
 }
 

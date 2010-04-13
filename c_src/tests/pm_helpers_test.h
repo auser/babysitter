@@ -18,3 +18,13 @@ char *test_find_binary() {
   mu_assert(!strcmp(find_binary("made_up_binary"), "\0"), "made_up_binary was found?!? ");
   return 0;
 }
+
+char *test_string_index() {
+  const char* options[] = {"cd", "env", "kill", "nice", "user", "stdout", "stderr", NULL};
+  
+  mu_assert(string_index(options, "env") == 1, "string_index returns incorrect index for 'env'");
+  mu_assert(string_index(options, "cd") == 0, "string_index returns incorrect index for 'cd'");
+  mu_assert(string_index(options, "user") == 4, "string_index returns incorrect index for 'user'");
+  mu_assert(string_index(options, "dogs") == -1, "string_index returns incorrect index for 'dogs'");
+  return 0;
+}

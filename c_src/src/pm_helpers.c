@@ -1,5 +1,19 @@
 #include "pm_helpers.h"
 
+int string_index(const char* cmds[], const char *cmd)
+{
+  int i = 0;
+  for (i = 0; *cmds != NULL; i++, cmds++) {
+    if (cmd == *cmds) return i;
+  }
+  return -1;
+}
+
+int decode_atom_index(const char** cmds, char *cmd)
+{
+  return 0;
+}
+
 int pm_abs_path(const char *path)
 {
   if ((path[0] == '/') || ((path[0] == '.') && (path[1] == '/')))

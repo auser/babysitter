@@ -14,6 +14,7 @@ static char * all_tests() {
   mu_run_test(test_pm_valid_process);
   mu_run_test(test_pm_abs_path);
   mu_run_test(test_find_binary);
+  mu_run_test(test_string_index);
   return 0;
 }
 
