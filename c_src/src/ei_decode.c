@@ -57,7 +57,7 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
   return 0;
 }
 
-int ei_read(char* buf, int fd)
+int ei_read(int fd, char* buf, int offset)
 {
   int size = MIN_BUFFER_SIZE;
   int len = read_cmd(&buf, &size, fd);
@@ -260,9 +260,11 @@ int decode_atom_index(char* buf, int index, const char* cmds[])
 int read_cmd(byte **buf, int *size, int fd)
 {
   int len;
-  int l = 0;
-  if ((l = read_exact(*buf, 2, fd)) != 2) return -1;
+  // Read the header first
+  if (read_exact(fd, *buf, 2) != 2) return -1;
   len = (*buf[0] << 8) | *buf[1];
+  
+  printf("aftre reading header len: %d\n", len);
   
   if (len > *size) {
     byte* tmp = (byte *) realloc(*buf, len);
@@ -273,7 +275,7 @@ int read_cmd(byte **buf, int *size, int fd)
       
     *size = len;
   }
-  return read_exact(*buf, len, fd);
+  return read_exact(fd, *buf, len);
 }
 
 int write_cmd(ei_x_buff *buff, int fd)
@@ -288,12 +290,14 @@ int write_cmd(ei_x_buff *buff, int fd)
   return write_exact(buff->buff, buff->index, fd);
 }
 
-int read_exact(byte *buf, int len, int fd)
+int read_exact(int fd, char* buf, int len)
 {
-  int i, got=0;
-
+  int i;
+  int got = 0;
+  
+  fprintf(stderr, "reading on fd: %d\n", fd);
   do {
-    if ((i = read(fd, buf+got, len-got)) <= 0)
+    if ((i = read(fd, (void*)buf+got, len-got)) <= 0)
       return i;
     got += i;
   } while (got<len);

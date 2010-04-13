@@ -13,7 +13,7 @@
 
 /* Defines */
 #ifndef MIN_BUFFER_SIZE
-#define MIN_BUFFER_SIZE 256
+#define MIN_BUFFER_SIZE 128
 #endif
 #ifndef BUFFER_SZ
 #define BUFFER_SZ 1024

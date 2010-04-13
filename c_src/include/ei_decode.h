@@ -34,7 +34,8 @@ int ei_ok(int fd, const char* fmt, va_list vargs);
 
 int read_cmd(byte **buf, int *size, int fd);
 int write_cmd(ei_x_buff* x, int fd);
-int read_exact(byte *buf, int len, int fd);
+// int read_exact(byte *buf, int len, int fd);
+int read_exact(int fd, char* buf, int len);
 int write_exact(byte *buf, int len, int fd);
 
 #endif
