@@ -12,6 +12,9 @@
 #include <errno.h>
 
 /* Defines */
+#ifndef MIN_BUFFER_SIZE
+#define MIN_BUFFER_SIZE 256
+#endif
 #ifndef BUFFER_SZ
 #define BUFFER_SZ 1024
 #endif

@@ -24,8 +24,8 @@ int                     run_as_user;
 pid_t                   process_pid;
 extern int              dbg;
 char*                   buf;
-int                     read_handle = 2;
-int                     write_handle = 3;
+int                     read_handle = 0;
+int                     write_handle = 1;
 
 int setup()
 {
@@ -64,8 +64,11 @@ int parse_the_command_line(int argc, const char** argv)
       arg = argv[2]; argc--; argv++; char * pEnd;
       write_handle = strtol(arg, &pEnd, 10);
     } else if (!strncmp(argv[1], "--non-standard", 14) || !strncmp(argv[1], "-n", 2)) {
-      read_handle = 3;
-      write_handle = read_handle + 1;
+      read_handle = 2;
+      write_handle = 3;
+    } else if (!strncmp(argv[1], "--non-blocking", 14) || !strncmp(argv[1], "-b", 2)) {
+      fcntl(read_handle,  F_SETFL, fcntl(read_handle,  F_GETFL) | O_NONBLOCK);
+      fcntl(write_handle, F_SETFL, fcntl(write_handle, F_GETFL) | O_NONBLOCK);
     }
     argc--; argv++;
   }
@@ -118,6 +121,8 @@ int main (int argc, char const *argv[])
   setup_erl_daemon_signal_handlers();
   if (setup()) return -1;
   
+  const int maxfd = read_handle + 1;
+  
   /* Do stuff */
   while (!terminated) {
     debug(dbg, 4, "looping... (%d)\n", (int)terminated);
@@ -131,8 +136,8 @@ int main (int argc, char const *argv[])
     // Erlang fun... pull the next command from the readfds parameter on the erlang fd
     struct timeval m_tv;
     m_tv.tv_usec = 0; m_tv.tv_sec = 5;
-    int cnt = select(read_handle + 2, &readfds, (fd_set *)0, (fd_set *) 0, &m_tv);
-    debug(dbg, 0, "read handle: %d\n", cnt);
+    int cnt = select(maxfd, &readfds, (fd_set *)0, (fd_set *) 0, &m_tv);
+    debug(dbg, 0, "read handle: %d\n", maxfd);
     int interrupted = (cnt < 0 && errno == EINTR);
     
     debug(dbg, 0, "interrupted: %d cnt: %d\n", interrupted, cnt);
@@ -145,13 +150,18 @@ int main (int argc, char const *argv[])
       // Read from fin a command sent by Erlang
       int   arity, index, version;
       long  transId;
-      char* buf;
-      if ((buf = (char *) malloc( BUF_SIZE )) == NULL) return -1;
+      char* buf = NULL;
       /* Reset the index, so that ei functions can decode terms from the 
        * beginning of the buffer */
-      index = 0;
       int len = 0;
-      if ((len = ei_read(buf, read_handle)) < 0) return -1;
+      
+      debug(dbg, 1, "ei_read on %d\n", read_handle);
+      if ((len = ei_read(buf, read_handle)) < 0) {
+        debug(dbg, 1, "ei_read len: %d\n", len);
+        break;
+      }
+      
+      index = 0;
       debug(dbg, 1, "decoding len: %d...\n", len);
       /* Ensure that we are receiving the binary term by reading and 
        * stripping the version byte */

@@ -59,7 +59,7 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
 
 int ei_read(char* buf, int fd)
 {
-  int size = BUFFER_SZ;
+  int size = MIN_BUFFER_SIZE;
   int len = read_cmd(&buf, &size, fd);
   return len;
 }
@@ -260,9 +260,10 @@ int decode_atom_index(char* buf, int index, const char* cmds[])
 int read_cmd(byte **buf, int *size, int fd)
 {
   int len;
-  if (read_exact(*buf, 2, fd) != 2) return(-1);
+  int l = 0;
+  if ((l = read_exact(*buf, 2, fd)) != 2) return -1;
   len = (*buf[0] << 8) | *buf[1];
-
+  
   if (len > *size) {
     byte* tmp = (byte *) realloc(*buf, len);
     if (tmp == NULL)

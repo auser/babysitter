@@ -167,7 +167,7 @@ init([Options]) ->
   try
     io:format("Exec: ~p~n", [Exe]),
     debug(Debug, "exec: port program: ~s\n", [Exe]),
-    Port = erlang:open_port({spawn, Exe}, [binary, exit_status, {packet, 2}, nouse_stdio, hide]),
+    Port = erlang:open_port({spawn, Exe}, [binary, exit_status, {packet, 2}, use_stdio, hide]),
     {ok, #state{port=Port, limit_users=Users, debug=Debug}}
   catch _:Reason ->
     {stop, io:format("Error starting port '~s': ~200p", [Exe, Reason])}
