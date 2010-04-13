@@ -144,23 +144,23 @@ int main (int argc, char const *argv[])
       long  transId;
       char* buf;
       if ((buf = (char *) malloc( sizeof(buf) )) == NULL) return -1;
-        
       /* Reset the index, so that ei functions can decode terms from the 
        * beginning of the buffer */
       index = 0;
-
+      
+      if (ei_read(buf, read_handle) < 0) return -1;
       /* Ensure that we are receiving the binary term by reading and 
        * stripping the version byte */
-      debug(dbg, 1, "decoding version...\n");
-      if (ei_decode_version(buf, &index, &version)) continue;
+      if (ei_decode_version(buf, &index, &version) < 0) break;
+      debug(dbg, 1, "decoding version: %d...\n", version);
       // Decode the tuple header and make sure that the arity is 2
       // as the tuple spec requires it to contain a tuple: {TransId, {Cmd::atom(), Arg1, Arg2, ...}}
       debug(dbg, 1, "decoding header...\n");
-      if (ei_decode_tuple_header(buf, &index, &arity) != 2) continue;
+      if (ei_decode_tuple_header(buf, &index, &arity) != 2) break;
       debug(dbg, 1, "decoding long\n");
       if (ei_decode_long(buf, &index, &transId) < 0) continue;
       debug(dbg, 1, "decoding ei_decode_tuple_header\n");
-      if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 2) continue;
+      if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 2) break;
       
       fprintf(stderr, "arity: %d\n", arity);
     }

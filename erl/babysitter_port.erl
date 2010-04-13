@@ -155,7 +155,7 @@ get_opt(debug)           -> {debug, true}.
 init([Options]) ->
   process_flag(trap_exit, true),
   Args = lists:foldl(
-    fun({debug, true},       Acc) -> [" --debug" | Acc];
+    fun({debug, true},       Acc) -> [" --debug 4" | Acc];
        ({alarm, I},          Acc) -> [" -alarm "++integer_to_list(I) | Acc];
        ({args, Arg},         Acc) -> [" "++Arg | Acc];
        ({user, User}, Acc) when User =/= "" -> [" -user "++User | Acc];
@@ -165,6 +165,7 @@ init([Options]) ->
   Users = proplists:get_value(limit_users, Options, default(limit_users)),
   Debug = proplists:get_value(verbose,     Options, default(verbose)),
   try
+    io:format("Exec: ~p~n", [Exe]),
     debug(Debug, "exec: port program: ~s\n", [Exe]),
     Port = erlang:open_port({spawn, Exe}, [binary, exit_status, {packet, 2}, nouse_stdio, hide]),
     {ok, #state{port=Port, limit_users=Users, debug=Debug}}

@@ -57,6 +57,12 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
   return 0;
 }
 
+int ei_read(char* buf, int fd)
+{
+  int size = BUFFER_SZ;
+  int len = read_cmd(&buf, &size, fd);
+  return len;
+}
 /**
 * Translate ei buffer into a process_t object
 **/
