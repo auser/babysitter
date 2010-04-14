@@ -245,8 +245,8 @@ handle_info({'EXIT', Pid, Reason}, State) ->
     % OsPid's Pid owner died. Kill linked OsPid.
     do_unlink_ospid(Pid, Reason, State),
     {noreply, State};
-handle_info(_Info, State) ->
-    error_logger:info_msg("~w - unhandled message: ~p\n", [?MODULE, _Info]),
+handle_info(Info, State) ->
+    error_logger:info_msg("~w - unhandled message: ~p\n", [?MODULE, Info]),
     {noreply, State}.
 
 %%----------------------------------------------------------------------

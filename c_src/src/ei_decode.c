@@ -267,7 +267,7 @@ int ei_write_atom(int fd, int transId, const char* first, const char* fmt, ...)
   if (ei_x_encode_string_len(&result, str, strlen(str))) return -4;
   
   write_cmd(fd, &result);
-  // ei_x_free(&result);
+  ei_x_free(&result);
   return 0;
 }
 
@@ -276,12 +276,16 @@ int ei_pid_ok(int fd, int transId, pid_t pid)
   ei_x_buff result;
   if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
   if (ei_x_encode_long(&result, transId)) return -2;
-  if (ei_x_encode_atom(&result, "ok") ) return -3;
+  if (ei_x_encode_tuple_header(&result, 2)) return -3;
+  if (ei_x_encode_atom(&result, "ok") ) return -4;
   // Encode pid
-  if (ei_x_encode_long(&result, (long)pid)) return -4;
+  printf("pid: %d\n", (int)pid);
+  if (ei_x_encode_long(&result, (int)pid)) return -5;
   
+  printf("writing\n");
   if (write_cmd(fd, &result)) return -5;
   printf("written\n");
+  ei_x_free(&result);
   return 0;
 }
 int ei_ok(int fd, int transId, const char* fmt, ...)
@@ -334,11 +338,10 @@ int write_cmd(int fd, ei_x_buff *buff)
 {
   byte li;
 
-  li = (buff->index >> 8) & 0xff; 
+  li = (buff->index >> 8) & 0xff;
   write_exact(fd, &li, 1);
   li = buff->index & 0xff;
   write_exact(fd, &li, 1);
-
   return write_exact(fd, buff->buff, buff->index);
 }
 
