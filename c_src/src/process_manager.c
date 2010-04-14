@@ -274,6 +274,9 @@ int pm_next_loop()
   else return 0;
 }
 
+void pm_set_can_jump() {pm_can_jump = 1;}
+void pm_set_can_not_jump() {pm_can_jump = 0;}
+
 int setup_pm_pending_alarm()
 {
   struct itimerval tval;

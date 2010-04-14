@@ -187,6 +187,7 @@ handle_call({port, Instruction}, From, #state{last_trans=Last} = State) ->
     try is_port_command(Instruction, State) of
     {ok, Term, Link} ->
         Next = next_trans(Last),
+        io:format("{~p, ~p}~n", [Next, Term]),
         erlang:port_command(State#state.port, term_to_binary({Next, Term})),
         {noreply, State#state{trans = queue:in({Next, From, Link}, State#state.trans)}}
     catch _:{error, Why} ->

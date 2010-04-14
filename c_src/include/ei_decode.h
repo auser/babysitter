@@ -27,15 +27,14 @@ char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size);
 // Ei
 int ei_decode_command_call_into_process(char *buf, process_t **ptr);
 int decode_atom_index(char* buf, int index, const char* cmds[]);
-int ei_read();
+int ei_read(int fd, char** buf);
 
 int ei_error(int fd, const char* fmt, va_list vargs);
 int ei_ok(int fd, const char* fmt, va_list vargs);
 
-int read_cmd(byte **buf, int *size, int fd);
-int write_cmd(ei_x_buff* x, int fd);
-// int read_exact(byte *buf, int len, int fd);
-int read_exact(int fd, char* buf, int len);
-int write_exact(byte *buf, int len, int fd);
+int read_cmd(int fd, byte **buf, int *size);
+int write_cmd(int fd, ei_x_buff *buff);
+int read_exact(int fd, byte *buf, int len);
+int write_exact(int fd, byte *buf, int len);
 
 #endif

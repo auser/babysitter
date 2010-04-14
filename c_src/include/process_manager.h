@@ -48,6 +48,8 @@ int pm_add_env(process_t **ptr, char *str);
 int pm_process_valid(process_t **ptr);
 int pm_free_process(process_t *p);
 int pm_malloc_and_set_attribute(char **ptr, char *value);
+void pm_set_can_jump();
+void pm_set_can_not_jump();
 
 /* extra helpers */
 int pm_setup(int read_handle, int write_handle);

@@ -57,11 +57,18 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
   return 0;
 }
 
-int ei_read(int fd, char* buf, int offset)
+int ei_read(int fd, char** bufr)
 {
-  int size = MIN_BUFFER_SIZE;
-  int len = read_cmd(&buf, &size, fd);
-  return len;
+  int size = MAX_BUFFER_SZ;
+  
+  char *buf;
+  if ((buf = (char *) realloc(buf, size)) == NULL)  return -1;
+  
+  int ret = read_cmd(fd, &buf, &size);
+  
+  printf("buf: %s - %d\n", buf, ret);
+  *bufr = buf;
+  return ret;
 }
 /**
 * Translate ei buffer into a process_t object
@@ -81,19 +88,23 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
 
   /* Ensure that we are receiving the binary term by reading and 
    * stripping the version byte */
-  if (ei_decode_version(buf, &index, &version)) return -2;
+  if (ei_decode_version(buf, &index, &version) < 0) return -2;
+  fprintf(stderr, "version: %d\n", version);
   // Decode the tuple header and make sure that the arity is 2
   // as the tuple spec requires it to contain a tuple: {TransId, {Cmd::atom(), Arg1, Arg2, ...}}
-  if (ei_decode_tuple_header(buf, &index, &arity) != 2) return -3; // decode the tuple and capture the arity
+  if (ei_decode_tuple_header(buf, &index, &arity) < 0) return -3; // decode the tuple and capture the arity
+  printf("original arity: %d\n", arity);
   if (ei_decode_long(buf, &index, &transId) < 0) return -4; // Get the transId
-  if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 2) return -5; 
+  printf("transId: %d\n", (int)transId);
+  if ((ei_decode_tuple_header(buf, &index, &arity)) < 0) return -5; 
+  
+  printf("new arity: %d\n", arity);
   
   process_t *process = *ptr;
   
   // Get the outer tuple  
   // The first command is a string
-  char command[MAX_BUFFER_SZ];
-  memset(&command, '\0', sizeof(command));
+  char command[MAX_BUFFER_SZ]; memset(&command, '\0', sizeof(command));
   
   // Get the command
   if (ei_decode_atom(buf, &index, command)) return -6;
@@ -238,7 +249,7 @@ int ei_write_atom(int fd, const char* first, const char* fmt, ...)
   
   if (ei_x_encode_string_len(&result, str, strlen(str))) return -3;
   
-  write_cmd(&result, fd);
+  write_cmd(fd, &result);
   ei_x_free(&result);
   return 0;
 }
@@ -257,47 +268,43 @@ int decode_atom_index(char* buf, int index, const char* cmds[])
 /**
 * Data i/o
 **/
-int read_cmd(byte **buf, int *size, int fd)
+int read_cmd(int fd, char **buf, int *size)
 {
   int len;
-  // Read the header first
-  if (read_exact(fd, *buf, 2) != 2) return -1;
-  len = (*buf[0] << 8) | *buf[1];
+  int header_len = 0;
+  if ((header_len = read_exact(fd, *buf, 2)) != 2) return -1;
   
-  printf("aftre reading header len: %d\n", len);
-  
+  len = (*buf[0] << 8) | (*buf)[1];
+
   if (len > *size) {
     byte* tmp = (byte *) realloc(*buf, len);
     if (tmp == NULL)
       return -1;
     else
       *buf = tmp;
-      
     *size = len;
   }
   return read_exact(fd, *buf, len);
 }
 
-int write_cmd(ei_x_buff *buff, int fd)
+int write_cmd(int fd, ei_x_buff *buff)
 {
   byte li;
 
   li = (buff->index >> 8) & 0xff; 
-  write_exact(&li, 1, fd);
+  write_exact(fd, &li, 1);
   li = buff->index & 0xff;
-  write_exact(&li, 1, fd);
+  write_exact(fd, &li, 1);
 
-  return write_exact(buff->buff, buff->index, fd);
+  return write_exact(fd, buff->buff, buff->index);
 }
 
-int read_exact(int fd, char* buf, int len)
+int read_exact(int fd, byte *buf, int len)
 {
-  int i;
-  int got = 0;
-  
-  fprintf(stderr, "reading on fd: %d\n", fd);
+  int i, got=0;
+
   do {
-    if ((i = read(fd, (void*)buf+got, len-got)) <= 0)
+    if ((i = read(fd, buf+got, len-got)) <= 0)
       return i;
     got += i;
   } while (got<len);
@@ -305,7 +312,7 @@ int read_exact(int fd, char* buf, int len)
   return len;
 }
 
-int write_exact(byte *buf, int len, int fd)
+int write_exact(int fd, byte *buf, int len)
 {
   int i, wrote = 0;
 

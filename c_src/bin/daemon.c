@@ -23,7 +23,6 @@ extern int              terminated;         // indicates that we got a SIGINT / 
 int                     run_as_user;
 pid_t                   process_pid;
 extern int              dbg;
-char*                   buf;
 int                     read_handle = 0;
 int                     write_handle = 1;
 
@@ -32,10 +31,7 @@ int setup()
   run_as_user = getuid();
   process_pid = getpid();
   pm_setup(read_handle, write_handle);
-  
-  // if ((buf = (char *) malloc( sizeof(buf) )) == NULL) 
-  //   return -1;
-  
+    
   return 0;
 }
 
@@ -111,87 +107,83 @@ void print_ellipses(int count)
   print_ellipses(count - 1);
 }
 
+int decode_and_run_erlang(char *buf, int len)
+{
+  process_t *proc;
+  ei_decode_command_call_into_process(buf, &proc);
+  
+  printf("process: %p\n", proc);
+  return 0;
+}
+
 int main (int argc, char const *argv[])
 {
-  fd_set master_fds;    // master file descriptor list
-  fd_set read_fds;     // temp file descriptor list for select()
-  int fdmax;            // maximum file descriptor number
-  
-  FD_ZERO(&master_fds);    // clear the master and temp sets
-  FD_ZERO(&read_fds);
-  
+  // Consider making this multi-plexing
+  fd_set rfds, wfds;      // temp file descriptor list for select()
+  int rnum = 0, wnum = 0;
+      
   if (parse_the_command_line(argc, argv)) return 0;
-  
-  fdmax = read_handle + 1;
   
   setup_erl_daemon_signal_handlers();
   if (setup()) return -1;
   
   /* Do stuff */
-  while (!terminated) {
-    debug(dbg, 4, "looping... (%d)\n", (int)terminated);
-    
-    FD_ZERO(&read_fds);
-    FD_SET(read_handle, &read_fds);
-    
+  while (!terminated) {    
     debug(dbg, 4, "preparing next loop...\n");
-    if (pm_next_loop()) break;
+    if (pm_next_loop() < 0) break;
     
-    // Erlang fun... pull the next command from the readfds parameter on the erlang fd
+    // Erlang fun... pull the next command from the read_fds parameter on the erlang fd
+    pm_set_can_not_jump();
+    // Create the timeout struct
     struct timeval m_tv;
-    m_tv.tv_usec = 500000; m_tv.tv_sec = 5;
-    int cnt = select(fdmax, &read_fds, (fd_set *)0, (fd_set *) 0, &m_tv);
-    int interrupted = (cnt < 0 && errno == EINTR);
+    m_tv.tv_usec = 0; 
+    m_tv.tv_sec = 5;
     
-    debug(dbg, 0, "interrupted: %d cnt: %d\n", interrupted, cnt);
-    if (interrupted || cnt == 0) {
-      if (pm_check_children(terminated) < 0) break;
-    } else if (cnt < 0) {
+    // clean socket lists
+		FD_ZERO(&rfds);
+		FD_ZERO(&wfds);
+		wnum = -1;
+    
+    FD_SET(read_handle, &rfds);
+    // FD_SET(write_handle, &wfds);
+    
+    // Add master listener to reading sockets
+		FD_SET(read_handle, &rfds);
+		rnum = read_handle;
+    
+    // Block until something happens with select
+    int num_ready_socks = select(
+			(wnum > rnum) ? wnum+1 : rnum+1,
+			(-1 != rnum)  ? &rfds : NULL,
+			(-1 != wnum)  ? &wfds : NULL, // never will write... yet?
+			(fd_set *) 0,
+			&m_tv
+		);
+    debug(dbg, 4, "number of ready sockets from select: %d\n", num_ready_socks);
+    
+    int interrupted = (num_ready_socks < 0 && errno == EINTR);
+    pm_set_can_jump();
+    
+    if (interrupted || num_ready_socks == 0) {
+      if (pm_check_children(terminated) < 0) continue;
+    } else if (num_ready_socks < 0) {
       perror("select"); 
       exit(9);
-    } else if (FD_ISSET(read_handle, &read_fds) ) {
-      printf("FD_ISSET on read_handle (%d)\n", read_handle);
-      // Read from fin a command sent by Erlang
-      int   arity, index, version;
-      long  transId;
-      char* buf = NULL;
-      /* Reset the index, so that ei functions can decode terms from the 
-       * beginning of the buffer */
+    } else if ( FD_ISSET(read_handle, &rfds) ) {
+      // Read from f_in a command sent by Erlang
+      char* buf;
       int len = 0;
-
-      // debug(dbg, 1, "ei_read on %d\n", read_handle);
-      // if ((len = ei_read(buf, read_handle)) < 0) {
-      //   debug(dbg, 1, "ei_read len: %d\n", len);
-      //   break;
-      // }
       
-      int n = 0;
-      fprintf(stderr, "Reading...\n");
-      while ( ( n=read(read_handle, buf, BUF_SIZE )) >  0)
-      {
-       buf[n]='\0';
-       fprintf(stderr, "Read: %s\n", buf);
+      if ((len = ei_read(read_handle, &buf)) < 0) {
+        if (dbg > 3) break; else continue;
       }
-         
-      // Read into buffer, first
-      read_exact(read_handle, buf, sizeof(buf));
-      printf("read: %s\n", buf);
-
-      index = 0;
-      debug(dbg, 1, "decoding len: %d...\n", len);
-      /* Ensure that we are receiving the binary term by reading and 
-       * stripping the version byte */
-      if (ei_decode_version(buf, &index, &version) < 0) break;
-      debug(dbg, 1, "decoding version: %d...\n", version);
-      // Decode the tuple header and make sure that the arity is 2
-      // as the tuple spec requires it to contain a tuple: {TransId, {Cmd::atom(), Arg1, Arg2, ...}}
-      if (ei_decode_tuple_header(buf, &index, &arity) != 2) break;
-      debug(dbg, 1, "decoding header arity: %d\n", arity);
-      if (ei_decode_long(buf, &index, &transId) < 0) break;
-      debug(dbg, 1, "decoding long transId: %d\n", transId);
-      if ((arity = ei_decode_tuple_header(buf, &index, &arity)) < 2) break;
-
-      fprintf(stderr, "arity: %d\n", arity);
+      
+      if (decode_and_run_erlang(buf, len)) {
+        fprintf(stderr, "Something went wrong\n");
+      } else {
+        // Everything went well
+      }
+      free(buf);
     }
   }
   terminate_all();
