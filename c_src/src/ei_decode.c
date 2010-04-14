@@ -82,6 +82,7 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
     return -1;
   
   int   arity, index, version, size;
+  int i = 0, tuple_size, type;
   long  transId;
     
   // Reset the index, so that ei functions can decode terms from the 
@@ -106,15 +107,20 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   
   // Get the outer tuple
   // The first command is a string
-  char action[MAX_BUFFER_SZ]; memset(&action, '\0', sizeof(action));
+  ei_get_type(buf, &index, &type, &size); 
+  char *action = NULL;
+  // if ((buf = (char *) realloc(buf, size)) == NULL)  return -1;
+  if ((action = (char*) realloc(action, size + 1)) == NULL) return -1;
   
   // Get the command
   if (ei_decode_atom(buf, &index, action)) return -6;
   
   int ret = -1;
   if ((int)(ret = (enum BabysitterActionT)string_index(babysitter_action_strings, action)) < 0) return -6;
-  
-  char command[MAX_BUFFER_SZ]; memset(&command, '\0', sizeof(command));
+    
+  ei_get_type(buf, &index, &type, &size); 
+  char *command = NULL;
+  if ((command = (char*) realloc(command, size + 1)) == NULL) return -1;
   
   // Get the command  
   if (ei_decode_string(buf, &index, command) < 0) return -6;
@@ -123,13 +129,8 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   // The second element of the tuple is a list of options
   if (ei_decode_list_header(buf, &index, &size) < 0) return -6;
   
-  int i = 0;
-  int tuple_size;
-  char value[MAX_BUFFER_SZ];
-  memset(&value, '\0', sizeof(value));
-  
   enum OptionT            { CD,   ENV,   NICE,   DO_BEFORE,   DO_AFTER } opt;
-  const char* options[] = {"cd", "env", "nice", "do_before", "do_after"};
+  const char* options[] = {"cd", "env", "nice", "do_before", "do_after", NULL};
   
   for (i = 0; i < size; i++) {
     // Decode the tuple of the form {atom, string()|int()};
@@ -138,14 +139,22 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
     printf("tuple_size: %d\n", tuple_size);
     if ((int)(opt = (enum OptionT)decode_atom_index(buf, index, options)) < 0) return -8;
     
+    // int ei_get_type(const char *buf, const int *index, int *type, int *size)
     switch (opt) {
       case CD:
       case ENV:
       case DO_BEFORE:
-      case DO_AFTER:
-        memset(&value, '\0', sizeof(value));
-        printf("value: %s (%d)\n", value, index);
-        if (ei_decode_string(buf, &index, value) < 0) return -9;
+      case DO_AFTER: {
+        ei_get_type(buf, &index, &type, &size); 
+        printf("type: %d\n", type);
+        char *value = NULL;
+        if ((value = (char*) realloc(value, size + 1)) == NULL) return -1;
+        
+        if (ei_decode_string(buf, &index, value) < 0) {
+          fprintf(stderr, "ei_decode_string error: %d\n", errno);
+          free(value);
+          return -9;
+        }
         printf("ei_decode_string: %s\n", value);
         if (opt == CD)
           pm_malloc_and_set_attribute(&process->cd, value);
@@ -155,6 +164,9 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
           pm_malloc_and_set_attribute(&process->before, value);
         else if (opt == DO_AFTER)
           pm_malloc_and_set_attribute(&process->after, value);
+        
+        free(value);
+      }
       break;
       case NICE: {
         long lval;
@@ -275,10 +287,16 @@ int ei_error(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "e
 
 int decode_atom_index(char* buf, int index, const char* cmds[])
 {
-  char atom_name[MAXATOMLEN]; memset(&atom_name, '\0', sizeof(atom_name));
+  int type, size;
+  ei_get_type(buf, &index, &type, &size); 
+  char *atom_name = NULL;
+  if ((atom_name = (char*) realloc(atom_name, size + 1)) == NULL) return -1;
+  
   if (ei_decode_atom(buf, &index, atom_name)) return -1;
   
-  return string_index(cmds, atom_name);
+  int ret = string_index(cmds, atom_name);
+  free(atom_name);
+  return ret;
 }
 
 /**
