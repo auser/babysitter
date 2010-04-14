@@ -31,6 +31,7 @@ typedef struct _process_t_ {
   char*   after;
   char*   cd;
   int     nice;
+  int     transId;        // Communication id
 } process_t;
 
 typedef struct _process_struct_ {

@@ -112,7 +112,8 @@ int decode_and_run_erlang(char *buf, int len)
   process_t *proc;
   ei_decode_command_call_into_process(buf, &proc);
   
-  printf("process: %p\n", proc);
+  // Do something here
+  ei_pid_ok(write_handle, proc->transId, getpid());
   
   pm_free_process(proc);
   return 0;
@@ -184,6 +185,7 @@ int main (int argc, char const *argv[])
         fprintf(stderr, "Something went wrong\n");
       } else {
         // Everything went well
+        fprintf(stderr, "Something went right\n");
       }
     }
   }

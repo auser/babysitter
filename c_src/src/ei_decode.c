@@ -73,9 +73,8 @@ int ei_read(int fd, char** bufr)
 * Translate ei buffer into a process_t object
 * returns a babysitter_action_t object
 **/
-enum BabysitterActionT {BS_BUNDLE,BS_MOUNT, BS_RUN, BS_UNMOUNT,BS_CLEANUP};
 const char* babysitter_action_strings[] = {"bundle", "mount", "run", "unmount", "cleanup", NULL};
-int ei_decode_command_call_into_process(char *buf, process_t **ptr)
+enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t **ptr)
 {
   // Instantiate a new process
   if (pm_new_process(ptr))
@@ -92,35 +91,28 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   /* Ensure that we are receiving the binary term by reading and 
    * stripping the version byte */
   if (ei_decode_version(buf, &index, &version) < 0) return -2;
-  fprintf(stderr, "version: %d\n", version);
   // Decode the tuple header and make sure that the arity is 2
   // as the tuple spec requires it to contain a tuple: {TransId, {Cmd::atom(), Arg1, Arg2, ...}}
   if (ei_decode_tuple_header(buf, &index, &arity) < 0) return -3; // decode the tuple and capture the arity
-  printf("original arity: %d\n", arity);
   if (ei_decode_long(buf, &index, &transId) < 0) return -4; // Get the transId
-  printf("transId: %d\n", (int)transId);
   if ((ei_decode_tuple_header(buf, &index, &arity)) < 0) return -5; 
   
-  printf("new arity: %d\n", arity);
-  
   process_t *process = *ptr;
+  process->transId = transId;
   
   // Get the outer tuple
-  // The first command is a string
+  // The first command is an atom
+  // {Cmd::atom(), Command::string(), Options::list()}
   ei_get_type(buf, &index, &type, &size); 
-  char *action = NULL;
-  // if ((buf = (char *) realloc(buf, size)) == NULL)  return -1;
-  if ((action = (char*) realloc(action, size + 1)) == NULL) return -1;
-  
+  char *action = NULL; if ((action = (char*) realloc(action, size + 1)) == NULL) return -1;
   // Get the command
   if (ei_decode_atom(buf, &index, action)) return -6;
-  
   int ret = -1;
   if ((int)(ret = (enum BabysitterActionT)string_index(babysitter_action_strings, action)) < 0) return -6;
-    
+  
+  // Get the next string
   ei_get_type(buf, &index, &type, &size); 
-  char *command = NULL;
-  if ((command = (char*) realloc(command, size + 1)) == NULL) return -1;
+  char *command = NULL; if ((command = (char*) realloc(command, size + 1)) == NULL) return -1;
   
   // Get the command  
   if (ei_decode_string(buf, &index, command) < 0) return -6;
@@ -136,10 +128,8 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
     // Decode the tuple of the form {atom, string()|int()};
     if (ei_decode_tuple_header(buf, &index, &tuple_size) < 0) return -7;
     
-    printf("tuple_size: %d\n", tuple_size);
     if ((int)(opt = (enum OptionT)decode_atom_index(buf, &index, options)) < 0) return -8;
     
-    // int ei_get_type(const char *buf, const int *index, int *type, int *size)
     switch (opt) {
       case CD:
       case ENV:
@@ -154,7 +144,6 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
           free(value);
           return -9;
         }
-        printf("ei_decode_string: %s\n", value);
         if (opt == CD)
           pm_malloc_and_set_attribute(&process->cd, value);
         else if (opt == ENV)
@@ -186,7 +175,7 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
 char read_buf[BUFFER_SZ];
 int  read_index = 0;
 
-void ei_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, char *string)
+void nif_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, char *string)
 {
   ERL_NIF_TERM head, tail;
   int character;
@@ -224,7 +213,7 @@ char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size)
   length = atoi(str_length)+1;
   args = (char *)calloc(length, sizeof(char));
 
-  ei_list_to_string(env, list, args);
+  nif_list_to_string(env, list, args);
   *arg_size = length;
 
   return args;
@@ -262,11 +251,12 @@ ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...)
 /**
 * Data marshalling functions
 **/
-int ei_write_atom(int fd, const char* first, const char* fmt, ...)
+int ei_write_atom(int fd, int transId, const char* first, const char* fmt, ...)
 {
   ei_x_buff result;
   if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
-  if (ei_x_encode_atom(&result, first) ) return -2;
+  if (ei_x_encode_long(&result, transId)) return -2;
+  if (ei_x_encode_atom(&result, first) ) return -3;
   // Encode string
   char str[MAXATOMLEN];
   va_list vargs;
@@ -274,15 +264,35 @@ int ei_write_atom(int fd, const char* first, const char* fmt, ...)
   vsnprintf(str, sizeof(str), fmt, vargs);
   va_end   (vargs);
   
-  if (ei_x_encode_string_len(&result, str, strlen(str))) return -3;
+  if (ei_x_encode_string_len(&result, str, strlen(str))) return -4;
   
   write_cmd(fd, &result);
-  ei_x_free(&result);
+  // ei_x_free(&result);
   return 0;
 }
 
-int ei_ok(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "ok", fmt, vargs);}
-int ei_error(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "error", fmt, vargs);}
+int ei_pid_ok(int fd, int transId, pid_t pid)
+{
+  ei_x_buff result;
+  if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
+  if (ei_x_encode_long(&result, transId)) return -2;
+  if (ei_x_encode_atom(&result, "ok") ) return -3;
+  // Encode pid
+  if (ei_x_encode_long(&result, (long)pid)) return -4;
+  
+  if (write_cmd(fd, &result)) return -5;
+  printf("written\n");
+  return 0;
+}
+int ei_ok(int fd, int transId, const char* fmt, ...)
+{  
+  va_list vargs;
+  return ei_write_atom(fd, transId, "ok", fmt, vargs);
+}
+int ei_error(int fd, int transId, const char* fmt, ...){
+  va_list vargs;
+  return ei_write_atom(fd, transId, "error", fmt, vargs);
+}
 
 int decode_atom_index(char* buf, int *index, const char* cmds[])
 {
