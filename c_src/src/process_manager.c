@@ -222,6 +222,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
       chdir(cd);
     
     if (execve((const char*)command_argv[0], (char* const*)command_argv, (char* const*) env) < 0) {
+      printf("execve failed because: %s\n", strerror(errno));
       return -1;
     }
     exit(-1);
