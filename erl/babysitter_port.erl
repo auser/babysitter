@@ -395,10 +395,11 @@ is_port_command({kill, Pid, Sig}, _State) when is_pid(Pid),is_integer(Sig) ->
 check_cmd_options([{cd, Dir}|T], State) when is_list(Dir) ->
     check_cmd_options(T, State);
 check_cmd_options([{env, Env}|T], State) when is_list(Env) ->
-    case lists:filter(fun(S) -> is_list(S) =:= false end, Env) of
-    [] -> check_cmd_options(T, State);
-    L  -> throw({error, {invalid_env_value, L}})
-    end;
+  check_cmd_options(T, State);
+    % case lists:filter(fun(S) -> is_list(S) =:= false end, Env) of
+    % [] -> check_cmd_options(T, State);
+    % L  -> throw({error, {invalid_env_value, L}})
+    % end;
 check_cmd_options([{kill, Cmd}|T], State) when is_list(Cmd) ->
     check_cmd_options(T, State);
 check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->

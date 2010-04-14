@@ -114,26 +114,28 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   int ret = -1;
   if ((int)(ret = (enum BabysitterActionT)string_index(babysitter_action_strings, action)) < 0) return -6;
   
-  printf("after atom string\n");
-  char *command = NULL;
+  char command[MAX_BUFFER_SZ]; memset(&command, '\0', sizeof(command));
+  
+  // Get the command  
   if (ei_decode_string(buf, &index, command) < 0) return -6;
-  printf("string: %s\n", command);
   pm_malloc_and_set_attribute(&process->command, command);
-  printf("command: %s\n", command);
   
   // The second element of the tuple is a list of options
   if (ei_decode_list_header(buf, &index, &size) < 0) return -6;
   
   int i = 0;
-  int tuple_size = 0;
-  char* value = NULL;
+  int tuple_size;
+  char value[MAX_BUFFER_SZ];
+  memset(&value, '\0', sizeof(value));
+  
+  enum OptionT            { CD,   ENV,   NICE,   DO_BEFORE,   DO_AFTER } opt;
+  const char* options[] = {"cd", "env", "nice", "do_before", "do_after"};
+  
   for (i = 0; i < size; i++) {
     // Decode the tuple of the form {atom, string()|int()};
     if (ei_decode_tuple_header(buf, &index, &tuple_size) < 0) return -7;
-          
-    enum OptionT            { CD,   ENV,   NICE,   DO_BEFORE,   DO_AFTER } opt;
-    const char* options[] = {"cd", "env", "nice", "do_before", "do_after"};
     
+    printf("tuple_size: %d\n", tuple_size);
     if ((int)(opt = (enum OptionT)decode_atom_index(buf, index, options)) < 0) return -8;
     
     switch (opt) {
@@ -141,7 +143,10 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
       case ENV:
       case DO_BEFORE:
       case DO_AFTER:
-        ei_decode_string(buf, &index, value);
+        memset(&value, '\0', sizeof(value));
+        printf("value: %s (%d)\n", value, index);
+        if (ei_decode_string(buf, &index, value) < 0) return -9;
+        printf("ei_decode_string: %s\n", value);
         if (opt == CD)
           pm_malloc_and_set_attribute(&process->cd, value);
         else if (opt == ENV)
