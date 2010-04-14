@@ -137,7 +137,7 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
     if (ei_decode_tuple_header(buf, &index, &tuple_size) < 0) return -7;
     
     printf("tuple_size: %d\n", tuple_size);
-    if ((int)(opt = (enum OptionT)decode_atom_index(buf, index, options)) < 0) return -8;
+    if ((int)(opt = (enum OptionT)decode_atom_index(buf, &index, options)) < 0) return -8;
     
     // int ei_get_type(const char *buf, const int *index, int *type, int *size)
     switch (opt) {
@@ -146,7 +146,6 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
       case DO_BEFORE:
       case DO_AFTER: {
         ei_get_type(buf, &index, &type, &size); 
-        printf("type: %d\n", type);
         char *value = NULL;
         if ((value = (char*) realloc(value, size + 1)) == NULL) return -1;
         
@@ -285,14 +284,14 @@ int ei_write_atom(int fd, const char* first, const char* fmt, ...)
 int ei_ok(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "ok", fmt, vargs);}
 int ei_error(int fd, const char* fmt, va_list vargs){return ei_write_atom(fd, "error", fmt, vargs);}
 
-int decode_atom_index(char* buf, int index, const char* cmds[])
+int decode_atom_index(char* buf, int *index, const char* cmds[])
 {
   int type, size;
-  ei_get_type(buf, &index, &type, &size); 
+  ei_get_type(buf, index, &type, &size); 
   char *atom_name = NULL;
   if ((atom_name = (char*) realloc(atom_name, size + 1)) == NULL) return -1;
   
-  if (ei_decode_atom(buf, &index, atom_name)) return -1;
+  if (ei_decode_atom(buf, index, atom_name)) return -1;
   
   int ret = string_index(cmds, atom_name);
   free(atom_name);

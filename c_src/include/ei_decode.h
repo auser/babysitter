@@ -26,7 +26,7 @@ char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size);
 
 // Ei
 int ei_decode_command_call_into_process(char *buf, process_t **ptr);
-int decode_atom_index(char* buf, int index, const char* cmds[]);
+int decode_atom_index(char* buf, int *index, const char* cmds[]);
 int ei_read(int fd, char** buf);
 
 int ei_error(int fd, const char* fmt, va_list vargs);
