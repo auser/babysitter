@@ -113,6 +113,8 @@ int decode_and_run_erlang(char *buf, int len)
   ei_decode_command_call_into_process(buf, &proc);
   
   printf("process: %p\n", proc);
+  
+  pm_free_process(proc);
   return 0;
 }
 
@@ -175,7 +177,7 @@ int main (int argc, char const *argv[])
       int len = 0;
       
       if ((len = ei_read(read_handle, &buf)) < 0) {
-        if (dbg > 3) break; else continue;
+        continue;
       }
       
       if (decode_and_run_erlang(buf, len)) {
@@ -183,7 +185,6 @@ int main (int argc, char const *argv[])
       } else {
         // Everything went well
       }
-      free(buf);
     }
   }
   terminate_all();

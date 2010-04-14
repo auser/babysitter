@@ -66,13 +66,15 @@ int ei_read(int fd, char** bufr)
   
   int ret = read_cmd(fd, &buf, &size);
   
-  printf("buf: %s - %d\n", buf, ret);
-  *bufr = buf;
+  if (ret > 0) *bufr = buf;
   return ret;
 }
 /**
 * Translate ei buffer into a process_t object
+* returns a babysitter_action_t object
 **/
+enum BabysitterActionT {BS_BUNDLE,BS_MOUNT, BS_RUN, BS_UNMOUNT,BS_CLEANUP};
+const char* babysitter_action_strings[] = {"bundle", "mount", "run", "unmount", "cleanup", NULL};
 int ei_decode_command_call_into_process(char *buf, process_t **ptr)
 {
   // Instantiate a new process
@@ -102,13 +104,22 @@ int ei_decode_command_call_into_process(char *buf, process_t **ptr)
   
   process_t *process = *ptr;
   
-  // Get the outer tuple  
+  // Get the outer tuple
   // The first command is a string
-  char command[MAX_BUFFER_SZ]; memset(&command, '\0', sizeof(command));
+  char action[MAX_BUFFER_SZ]; memset(&action, '\0', sizeof(action));
   
   // Get the command
-  if (ei_decode_atom(buf, &index, command)) return -6;
+  if (ei_decode_atom(buf, &index, action)) return -6;
+  
+  int ret = -1;
+  if ((int)(ret = (enum BabysitterActionT)string_index(babysitter_action_strings, action)) < 0) return -6;
+  
+  printf("after atom string\n");
+  char *command = NULL;
+  if (ei_decode_string(buf, &index, command) < 0) return -6;
+  printf("string: %s\n", command);
   pm_malloc_and_set_attribute(&process->command, command);
+  printf("command: %s\n", command);
   
   // The second element of the tuple is a list of options
   if (ei_decode_list_header(buf, &index, &size) < 0) return -6;

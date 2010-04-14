@@ -4,7 +4,7 @@ int string_index(const char* cmds[], const char *cmd)
 {
   int i = 0;
   for (i = 0; *cmds != NULL; i++, cmds++) {
-    if (cmd == *cmds) return i;
+    if (!strncmp(cmd, *cmds, strlen(cmd))) return i;
   }
   return -1;
 }
