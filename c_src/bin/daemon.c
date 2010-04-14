@@ -114,7 +114,13 @@ int decode_and_run_erlang(char *buf, int len)
   ei_decode_command_call_into_process(buf, &proc);
   
   // Do something here
-  ei_pid_ok(write_handle, proc->transId, getpid());
+  pid_t pid = pm_run_process(proc);
+  
+  process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
+  ps->pid = pid;
+  ps->transId = proc->transId;
+  HASH_ADD_INT(running_children, pid, ps);
+  ei_pid_ok(write_handle, proc->transId, pid);
   
   pm_free_process(proc);
   return 0;

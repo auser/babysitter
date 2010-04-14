@@ -279,12 +279,9 @@ int ei_pid_ok(int fd, int transId, pid_t pid)
   if (ei_x_encode_tuple_header(&result, 2)) return -3;
   if (ei_x_encode_atom(&result, "ok") ) return -4;
   // Encode pid
-  printf("pid: %d\n", (int)pid);
   if (ei_x_encode_long(&result, (int)pid)) return -5;
   
-  printf("writing\n");
-  if (write_cmd(fd, &result)) return -5;
-  printf("written\n");
+  if (write_cmd(fd, &result) < 0) return -5;
   ei_x_free(&result);
   return 0;
 }

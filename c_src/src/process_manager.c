@@ -253,7 +253,6 @@ pid_t pm_run_process(process_t *process)
   if (process->before) pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, process->env);
   pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, process->env);
   if (process->after) pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, process->env);
-  printf("pid: %d\n", pid);
   return pid;
 }
 

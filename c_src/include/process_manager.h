@@ -35,9 +35,9 @@ typedef struct _process_t_ {
 } process_t;
 
 typedef struct _process_struct_ {
-    int pid;                    /* key */
-    process_t process;
-    UT_hash_handle hh;         /* makes this structure hashable */
+    int pid;                    // key
+    int transId;                // id of the transmission
+    UT_hash_handle hh;          // makes this structure hashable
 } process_struct;
 
 /* Helpers */
