@@ -116,7 +116,7 @@ void pm_gotsigchild(int signal, siginfo_t* si, void* context)
 **/
 void pm_setup_signal_handlers()
 {
-  struct sigaction                sact, sterm;
+  struct sigaction sact, sterm;
   sterm.sa_handler = pm_gotsignal;
   sigemptyset(&sterm.sa_mask);
   sigaddset(&sterm.sa_mask, SIGCHLD);
@@ -258,6 +258,7 @@ pid_t pm_run_process(process_t *process)
 
 int pm_check_children(int isTerminated)
 {
+  
   return 0;
 }
 

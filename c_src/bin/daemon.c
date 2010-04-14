@@ -110,19 +110,19 @@ void print_ellipses(int count)
 
 int decode_and_run_erlang(char *buf, int len)
 {
-  process_t *proc;
-  ei_decode_command_call_into_process(buf, &proc);
-  
+  process_t *process;
+  ei_decode_command_call_into_process(buf, &process);
+  printf("process: %p\n", process);
   // Do something here
-  pid_t pid = pm_run_process(proc);
+  pid_t pid = pm_run_process(process);
   
   process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
   ps->pid = pid;
-  ps->transId = proc->transId;
+  ps->transId = process->transId;
   HASH_ADD_INT(running_children, pid, ps);
-  ei_pid_ok(write_handle, proc->transId, pid);
+  ei_pid_ok(write_handle, process->transId, pid);
   
-  pm_free_process(proc);
+  pm_free_process(process);
   return 0;
 }
 

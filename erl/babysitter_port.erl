@@ -155,7 +155,7 @@ get_opt(debug)           -> {debug, true}.
 init([Options]) ->
   process_flag(trap_exit, true),
   Args = lists:foldl(
-    fun({debug, true},       Acc) -> [" --debug 4" | Acc];
+    fun({debug, true},       Acc) -> [" --debug 0" | Acc];
        ({alarm, I},          Acc) -> [" -alarm "++integer_to_list(I) | Acc];
        ({args, Arg},         Acc) -> [" "++Arg | Acc];
        ({user, User}, Acc) when User =/= "" -> [" -user "++User | Acc];

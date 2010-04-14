@@ -167,6 +167,8 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
       break;
     }
   }
+  
+  *ptr = process;
   return 0;
 }
 
