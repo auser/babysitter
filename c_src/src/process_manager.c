@@ -218,7 +218,9 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     expanded_command = calloc(strlen(full_filepath) + strlen(command + prefix) + 1, sizeof(char));
     strcat(expanded_command, full_filepath); 
     strcat(expanded_command, command + prefix);
-
+    
+    printf("expanded_command: >>%s<<\n", expanded_command);
+    
     command_argv = (char **) malloc(4 * sizeof(char *));
     command_argv[0] = strdup(getenv("SHELL"));
     command_argv[1] = "-c";
