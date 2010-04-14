@@ -201,16 +201,33 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     command_argv[1] = NULL;
     command_argc = 1;
   } else {
-    if ((command_argc = argify(command, &command_argv)) < 1) return -1;
-    full_filepath = find_binary(command_argv[0]);
+    int prefix;
+    char *cp, *cmdname, *expanded_command;
+ 
+
+    // get bare command for path lookup
+    for (cp = (char *) command; !isspace(*cp); cp++) ;
+    prefix = cp - command;
+    cmdname = calloc(prefix, sizeof(char));
+    strncpy(cmdname, command, prefix);
+
+    // expand command name to full path
+    full_filepath = find_binary(cmdname);
+
+    // build invocable command with args
+    expanded_command = calloc(strlen(full_filepath) + strlen(command + prefix) + 1, sizeof(char));
+    strcat(expanded_command, full_filepath); 
+    strcat(expanded_command, command + prefix);
+
+    command_argv = (char **) malloc(4 * sizeof(char *));
     command_argv[0] = strdup(getenv("SHELL"));
-    command_argv[1] = strdup("-c");
-    command_argv[2] = strdup(full_filepath);
+    command_argv[1] = "-c";
+    command_argv[2] = expanded_command;
     command_argc = 3;
   }
 
   command_argv[command_argc] = 0;
-  
+    
   // Now actually RUN it!
   pid_t pid = fork();
   switch (pid) {
@@ -251,6 +268,9 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
 
 pid_t pm_run_process(process_t *process)
 {
+  // Safe-ify the env
+  process->env[process->env_c] = NULL;
+  
   if (process->before) pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, process->env);
   pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, process->env);
   if (process->after) pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, process->env);
