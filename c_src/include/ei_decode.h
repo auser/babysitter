@@ -22,7 +22,7 @@ ERL_NIF_TERM error(ErlNifEnv* env, const char *fmt, ...);
 // Decoders
 int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[], process_t **ptr);
 void nif_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, char *string);
-char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size);
+char *nif_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size);
 
 // Ei
 enum BabysitterActionT {BS_BUNDLE,BS_MOUNT, BS_RUN, BS_UNMOUNT,BS_CLEANUP};

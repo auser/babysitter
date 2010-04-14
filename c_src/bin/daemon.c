@@ -94,6 +94,7 @@ int terminate_all()
   // while (HASH_COUNT(running_children) > 0) {
   //   
   // }
+  printf("in terminate_all\n");
   return 0;
 }
 
@@ -149,9 +150,6 @@ int main (int argc, char const *argv[])
     
     FD_SET(read_handle, &rfds);
     // FD_SET(write_handle, &wfds);
-    
-    // Add master listener to reading sockets
-		FD_SET(read_handle, &rfds);
 		rnum = read_handle;
     
     // Block until something happens with select
@@ -178,14 +176,14 @@ int main (int argc, char const *argv[])
       int len = 0;
       
       if ((len = ei_read(read_handle, &buf)) < 0) {
-        continue;
+        terminated = len;
+        break;
       }
       
       if (decode_and_run_erlang(buf, len)) {
-        fprintf(stderr, "Something went wrong\n");
+        // Something is afoot (failed)
       } else {
         // Everything went well
-        fprintf(stderr, "Something went right\n");
       }
     }
   }

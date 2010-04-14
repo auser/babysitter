@@ -62,7 +62,7 @@ int ei_read(int fd, char** bufr)
   int size = MAX_BUFFER_SZ;
   
   char *buf;
-  if ((buf = (char *) realloc(buf, size)) == NULL)  return -1;
+  if ((buf = (char *) calloc(sizeof(char*), size)) == NULL)  return -1;
   
   int ret = read_cmd(fd, &buf, &size);
   
@@ -76,9 +76,9 @@ int ei_read(int fd, char** bufr)
 const char* babysitter_action_strings[] = {"bundle", "mount", "run", "unmount", "cleanup", NULL};
 enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t **ptr)
 {
+  int err_code = -1;
   // Instantiate a new process
-  if (pm_new_process(ptr))
-    return -1;
+  if (pm_new_process(ptr)) return err_code--;
   
   int   arity, index, version, size;
   int i = 0, tuple_size, type;
@@ -90,12 +90,12 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
 
   /* Ensure that we are receiving the binary term by reading and 
    * stripping the version byte */
-  if (ei_decode_version(buf, &index, &version) < 0) return -2;
+  if (ei_decode_version(buf, &index, &version) < 0) return err_code--;
   // Decode the tuple header and make sure that the arity is 2
   // as the tuple spec requires it to contain a tuple: {TransId, {Cmd::atom(), Arg1, Arg2, ...}}
-  if (ei_decode_tuple_header(buf, &index, &arity) < 0) return -3; // decode the tuple and capture the arity
-  if (ei_decode_long(buf, &index, &transId) < 0) return -4; // Get the transId
-  if ((ei_decode_tuple_header(buf, &index, &arity)) < 0) return -5; 
+  if (ei_decode_tuple_header(buf, &index, &arity) < 0) return err_code--;; // decode the tuple and capture the arity
+  if (ei_decode_long(buf, &index, &transId) < 0) return err_code--;; // Get the transId
+  if ((ei_decode_tuple_header(buf, &index, &arity)) < 0) return err_code--;; 
   
   process_t *process = *ptr;
   process->transId = transId;
@@ -104,31 +104,31 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
   // The first command is an atom
   // {Cmd::atom(), Command::string(), Options::list()}
   ei_get_type(buf, &index, &type, &size); 
-  char *action = NULL; if ((action = (char*) realloc(action, size + 1)) == NULL) return -1;
+  char *action = NULL; if ((action = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
   // Get the command
-  if (ei_decode_atom(buf, &index, action)) return -6;
+  if (ei_decode_atom(buf, &index, action)) return err_code--;
   int ret = -1;
-  if ((int)(ret = (enum BabysitterActionT)string_index(babysitter_action_strings, action)) < 0) return -6;
+  if ((int)(ret = (enum BabysitterActionT)string_index(babysitter_action_strings, action)) < 0) return err_code--;
   
   // Get the next string
   ei_get_type(buf, &index, &type, &size); 
-  char *command = NULL; if ((command = (char*) realloc(command, size + 1)) == NULL) return -1;
+  char *command = NULL; if ((command = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
   
   // Get the command  
-  if (ei_decode_string(buf, &index, command) < 0) return -6;
+  if (ei_decode_string(buf, &index, command) < 0) return err_code--;
   pm_malloc_and_set_attribute(&process->command, command);
   
   // The second element of the tuple is a list of options
-  if (ei_decode_list_header(buf, &index, &size) < 0) return -6;
+  if (ei_decode_list_header(buf, &index, &size) < 0) return err_code--;
   
   enum OptionT            { CD,   ENV,   NICE,   DO_BEFORE,   DO_AFTER } opt;
   const char* options[] = {"cd", "env", "nice", "do_before", "do_after", NULL};
   
   for (i = 0; i < size; i++) {
     // Decode the tuple of the form {atom, string()|int()};
-    if (ei_decode_tuple_header(buf, &index, &tuple_size) < 0) return -7;
+    if (ei_decode_tuple_header(buf, &index, &tuple_size) < 0) return err_code--;
     
-    if ((int)(opt = (enum OptionT)decode_atom_index(buf, &index, options)) < 0) return -8;
+    if ((int)(opt = (enum OptionT)decode_atom_index(buf, &index, options)) < 0) return err_code--;
     
     switch (opt) {
       case CD:
@@ -137,7 +137,7 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
       case DO_AFTER: {
         ei_get_type(buf, &index, &type, &size); 
         char *value = NULL;
-        if ((value = (char*) realloc(value, size + 1)) == NULL) return -1;
+        if ((value = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
         
         if (ei_decode_string(buf, &index, value) < 0) {
           fprintf(stderr, "ei_decode_string error: %d\n", errno);
@@ -163,7 +163,7 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
       }
       break;
       default:
-      return -9;
+        return err_code--;
       break;
     }
   }
@@ -192,7 +192,7 @@ void nif_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, char *string)
   *string = '\0';
 };
 
-char *ei_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size)
+char *nif_arg_list_to_string(ErlNifEnv *env, ERL_NIF_TERM list, int *arg_size)
 {
   ERL_NIF_TERM head, tail;
   char str_length[PREFIX_LEN], *args;
