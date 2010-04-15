@@ -94,6 +94,7 @@ int pm_free_process(process_t *p)
 /*--- Run process ---*/
 void pm_gotsignal(int signal)
 { 
+  printf("pm_gotsignal: %d\n", signal);
   switch(signal) {
     case SIGHUP:
       break;
@@ -106,9 +107,10 @@ void pm_gotsignal(int signal)
 
 void pm_gotsigchild(int signal, siginfo_t* si, void* context)
 {
+  printf("pm_gotsigchild: %d\n", signal);
   // If someone used kill() to send SIGCHLD ignore the event
   if (signal != SIGCHLD) return;
-  
+  signaled = 1;
   // process_child_signal(si->si_pid);
 }
 /**
@@ -297,7 +299,46 @@ pid_t pm_run_process(process_t *process)
 
 int pm_check_children(void (*child_changed_status)(pid_t pid, int status), int isTerminated)
 {
-  child_changed_status((pid_t)50002, isTerminated);
+  process_struct *ps;
+  int p_status = 0;
+  int status;
+  do {
+    for( ps = exited_children; ps != NULL && !isTerminated; ps = ps->hh.next ) {
+      // For each of the exited_children, update the erlang vm and set to terminated
+      child_changed_status(ps->pid, ESRCH);
+    }
+  } while (signaled && !isTerminated);
+  
+  // Run through each of the running children and poke at them to see
+  // if they are running or not
+  for( ps = running_children; ps != NULL; ps = ps->hh.next ) {
+    printf("checking running_children pid: %d\n", ps->pid);
+    if ((p_status = pm_check_pid_status(ps->pid))) {
+      time_t now;
+      now = time(NULL); // Current time
+      // Something is wrong with the process, whatever could it be? Did we try to kill it?
+      if (ps->kill_pid > 0 && difftime(ps->deadline, now) > 0) {
+        // We've definitely sent this pid a shutdown and the deadline has clearly passed, let's force kill it
+        kill(ps->pid, SIGTERM);
+        // Kill the killing process too
+        if ((p_status = kill(ps->kill_pid, 0)) == 0) kill(ps->kill_pid, SIGKILL);
+        // Set the deadline for the pid
+        ps->deadline += 5;
+      }
+      // Now wait for it, only if it's going to die.
+      while ((p_status = waitpid(ps->pid, &status, WNOHANG)) < 0 && errno == EINTR);
+      if (p_status > 0) {
+        HASH_ADD(hh, exited_children, pid, sizeof(ps), ps);
+        HASH_DEL(running_children, ps);
+        continue;
+      }
+    } else if (p_status < 0 && errno == ESRCH) {
+      // Now if the pid has most definitely disappeared, then we can 
+      // send the status change and remove the pid from tracking
+      HASH_DEL(running_children, ps);
+    }
+  }
+
   return 0;
 }
 

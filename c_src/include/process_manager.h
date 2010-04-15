@@ -35,7 +35,9 @@ typedef struct _process_t_ {
 } process_t;
 
 typedef struct _process_struct_ {
-    int pid;                    // key
+    pid_t pid;                  // key
+    pid_t kill_pid;             // Kill pid
+    time_t deadline;            // Deadline to kill the pid
     int transId;                // id of the transmission
     UT_hash_handle hh;          // makes this structure hashable
 } process_struct;
