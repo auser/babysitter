@@ -94,7 +94,6 @@ int pm_free_process(process_t *p)
 /*--- Run process ---*/
 void pm_gotsignal(int signal)
 { 
-  printf("pm_gotsignal: %d\n", signal);
   switch(signal) {
     case SIGHUP:
       break;
@@ -107,7 +106,6 @@ void pm_gotsignal(int signal)
 
 void pm_gotsigchild(int signal, siginfo_t* si, void* context)
 {
-  printf("pm_gotsigchild: %d\n", signal);
   // If someone used kill() to send SIGCHLD ignore the event
   if (signal != SIGCHLD) return;
   signaled = 1;
@@ -205,9 +203,8 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     int prefix;
     char *cp, *cmdname, *expanded_command;
 
-
     // get bare command for path lookup
-    for (cp = (char *) command; !isspace(*cp); cp++) ;
+    for (cp = (char *) command; *cp && !isspace(*cp); cp++) ;
     prefix = cp - command;
     cmdname = calloc(prefix, sizeof(char));
     strncpy(cmdname, command, prefix);
@@ -226,7 +223,7 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     command_argv[2] = expanded_command;
     command_argc = 3;
     
-    printf("expanded_command: >>%s<<\n", expanded_command);
+    // printf("expanded_command: >>%s<<\n", expanded_command);
   }
   *argc = command_argc;
   *argv = command_argv;
@@ -278,12 +275,28 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
 typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
 int run_hook(hook_t t, process_t *process)
 {
+  pid_t pid = 0;
   if (t == BEFORE_HOOK) {
-    pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env);
+    pid = pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   } else if (t == AFTER_HOOK) {
-    pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
+    pid = pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   }
-  return 0;
+  if (kill(pid, 0) == 0) {
+    int childExitStatus;
+    printf("waiting for pid: %d...\n", (int)pid);
+    waitpid( pid, &childExitStatus, 0);
+    if( !WIFEXITED(childExitStatus) ){
+      printf("pid exited: %d\n", childExitStatus);
+    } else if (!WIFSIGNALED(childExitStatus)) {
+      printf("pid signaled: %d\n", childExitStatus);
+    } else if (!WIFSTOPPED(childExitStatus)) {
+      printf("pid stopped: %d\n", childExitStatus);
+    }
+    return 0;
+  } else {
+    printf("Something very bad happened with the hook\n");
+    return -1;
+  }
 }
 
 pid_t pm_run_process(process_t *process)
@@ -302,18 +315,14 @@ int pm_check_children(void (*child_changed_status)(pid_t pid, int status), int i
   process_struct *ps;
   int p_status = 0;
   int status;
-  do {
-    for( ps = exited_children; ps != NULL && !isTerminated; ps = ps->hh.next ) {
-      // For each of the exited_children, update the erlang vm and set to terminated
-      child_changed_status(ps->pid, ESRCH);
-    }
-  } while (signaled && !isTerminated);
   
   // Run through each of the running children and poke at them to see
   // if they are running or not
   for( ps = running_children; ps != NULL; ps = ps->hh.next ) {
-    printf("checking running_children pid: %d\n", ps->pid);
-    if ((p_status = pm_check_pid_status(ps->pid))) {
+    // Prevent zombies...
+    while ((p_status = waitpid(ps->pid, &status, WNOHANG)) < 0 && errno == EINTR);
+    
+    if ((p_status = pm_check_pid_status(ps->pid)) > 0) {
       time_t now;
       now = time(NULL); // Current time
       // Something is wrong with the process, whatever could it be? Did we try to kill it?
@@ -326,7 +335,6 @@ int pm_check_children(void (*child_changed_status)(pid_t pid, int status), int i
         ps->deadline += 5;
       }
       // Now wait for it, only if it's going to die.
-      while ((p_status = waitpid(ps->pid, &status, WNOHANG)) < 0 && errno == EINTR);
       if (p_status > 0) {
         HASH_ADD(hh, exited_children, pid, sizeof(ps), ps);
         HASH_DEL(running_children, ps);
@@ -336,6 +344,7 @@ int pm_check_children(void (*child_changed_status)(pid_t pid, int status), int i
       // Now if the pid has most definitely disappeared, then we can 
       // send the status change and remove the pid from tracking
       HASH_DEL(running_children, ps);
+      child_changed_status(ps->pid, ESRCH);
     }
   }
 
