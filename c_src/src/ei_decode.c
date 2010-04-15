@@ -67,6 +67,8 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
     
     switch (opt) {
       case CD:
+      case DO_BEFORE:
+      case DO_AFTER:
       case ENV: {
         ei_get_type(buf, &index, &type, &size); 
         char *value = NULL;
@@ -118,12 +120,7 @@ int read_cmd(int fd, unsigned char **bufr, int *size)
   
   int len = 0;
   int i = 0;
-  for(i = 0; i < header_len; i++) {
-    printf("%d\n", buf[i]);
-    len |= buf[i] << (8*(header_len-i-1));
-  }
-
-  printf("len: %d (%d)\n", (int)len, 1);
+  for(i = 0; i < header_len; i++) len |= buf[i] << (8*(header_len-i-1));
   
   if (len > *size) {
     unsigned char* tmp = (unsigned char *) realloc(buf, len);
@@ -134,7 +131,6 @@ int read_cmd(int fd, unsigned char **bufr, int *size)
     *size = len;
   }
   int ret = read_exact(fd, buf, len);
-  printf("ret: %d\n", len);
   *bufr = buf;
   return ret;
 }
