@@ -223,7 +223,8 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     command_argv[1] = "-c";
     command_argv[2] = expanded_command;
     command_argc = 3;
-
+    
+    printf("expanded_command: >>%s<<\n", expanded_command);
   }
   *argc = command_argc;
   *argv = command_argv;
@@ -249,6 +250,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     pid = vfork();
   else
     pid = fork();
+    
   switch (pid) {
   case -1: 
     return -1;
@@ -278,7 +280,7 @@ int run_hook(hook_t t, process_t *process)
     printf("running before hook\n");
     pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   } else if (t == AFTER_HOOK) {
-    
+    pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   }
   return 0;
 }
@@ -296,7 +298,6 @@ pid_t pm_run_process(process_t *process)
 
 int pm_check_children(int isTerminated)
 {
-  
   return 0;
 }
 
