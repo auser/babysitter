@@ -292,7 +292,7 @@ int run_hook(hook_t t, process_t *process)
     } else if (!WIFSTOPPED(childExitStatus)) {
       printf("pid stopped: %d\n", childExitStatus);
     }
-    return 0;
+    return childExitStatus;
   } else {
     printf("Something very bad happened with the hook\n");
     return -1;

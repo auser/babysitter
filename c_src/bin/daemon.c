@@ -91,10 +91,6 @@ void setup_erl_daemon_signal_handlers()
 
 int terminate_all()
 {
-  // while (HASH_COUNT(running_children) > 0) {
-  //   
-  // }
-  printf("in terminate_all\n");
   return 0;
 }
 
