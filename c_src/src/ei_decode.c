@@ -55,7 +55,7 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
   
   // The second element of the tuple is a list of options
   if (ei_decode_list_header(buf, &index, &size) < 0) return err_code--;
-  
+    
   enum OptionT            { CD,   ENV,   NICE,  DO_BEFORE, DO_AFTER } opt;
   const char* options[] = {"cd", "env", "nice", "do_before", "do_after", NULL};
   
@@ -70,6 +70,7 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
       case DO_BEFORE:
       case DO_AFTER:
       case ENV: {
+        int size;
         ei_get_type(buf, &index, &type, &size); 
         char *value = NULL;
         if ((value = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
@@ -77,15 +78,14 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
         if (ei_decode_string(buf, &index, value) < 0) {
           fprintf(stderr, "ei_decode_string error: %d\n", errno);
           free(value);
-          return -9;
+          return err_code--;
         }
         if (opt == CD)
           pm_malloc_and_set_attribute(&process->cd, value);
         else if (opt == ENV)
           pm_add_env(&process, value);
-        else if (opt == DO_BEFORE) {
+        else if (opt == DO_BEFORE)
           pm_malloc_and_set_attribute(&process->before, value);
-        }
         else if (opt == DO_AFTER)
           pm_malloc_and_set_attribute(&process->after, value);
         
@@ -216,7 +216,7 @@ int decode_atom_index(char* buf, int *index, const char* cmds[])
   int type, size;
   ei_get_type(buf, index, &type, &size); 
   char *atom_name = NULL;
-  if ((atom_name = (char*) realloc(atom_name, size + 1)) == NULL) return -1;
+  if ((atom_name = (char*) calloc(sizeof(char), size)) == NULL) return -1;
   
   if (ei_decode_atom(buf, index, atom_name)) return -1;
   
