@@ -184,15 +184,15 @@ init([Options]) ->
 %% @private
 %%----------------------------------------------------------------------
 handle_call({port, Instruction}, From, #state{last_trans=Last} = State) ->
-    try is_port_command(Instruction, State) of
+  try is_port_command(Instruction, State) of
     {ok, Term, Link} ->
-        Next = next_trans(Last),
-        io:format("{~p, ~p}~n", [Next, Term]),
-        erlang:port_command(State#state.port, term_to_binary({Next, Term})),
-        {noreply, State#state{trans = queue:in({Next, From, Link}, State#state.trans)}}
+      Next = next_trans(Last),
+      io:format("{~p, ~p}~n", [Next, Term]),
+      erlang:port_command(State#state.port, term_to_binary({Next, Term})),
+      {noreply, State#state{trans = queue:in({Next, From, Link}, State#state.trans)}}
     catch _:{error, Why} ->
-        {reply, {error, Why}, State}
-    end;
+      {reply, {error, Why}, State}
+  end;
 
 handle_call(Request, _From, _State) ->
     {stop, {not_implemented, Request}}.
@@ -400,8 +400,10 @@ check_cmd_options([{env, Env}|T], State) when is_list(Env) ->
     % [] -> check_cmd_options(T, State);
     % L  -> throw({error, {invalid_env_value, L}})
     % end;
+check_cmd_options([{should_wait, I}|T], State) when is_integer(I) ->
+  check_cmd_options(T, State);
 check_cmd_options([{kill, Cmd}|T], State) when is_list(Cmd) ->
-    check_cmd_options(T, State);
+  check_cmd_options(T, State);
 check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->
     check_cmd_options(T, State);
 check_cmd_options([{Std, I}|T], State) when Std=:=stderr, I=/=Std; Std=:=stdout, I=/=Std ->
@@ -413,8 +415,8 @@ check_cmd_options([{Std, I}|T], State) when Std=:=stderr, I=/=Std; Std=:=stdout,
     end;
 check_cmd_options([{user, U}|T], State) when is_list(U), U =/= "" ->
     case lists:member(U, State#state.limit_users) of
-    true  -> check_cmd_options(T, State);
-    false -> throw({error, io:format("User ~s is not allowed to run commands!", [U])})
+      true  -> check_cmd_options(T, State);
+      false -> throw({error, io:format("User ~s is not allowed to run commands!", [U])})
     end;
 check_cmd_options([Other|_], _State) -> throw({error, {invalid_option, Other}});
 check_cmd_options([], _State)        -> ok.

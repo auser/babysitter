@@ -112,9 +112,9 @@ int decode_and_run_erlang(char *buf, int len)
 {
   process_t *process;
   ei_decode_command_call_into_process(buf, &process);
-  printf("process: %p\n", process);
+  
   // Do something here
-  pid_t pid = pm_run_process(process);
+  pid_t pid = pm_run_process(process, process->should_wait);
   
   process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
   ps->pid = pid;

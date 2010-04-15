@@ -52,6 +52,7 @@ int pm_new_process(process_t **ptr)
     return -1;
   }
   
+  p->should_wait = 0;
   p->env_c = 0;
   p->env_capacity = 0;
   p->env = NULL;
@@ -145,7 +146,7 @@ int pm_setup(int read_handle, int write_handle)
   return 0;
 }
 
-pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, char** env)
+pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, const char** env)
 {
   // Setup execution
   char **command_argv = {0};
@@ -219,63 +220,62 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     strcat(expanded_command, full_filepath); 
     strcat(expanded_command, command + prefix);
     
-    printf("expanded_command: >>%s<<\n", expanded_command);
-    
     command_argv = (char **) malloc(4 * sizeof(char *));
     command_argv[0] = strdup(getenv("SHELL"));
     command_argv[1] = "-c";
     command_argv[2] = expanded_command;
     command_argc = 3;
+    
+    printf("expanded_command >>%s<<\n", expanded_command);
   }
-
+  
   command_argv[command_argc] = 0;
     
   // Now actually RUN it!
   pid_t pid = fork();
   switch (pid) {
-  case -1: 
-    return -1;
-  case 0: {
-    pm_setup_signal_handlers();
-    if (cd != NULL && cd[0] != '\0')
-      chdir(cd);
-    
-    if (execve((const char*)command_argv[0], (char* const*)command_argv, (char* const*) env) < 0) {
-      printf("execve failed because: %s\n", strerror(errno));
+    case -1: 
       return -1;
+    case 0: {
+        pm_setup_signal_handlers();
+        if (cd != NULL && cd[0] != '\0')
+          chdir(cd);
+    
+        if (execve((const char*)command_argv[0], (char* const*)command_argv, (char* const*) env) < 0) {
+          printf("execve failed because: %s\n", strerror(errno));
+          return -1;
+        }
     }
-    exit(-1);
-  }
-  default:
-    // In parent process
-    if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) {
-    }
-    if (should_wait && kill(pid, 0) == 0) {
-      int childExitStatus;
-      printf("waiting for pid: %d...\n", (int)pid);
-      waitpid( pid, &childExitStatus, 0);
-      if( !WIFEXITED(childExitStatus) ){
-        printf("pid exited: %d\n", childExitStatus);
-      } else if (!WIFSIGNALED(childExitStatus)) {
-        printf("pid signaled: %d\n", childExitStatus);
-      } else if (!WIFSTOPPED(childExitStatus)) {
-        printf("pid stopped: %d\n", childExitStatus);
-      }
-      printf("pid: %d - status: %d\n", (int)pid, childExitStatus);
-      return pid;
-    } else
+    default:
+      printf("In Parent process: %d\n", pid);
+      // In parent process
+      if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) ;
+      
       return pid;
   }
 }
 
-pid_t pm_run_process(process_t *process)
+typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
+int run_hook(hook_t t, process_t *process)
 {
+  if (t == BEFORE_HOOK) {
+    printf("running before hook\n");
+    pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env);
+  } else if (t == AFTER_HOOK) {
+    pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
+  }
+  return 0;
+}
+
+pid_t pm_run_process(process_t *process, int should_wait)
+{
+  if (pm_process_valid(&process)) return -1;
   // Safe-ify the env
   process->env[process->env_c] = NULL;
   
-  if (process->before) pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, process->env);
-  pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, process->env);
-  if (process->after) pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, process->env);
+  // if (process->before) run_hook(BEFORE_HOOK, process);
+  pid_t pid = pm_execute(should_wait, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
+  // if (process->after) run_hook(AFTER_HOOK, process);
   return pid;
 }
 

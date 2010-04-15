@@ -57,7 +57,7 @@ ERL_NIF_TERM run_and_monitor(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]
   // Do something with the process
   if (pm_process_valid(&process)) return error(env, "invalid process specification");
   
-  pid = pm_run_process(process);
+  pid = pm_run_process(process, 1);
   if (pid > 0)
     erlRes = enif_make_tuple2(env, enif_make_atom(env,"pid"), enif_make_ulong(env, pid));
   else

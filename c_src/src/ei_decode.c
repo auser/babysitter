@@ -60,9 +60,11 @@ int decode_command_call_into_process(ErlNifEnv* env, int argc, const ERL_NIF_TER
 int ei_read(int fd, char** bufr)
 {
   int size = MAX_BUFFER_SZ;
-  
   char *buf;
-  if ((buf = (char *) calloc(sizeof(char*), size)) == NULL)  return -1;
+  if ((buf = (char *) calloc(sizeof(char), size)) == NULL) {
+    fprintf(stderr, "Could not create an erlang buffer: %s\n", strerror(errno));
+    return -1;
+  }
   
   int ret = read_cmd(fd, &buf, &size);
   
@@ -121,8 +123,8 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
   // The second element of the tuple is a list of options
   if (ei_decode_list_header(buf, &index, &size) < 0) return err_code--;
   
-  enum OptionT            { CD,   ENV,   NICE,   DO_BEFORE,   DO_AFTER } opt;
-  const char* options[] = {"cd", "env", "nice", "do_before", "do_after", NULL};
+  enum OptionT            { CD,   ENV,   NICE,   SHOULD_WAIT } opt;
+  const char* options[] = {"cd", "env", "nice", "should_wait", NULL};
   
   for (i = 0; i < size; i++) {
     // Decode the tuple of the form {atom, string()|int()};
@@ -132,9 +134,7 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
     
     switch (opt) {
       case CD:
-      case ENV:
-      case DO_BEFORE:
-      case DO_AFTER: {
+      case ENV: {
         ei_get_type(buf, &index, &type, &size); 
         char *value = NULL;
         if ((value = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
@@ -148,14 +148,15 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
           pm_malloc_and_set_attribute(&process->cd, value);
         else if (opt == ENV)
           pm_add_env(&process, value);
-        else if (opt == DO_BEFORE)
-          pm_malloc_and_set_attribute(&process->before, value);
-        else if (opt == DO_AFTER)
-          pm_malloc_and_set_attribute(&process->after, value);
         
         free(value);
       }
       break;
+      case SHOULD_WAIT: {
+        long lval;
+        ei_decode_long(buf, &index, &lval);
+        process->should_wait = lval;
+      }
       case NICE: {
         long lval;
         ei_decode_long(buf, &index, &lval);
@@ -329,6 +330,7 @@ int read_cmd(int fd, char **buf, int *size)
       *buf = tmp;
     *size = len;
   }
+  printf("reading %d\n", fd);
   return read_exact(fd, *buf, len);
 }
 
