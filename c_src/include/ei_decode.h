@@ -22,6 +22,8 @@ int decode_atom_index(char* buf, int *index, const char* cmds[]);
 
 // Ei responses
 int ei_pid_ok(int fd, int transId, pid_t pid);
+int ei_pid_status_term(int fd, int transId, pid_t pid, int status);
+// Responses
 int ei_error(int fd, int transId, const char* fmt, ...);
 int ei_ok(int fd, int transId, const char* fmt, ...);
 

@@ -45,7 +45,7 @@ start(Options) when is_list(Options) ->
 %% @end
 %%-------------------------------------------------------------------------
 run(Exe, Options) when is_list(Exe), is_list(Options) ->
-    gen_server:call(?MODULE, {port, {start, {run, Exe, Options}, nolink}}, 30000).
+  gen_server:call(?MODULE, {port, {start, {run, Exe, Options}, nolink}}, 30000).
 
 %%-------------------------------------------------------------------------
 %% @equiv run/2
@@ -56,7 +56,7 @@ run(Exe, Options) when is_list(Exe), is_list(Options) ->
 %% @end
 %%-------------------------------------------------------------------------
 run_link(Exe, Options) when is_list(Exe), is_list(Options) ->
-    gen_server:call(?MODULE, {port, {start, {run, Exe, Options}, link}}).
+  gen_server:call(?MODULE, {port, {start, {run, Exe, Options}, link}}).
 
 %%-------------------------------------------------------------------------
 %% @spec () -> [OsPid::integer()]
@@ -64,7 +64,7 @@ run_link(Exe, Options) when is_list(Exe), is_list(Options) ->
 %% @end
 %%-------------------------------------------------------------------------
 which_children() ->
-    gen_server:call(?MODULE, {port, {list}}).
+  gen_server:call(?MODULE, {port, {list}}).
 
 %%-------------------------------------------------------------------------
 %% @spec (Pid, Signal::integer()) -> ok | {error, Reason}
@@ -295,52 +295,52 @@ maybe_add_monitor(Reply, _Pid, _MonType, _Debug) ->
 %% @private
 %%----------------------------------------------------------------------
 ospid_init(Pid, OsPid, LinkType, Parent, Debug) ->
-    process_flag(trap_exit, true),
-    case LinkType of
+  process_flag(trap_exit, true),
+  case LinkType of
     link -> link(Pid); % The caller pid that requested to run the OsPid command & link to it. 
     _    -> ok
-    end,
-    ospid_loop({Pid, OsPid, Parent, Debug}).
+  end,
+  ospid_loop({Pid, OsPid, Parent, Debug}).
 
 ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
-    receive
+  receive
     {{From, Ref}, ospid} ->
-        From ! {Ref, {ok, OsPid}},
-        ospid_loop(State);
+      From ! {Ref, {ok, OsPid}},
+      ospid_loop(State);
     {'DOWN', OsPid, {exit_status, Status}} ->
-        debug(Debug, "~w ~w got down message (~w)\n", [self(), OsPid, status(Status)]),
-        % OS process died
-        exit({exit_status, Status});
+      debug(Debug, "~w ~w got down message (~w)\n", [self(), OsPid, status(Status)]),
+      % OS process died
+      exit({exit_status, Status});
     {'EXIT', Pid, Reason} ->
-        % Pid died
-        debug(Debug, "~w ~w got exit from linked ~w: ~p\n", [self(), OsPid, Pid, Reason]),
-        exit({owner_died, Reason});
+      % Pid died
+      debug(Debug, "~w ~w got exit from linked ~w: ~p\n", [self(), OsPid, Pid, Reason]),
+      exit({owner_died, Reason});
     {'EXIT', Parent, Reason} ->
-        % Port program died
-        debug(Debug, "~w ~w got exit from parent ~w: ~p\n", [self(), OsPid, Parent, Reason]),
-        exit({port_closed, Reason});
+      % Port program died
+      debug(Debug, "~w ~w got exit from parent ~w: ~p\n", [self(), OsPid, Parent, Reason]),
+      exit({port_closed, Reason});
     Other ->
-        error_logger:warning_msg("~w - unknown msg: ~p\n", [self(), Other]),
-        ospid_loop(State)
-    end.
+      error_logger:warning_msg("~w - unknown msg: ~p\n", [self(), Other]),
+      ospid_loop(State)
+  end.
     
 notify_ospid_owner(OsPid, Status) ->
-    % See if there is a Pid owner of this OsPid. If so, sent the 'DOWN' message.
-    case ets:lookup(exec_mon, OsPid) of
+  % See if there is a Pid owner of this OsPid. If so, sent the 'DOWN' message.
+  case ets:lookup(exec_mon, OsPid) of
     [{_OsPid, Pid}] ->
-        unlink(Pid),
-        Pid ! {'DOWN', OsPid, {exit_status, Status}},
-        ets:delete(exec_mon, {Pid, OsPid}),
-        ets:delete(exec_mon, {OsPid, Pid});
+      unlink(Pid),
+      Pid ! {'DOWN', OsPid, {exit_status, Status}},
+      ets:delete(exec_mon, {Pid, OsPid}),
+      ets:delete(exec_mon, {OsPid, Pid});
     [] ->
-        %error_logger:warning_msg("Owner ~w not found\n", [OsPid]),
-        ok
-    end.
+      %error_logger:warning_msg("Owner ~w not found\n", [OsPid]),
+      ok
+  end.
 
 debug(false, _, _) ->
-    ok;
+  ok;
 debug(true, Fmt, Args) ->        
-    io:format(Fmt, Args).
+  io:format(Fmt, Args).
 
 %%----------------------------------------------------------------------
 %% @spec (Pid::pid(), Action, State::#state{}) -> 
@@ -350,26 +350,26 @@ debug(true, Fmt, Args) ->
 %% @end
 %%----------------------------------------------------------------------
 do_unlink_ospid(Pid, _Reason, State) ->
-    case ets:lookup(exec_mon, Pid) of
+  case ets:lookup(exec_mon, Pid) of
     [{_Pid, OsPid}] when is_integer(OsPid) ->
-        debug(State#state.debug, "Pid ~p died. Killing linked OsPid ~w\n", [Pid, OsPid]),
-        ets:delete(exec_mon, {Pid, OsPid}),
-        ets:delete(exec_mon, {OsPid, Pid}),
-        erlang:port_command(State#state.port, term_to_binary({0, {stop, OsPid}}));
+      debug(State#state.debug, "Pid ~p died. Killing linked OsPid ~w\n", [Pid, OsPid]),
+      ets:delete(exec_mon, {Pid, OsPid}),
+      ets:delete(exec_mon, {OsPid, Pid}),
+      erlang:port_command(State#state.port, term_to_binary({0, {stop, OsPid}}));
     _ ->
-        ok 
-    end.
+      ok 
+  end.
 
 get_transaction(Q, I) -> 
-    get_transaction(Q, I, Q).
+  get_transaction(Q, I, Q).
 get_transaction(Q, I, OldQ) ->
-    case queue:out(Q) of
+  case queue:out(Q) of
     {{value, {I, From, LinkType}}, Q2} ->
-        {true, From, LinkType, Q2};
+      {true, From, LinkType, Q2};
     {empty, _} ->
-        {false, OldQ};
+      {false, OldQ};
     {_, Q2} ->
-        get_transaction(Q2, I, OldQ)
+      get_transaction(Q2, I, OldQ)
     end.
     
 is_port_command({start, {run, _Cmd, Options} = T, Link}, State) ->

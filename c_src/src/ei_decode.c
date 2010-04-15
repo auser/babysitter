@@ -186,6 +186,21 @@ int ei_pid_ok(int fd, int transId, pid_t pid)
   ei_x_free(&result);
   return 0;
 }
+int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
+{
+  ei_x_buff result;
+  if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
+  if (ei_x_encode_long(&result, transId)) return -2;
+  if (ei_x_encode_tuple_header(&result, 3)) return -3;
+  if (ei_x_encode_atom(&result, "exit_status") ) return -4;
+  // Encode pid
+  if (ei_x_encode_long(&result, (int)pid)) return -5;
+  if (ei_x_encode_long(&result, (int)status)) return -5;
+  if (write_cmd(fd, &result) < 0) return -5;
+  ei_x_free(&result);
+  return 0;
+}
+
 int ei_ok(int fd, int transId, const char* fmt, ...)
 {  
   va_list vargs;
