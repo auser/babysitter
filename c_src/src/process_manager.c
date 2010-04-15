@@ -277,7 +277,6 @@ typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
 int run_hook(hook_t t, process_t *process)
 {
   if (t == BEFORE_HOOK) {
-    printf("running before hook\n");
     pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   } else if (t == AFTER_HOOK) {
     pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);

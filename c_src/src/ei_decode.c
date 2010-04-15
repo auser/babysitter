@@ -84,7 +84,6 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
         else if (opt == ENV)
           pm_add_env(&process, value);
         else if (opt == DO_BEFORE) {
-          printf("do_before %s\n", value);
           pm_malloc_and_set_attribute(&process->before, value);
         }
         else if (opt == DO_AFTER)
