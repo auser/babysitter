@@ -221,6 +221,7 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     command_argv[0] = strdup(getenv("SHELL"));
     command_argv[1] = "-c";
     command_argv[2] = expanded_command;
+    command_argv[3] = NULL;
     command_argc = 3;
     
     // printf("expanded_command: >>%s<<\n", expanded_command);
@@ -260,9 +261,15 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     
     if (execve((const char*)command_argv[0], (char* const*)command_argv, (char* const*) env) < 0) {
       printf("execve failed because: %s\n", strerror(errno));
-      return -1;
+      printf("command_argc: %d\n", command_argc);
+      char **tmp_argv = command_argv;
+      char **tmp_env = (char**)env;
+      int i = 0;
+      for (i = 0; *tmp_argv != NULL; i++) printf("argv[%d] = %s\n", i, *tmp_argv++);
+      for (i = 0; *tmp_env != NULL; i++) printf("env[%d] = %s\n", i, *tmp_env++);
+      
+      exit(-1);
     }
-    exit(-1);
   }
   default:
     // In parent process
@@ -310,7 +317,7 @@ pid_t pm_run_process(process_t *process)
   return pid;
 }
 
-int pm_check_children(void (*child_changed_status)(pid_t pid, int status), int isTerminated)
+int pm_check_children(void (*child_changed_status)(process_struct *ps), int isTerminated)
 {
   process_struct *ps;
   int p_status = 0;
@@ -344,14 +351,15 @@ int pm_check_children(void (*child_changed_status)(pid_t pid, int status), int i
       // Now if the pid has most definitely disappeared, then we can 
       // send the status change and remove the pid from tracking
       HASH_DEL(running_children, ps);
-      child_changed_status(ps->pid, ESRCH);
+      ps->status = ESRCH;
+      child_changed_status(ps);
     }
   }
 
   return 0;
 }
 
-int pm_next_loop(void (*child_changed_status)(pid_t pid, int status))
+int pm_next_loop(void (*child_changed_status)(process_struct *ps))
 {
   sigsetjmp(saved_jump_buf, 1); pm_can_jump = 0;
 

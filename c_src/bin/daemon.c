@@ -122,10 +122,12 @@ int decode_and_run_erlang(unsigned char *buf, int len)
   return 0;
 }
 
-void child_changed_status(pid_t pid, int status)
+void child_changed_status(process_struct *ps)
 {
   // A child was affected (in the following ways)
-  printf("child_changed_status callback called\n");
+  printf("child_changed_status callback called for %d\n", ps->pid);
+  // int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
+  ei_pid_status_term(write_handle, ps->transId, ps->pid, ps->status);
 }
 
 int main (int argc, char const *argv[])
