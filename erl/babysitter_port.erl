@@ -400,6 +400,10 @@ check_cmd_options([{env, Env}|T], State) when is_list(Env) ->
     % [] -> check_cmd_options(T, State);
     % L  -> throw({error, {invalid_env_value, L}})
     % end;
+check_cmd_options([{do_before, Cmd}|T], State) when is_list(Cmd) ->
+  check_cmd_options(T, State);
+check_cmd_options([{do_after, Cmd}|T], State) when is_list(Cmd) ->
+  check_cmd_options(T, State);
 check_cmd_options([{kill, Cmd}|T], State) when is_list(Cmd) ->
   check_cmd_options(T, State);
 check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->

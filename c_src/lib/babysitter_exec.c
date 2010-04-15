@@ -1,6 +1,7 @@
 #include "babysitter_exec.h"
 #include "process_manager.h"
 #include "ei_decode.h"
+#include "nif_decode.h"
 
 /**
 * Test if the pid is up or not

@@ -20,7 +20,7 @@
 #endif
 
 #ifndef MAX_BUFFER_SZ
-#define MAX_BUFFER_SZ 4096
+#define MAX_BUFFER_SZ 65536
 #endif
 
 #ifndef PREFIX_LEN
