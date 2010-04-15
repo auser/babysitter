@@ -108,10 +108,10 @@ void print_ellipses(int count)
   print_ellipses(count - 1);
 }
 
-int decode_and_run_erlang(char *buf, int len)
+int decode_and_run_erlang(unsigned char *buf, int len)
 {
   process_t *process;
-  ei_decode_command_call_into_process(buf, &process);
+  ei_decode_command_call_into_process((char *)buf, &process);
   
   // Do something here
   pid_t pid = pm_run_process(process);
@@ -124,6 +124,12 @@ int decode_and_run_erlang(char *buf, int len)
   
   pm_free_process(process);
   return 0;
+}
+
+void child_changed_status(pid_t pid, int status)
+{
+  // A child was affected (in the following ways)
+  printf("child_changed_status callback called\n");
 }
 
 int main (int argc, char const *argv[])
@@ -145,7 +151,7 @@ int main (int argc, char const *argv[])
   /* Do stuff */
   while (!terminated) {    
     debug(dbg, 4, "preparing next loop...\n");
-    if (pm_next_loop() < 0) break;
+    if (pm_next_loop(child_changed_status) < 0) break;
     
     // Erlang fun... pull the next command from the read_fds parameter on the erlang fd
     pm_set_can_not_jump();
@@ -173,13 +179,13 @@ int main (int argc, char const *argv[])
     pm_set_can_jump();
     
     if (interrupted || num_ready_socks == 0) {
-      if (pm_check_children(terminated) < 0) continue;
+      if (pm_check_children(child_changed_status, terminated) < 0) continue;
     } else if (num_ready_socks < 0) {
       perror("select"); 
       exit(9);
     } else if ( FD_ISSET(read_handle, &rfds) ) {
-      // Read from f_in a command sent by Erlang
-      char* buf;
+      // Read from read_handle a command sent by Erlang
+      unsigned char* buf;
       int len = 0;
       
       if ((len = ei_read(read_handle, &buf)) < 0) {

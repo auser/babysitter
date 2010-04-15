@@ -295,16 +295,17 @@ pid_t pm_run_process(process_t *process)
   return pid;
 }
 
-int pm_check_children(int isTerminated)
+int pm_check_children(void (*child_changed_status)(pid_t pid, int status), int isTerminated)
 {
+  child_changed_status((pid_t)50002, isTerminated);
   return 0;
 }
 
-int pm_next_loop()
+int pm_next_loop(void (*child_changed_status)(pid_t pid, int status))
 {
   sigsetjmp(saved_jump_buf, 1); pm_can_jump = 0;
 
-  while (!terminated && (HASH_COUNT(exited_children) > 0 || signaled)) pm_check_children(terminated);
+  while (!terminated && (HASH_COUNT(exited_children) > 0 || signaled)) pm_check_children(child_changed_status, terminated);
   pm_check_pending_processes(); // Check for pending signals arrived while we were in the signal handler
 
   pm_can_jump = 1;
