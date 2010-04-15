@@ -31,7 +31,6 @@ typedef struct _process_t_ {
   char*   after;
   char*   cd;
   int     nice;
-  int     should_wait;    // Should we monitor this pid or not
   int     transId;        // Communication id
 } process_t;
 
@@ -57,7 +56,7 @@ void pm_set_can_not_jump();
 int pm_setup(int read_handle, int write_handle);
 
 /* Mainly private exports */
-pid_t pm_run_process(process_t *process, int should_wait);
+pid_t pm_run_process(process_t *process);
 pid_t pm_execute(int wait, const char* command, const char *cd, int nice, const char** env);
 int pm_check_children(int isTerminated);
 int pm_check_pending_processes();

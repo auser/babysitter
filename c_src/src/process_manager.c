@@ -52,7 +52,6 @@ int pm_new_process(process_t **ptr)
     return -1;
   }
   
-  p->should_wait = 0;
   p->env_c = 0;
   p->env_capacity = 0;
   p->env = NULL;
@@ -146,13 +145,12 @@ int pm_setup(int read_handle, int write_handle)
   return 0;
 }
 
-pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, const char** env)
+int expand_command(const char* command, int* argc, char ***argv, int *using_a_script)
 {
-  // Setup execution
-  char **command_argv = {0};
-  int command_argc = 0;
-  const char* full_filepath;
-  int running_script = 0;
+  char **command_argv = *argv;
+  int command_argc = *argc;
+  int running_script = *using_a_script;
+  const char *full_filepath;
   
   if (!strncmp(command, "#!", 2)) {
     // We are running a shell script command
@@ -178,7 +176,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
       fprintf(stderr, "fsync failed for tempfile: %s\n", filename);
       return -1;
     }
-    
+
     // Close the file descriptor
     close(fd);
 
@@ -204,7 +202,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   } else {
     int prefix;
     char *cp, *cmdname, *expanded_command;
- 
+
 
     // get bare command for path lookup
     for (cp = (char *) command; !isspace(*cp); cp++) ;
@@ -219,39 +217,57 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     expanded_command = calloc(strlen(full_filepath) + strlen(command + prefix) + 1, sizeof(char));
     strcat(expanded_command, full_filepath); 
     strcat(expanded_command, command + prefix);
-    
+
     command_argv = (char **) malloc(4 * sizeof(char *));
     command_argv[0] = strdup(getenv("SHELL"));
     command_argv[1] = "-c";
     command_argv[2] = expanded_command;
     command_argc = 3;
-    
-    printf("expanded_command >>%s<<\n", expanded_command);
+
   }
+  *argc = command_argc;
+  *argv = command_argv;
+  *using_a_script = running_script;
+  
+  return 0;
+}
+
+pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, const char** env)
+{
+  // Setup execution
+  char **command_argv = {0};
+  int command_argc = 0;
+  int running_script = 0;
+  
+  if (expand_command(command, &command_argc, &command_argv, &running_script)) ;
   
   command_argv[command_argc] = 0;
-    
+  
   // Now actually RUN it!
-  pid_t pid = fork();
+  pid_t pid;
+  if (should_wait)
+    pid = vfork();
+  else
+    pid = fork();
   switch (pid) {
-    case -1: 
-      return -1;
-    case 0: {
-        pm_setup_signal_handlers();
-        if (cd != NULL && cd[0] != '\0')
-          chdir(cd);
+  case -1: 
+    return -1;
+  case 0: {
+    pm_setup_signal_handlers();
+    if (cd != NULL && cd[0] != '\0')
+      chdir(cd);
     
-        if (execve((const char*)command_argv[0], (char* const*)command_argv, (char* const*) env) < 0) {
-          printf("execve failed because: %s\n", strerror(errno));
-          return -1;
-        }
+    if (execve((const char*)command_argv[0], (char* const*)command_argv, (char* const*) env) < 0) {
+      printf("execve failed because: %s\n", strerror(errno));
+      return -1;
     }
-    default:
-      printf("In Parent process: %d\n", pid);
-      // In parent process
-      if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) ;
-      
-      return pid;
+    exit(-1);
+  }
+  default:
+    // In parent process
+    if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) 
+      ;
+    return pid;
   }
 }
 
@@ -262,20 +278,19 @@ int run_hook(hook_t t, process_t *process)
     printf("running before hook\n");
     pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   } else if (t == AFTER_HOOK) {
-    pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
+    
   }
   return 0;
 }
 
-pid_t pm_run_process(process_t *process, int should_wait)
+pid_t pm_run_process(process_t *process)
 {
-  if (pm_process_valid(&process)) return -1;
   // Safe-ify the env
   process->env[process->env_c] = NULL;
   
-  // if (process->before) run_hook(BEFORE_HOOK, process);
-  pid_t pid = pm_execute(should_wait, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
-  // if (process->after) run_hook(AFTER_HOOK, process);
+  if (process->before) run_hook(BEFORE_HOOK, process);
+  pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
+  if (process->after) run_hook(AFTER_HOOK, process);
   return pid;
 }
 

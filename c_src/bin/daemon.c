@@ -137,6 +137,11 @@ int main (int argc, char const *argv[])
   setup_erl_daemon_signal_handlers();
   if (setup()) return -1;
   
+  // Create the timeout struct
+  struct timeval m_tv;
+  m_tv.tv_usec = 0; 
+  m_tv.tv_sec = 5;
+    
   /* Do stuff */
   while (!terminated) {    
     debug(dbg, 4, "preparing next loop...\n");
@@ -144,10 +149,6 @@ int main (int argc, char const *argv[])
     
     // Erlang fun... pull the next command from the read_fds parameter on the erlang fd
     pm_set_can_not_jump();
-    // Create the timeout struct
-    struct timeval m_tv;
-    m_tv.tv_usec = 0; 
-    m_tv.tv_sec = 5;
     
     // clean socket lists
 		FD_ZERO(&rfds);
