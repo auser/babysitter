@@ -13,7 +13,6 @@
 #include "pm_helpers.h"
 
 // Defines
-typedef char byte;
 
 // Ei
 enum BabysitterActionT {BS_BUNDLE,BS_MOUNT, BS_RUN, BS_UNMOUNT,BS_CLEANUP};
