@@ -23,6 +23,10 @@
 #define MAX_BUFFER_SZ 65536
 #endif
 
+#ifndef MAX_ENV
+#define MAX_ENV 256
+#endif
+
 #ifndef PREFIX_LEN
 #define PREFIX_LEN 8
 #endif

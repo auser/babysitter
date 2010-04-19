@@ -35,10 +35,17 @@ int pm_check_pid_status(pid_t pid)
 int pm_add_env(process_t **ptr, char* value)
 {
   process_t *p = *ptr;
+  int old_size = p->env_c;
   // Expand space, if necessary
   if (p->env_c == p->env_capacity) {
-    if (p->env_capacity == 0) p->env_capacity = 1;
-    p->env = (char**)realloc(p->env, (p->env_capacity *= 2) * sizeof(char*));
+    if (p->env_capacity == 0) p->env_capacity = 2;
+    int new_size = (p->env_capacity *= 2) * sizeof(char*);
+    void *new_env = (char**)realloc(p->env, new_size);
+    if (new_env != NULL) {
+      p->env = new_env;
+    // Clear out the new mem
+    p->env[old_size+1] = NULL;
+    }
   }
   p->env[p->env_c++] = strdup(value);
   return 0;
@@ -259,15 +266,8 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     if (cd != NULL && cd[0] != '\0')
       chdir(cd);
     
-    if (execve((const char*)command_argv[0], (char* const*)command_argv, (char* const*) env) < 0) {
-      printf("execve failed because: %s\n", strerror(errno));
-      printf("command_argc: %d\n", command_argc);
-      char **tmp_argv = command_argv;
-      char **tmp_env = (char**)env;
-      int i = 0;
-      for (i = 0; *tmp_argv != NULL; i++) printf("argv[%d] = %s\n", i, *tmp_argv++);
-      for (i = 0; *tmp_env != NULL; i++) printf("env[%d] = %s\n", i, *tmp_env++);
-      
+    if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
+      printf("execve failed because: %s\n", strerror(errno));      
       exit(-1);
     }
   }
