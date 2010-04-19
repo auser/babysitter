@@ -193,7 +193,6 @@ int main (int argc, char const *argv[])
       
       if (decode_and_run_erlang(buf, len)) {
         // Something is afoot (failed)
-        printf("Something is afoot\n");
       } else {
         // Everything went well
       }

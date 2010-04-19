@@ -265,8 +265,8 @@ code_change(_OldVsn, State, _Extra) ->
 %% @private
 %%----------------------------------------------------------------------
 terminate(_Reason, #state{}) ->
-    error_logger:warning_msg("~w - exec process terminated\n", [self()]),
-    ok.
+  error_logger:warning_msg("~w - exec process terminated\n", [self()]),
+  ok.
 
 %%%---------------------------------------------------------------------
 %%% Internal functions
@@ -407,24 +407,21 @@ check_cmd_options([{do_after, Cmd}|T], State) when is_list(Cmd) ->
 check_cmd_options([{kill, Cmd}|T], State) when is_list(Cmd) ->
   check_cmd_options(T, State);
 check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->
-    check_cmd_options(T, State);
+  check_cmd_options(T, State);
 check_cmd_options([{Std, I}|T], State) when Std=:=stderr, I=/=Std; Std=:=stdout, I=/=Std ->
-    if I=:=null; I=:=stderr; I=:=stdout; is_list(I); 
-       is_tuple(I), tuple_size(I)=:=2, element(1,I)=:="append", is_list(element(2,I))
-    ->  check_cmd_options(T, State);
+  if I=:=null; I=:=stderr; I=:=stdout; is_list(I); 
+    is_tuple(I), tuple_size(I)=:=2, element(1,I)=:="append", is_list(element(2,I)) ->  
+      check_cmd_options(T, State);
     true -> 
-        throw({error, io:format("Invalid ~w option ~p", [Std, I])})
-    end;
+      throw({error, io:format("Invalid ~w option ~p", [Std, I])})
+  end;
 check_cmd_options([{user, U}|T], State) when is_list(U), U =/= "" ->
-    case lists:member(U, State#state.limit_users) of
-      true  -> check_cmd_options(T, State);
-      false -> throw({error, io:format("User ~s is not allowed to run commands!", [U])})
-    end;
+  case lists:member(U, State#state.limit_users) of
+    true  -> check_cmd_options(T, State);
+    false -> throw({error, io:format("User ~s is not allowed to run commands!", [U])})
+  end;
 check_cmd_options([Other|_], _State) -> throw({error, {invalid_option, Other}});
 check_cmd_options([], _State)        -> ok.
     
-next_trans(I) when I < 268435455 ->
-    I+1;
-next_trans(_) ->
-    1.
-
+next_trans(I) when I < 268435455 -> I+1;
+next_trans(_) -> 1.

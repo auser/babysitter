@@ -38,13 +38,15 @@ int pm_add_env(process_t **ptr, char* value)
   int old_size = p->env_c;
   // Expand space, if necessary
   if (p->env_c == p->env_capacity) {
-    if (p->env_capacity == 0) p->env_capacity = 2;
+    if (p->env_capacity == 0) p->env_capacity = 1 * sizeof(char*);
     int new_size = (p->env_capacity *= 2) * sizeof(char*);
     void *new_env = (char**)realloc(p->env, new_size);
     if (new_env != NULL) {
       p->env = new_env;
-    // Clear out the new mem
-    p->env[old_size+1] = NULL;
+      // Clear out the new mem
+      p->env[old_size+1] = NULL;
+    } else {
+      return -1; // Something is SERIOUSLY wrong
     }
   }
   p->env[p->env_c++] = strdup(value);
@@ -240,6 +242,17 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
   return 0;
 }
 
+/**
+* pm_execute
+* @params
+*   int should_wait - Indicates if this execute should be inline or asynchronous
+*   const char* command - The command to run
+*   const char* cd - Run in this directory unless it's a NULL pointer
+*   int nice - Special nice level
+*   const char** env - Environment variables to run in the shell
+* @output
+    pid_t pid - output pid of the new process
+**/
 pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, const char** env)
 {
   // Setup execution
