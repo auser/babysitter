@@ -107,16 +107,26 @@ void print_ellipses(int count)
 int decode_and_run_erlang(unsigned char *buf, int len)
 {
   process_t *process;
-  ei_decode_command_call_into_process((char *)buf, &process);
+  enum BabysitterActionT action = ei_decode_command_call_into_process((char *)buf, &process);
   
-  // Do something here
-  pid_t pid = pm_run_process(process);
-  
-  process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
-  ps->pid = pid;
-  ps->transId = process->transId;
-  HASH_ADD_INT(running_children, pid, ps);
-  ei_pid_ok(write_handle, process->transId, pid);
+  switch (action) {
+    case BS_RUN: {
+      pid_t pid = pm_run_and_spawn_process(process);  
+      process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
+      ps->pid = pid;
+      ps->transId = process->transId;
+      HASH_ADD_INT(running_children, pid, ps);
+      ei_pid_ok(write_handle, process->transId, pid);
+      break;
+    }
+    case BS_MOUNT:
+    case BS_UNMOUNT:
+    case BS_BUNDLE:
+    case BS_CLEANUP:
+      pm_run_process(process);
+    default:
+    break;
+  }  
   
   pm_free_process(process);
   return 0;

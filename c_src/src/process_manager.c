@@ -292,6 +292,24 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   }
 }
 
+int wait_for_pid(pid_t pid)
+{
+  if (kill(pid, 0) == 0) {
+    int childExitStatus;
+    printf("waiting for pid: %d...\n", (int)pid);
+    waitpid( pid, &childExitStatus, 0);
+    // if( !WIFEXITED(childExitStatus) ){
+    // } else if (!WIFSIGNALED(childExitStatus)) {
+    // } else if (!WIFSTOPPED(childExitStatus)) {
+    // }
+    return childExitStatus;
+  } else {
+    printf("Something very bad happened with the hook\n");
+    return -1;
+  }
+  
+}
+
 typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
 int run_hook(hook_t t, process_t *process)
 {
@@ -301,25 +319,10 @@ int run_hook(hook_t t, process_t *process)
   } else if (t == AFTER_HOOK) {
     pid = pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   }
-  if (kill(pid, 0) == 0) {
-    int childExitStatus;
-    printf("waiting for pid: %d...\n", (int)pid);
-    waitpid( pid, &childExitStatus, 0);
-    if( !WIFEXITED(childExitStatus) ){
-      printf("pid exited: %d\n", childExitStatus);
-    } else if (!WIFSIGNALED(childExitStatus)) {
-      printf("pid signaled: %d\n", childExitStatus);
-    } else if (!WIFSTOPPED(childExitStatus)) {
-      printf("pid stopped: %d\n", childExitStatus);
-    }
-    return childExitStatus;
-  } else {
-    printf("Something very bad happened with the hook\n");
-    return -1;
-  }
+  return wait_for_pid(pid);
 }
 
-pid_t pm_run_process(process_t *process)
+pid_t pm_run_and_spawn_process(process_t *process)
 {
   // Safe-ify the env
   process->env[process->env_c] = NULL;
@@ -328,6 +331,17 @@ pid_t pm_run_process(process_t *process)
   pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
   if (process->after) run_hook(AFTER_HOOK, process);
   return pid;
+}
+
+int pm_run_process(process_t *process)
+{
+  // Safe-ify the env
+  process->env[process->env_c] = NULL;
+  
+  if (process->before) run_hook(BEFORE_HOOK, process);
+  pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
+  if (process->after) run_hook(AFTER_HOOK, process);
+  return wait_for_pid(pid);
 }
 
 int pm_check_children(void (*child_changed_status)(process_struct *ps), int isTerminated)

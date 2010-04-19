@@ -165,7 +165,6 @@ init([Options]) ->
   Users = proplists:get_value(limit_users, Options, default(limit_users)),
   Debug = proplists:get_value(verbose,     Options, default(verbose)),
   try
-    io:format("Exec: ~p~n", [Exe]),
     debug(Debug, "exec: port program: ~s\n", [Exe]),
     Port = erlang:open_port({spawn, Exe}, [binary, exit_status, {packet, 2}, nouse_stdio, hide]),
     {ok, #state{port=Port, limit_users=Users, debug=Debug}}

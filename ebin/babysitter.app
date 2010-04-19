@@ -8,6 +8,7 @@
   {applications, [kernel, stdlib, sasl]},
   {mod, {babysitter_app, []}},
   {env, [
+    {debug, 3}
   ]}
  ]
 }.

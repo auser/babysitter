@@ -80,7 +80,6 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
           free(value);
           return err_code--;
         }
-        printf("opt: %i - %s\n", opt, value);
         if (opt == CD)
           pm_malloc_and_set_attribute(&process->cd, value);
         else if (opt == ENV)
@@ -105,7 +104,7 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
     }
   }
   *ptr = process;
-  return 0;
+  return ret;
 }
 
 /**

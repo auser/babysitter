@@ -11,7 +11,8 @@
 
 %% API
 -export([
-  start_link/0
+  start_link/0,
+  start_link/1
 ]).
 
 %% Supervisor callbacks
@@ -29,6 +30,9 @@
 start_link() ->
   supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
+start_link(Opts) ->
+  supervisor:start_link({local, ?SERVER}, ?MODULE, [Opts]).
+
 %%====================================================================
 %% Supervisor callbacks
 %%====================================================================
@@ -41,8 +45,8 @@ start_link() ->
 %% to find out about restart strategy, maximum restart frequency and child
 %% specifications.
 %%--------------------------------------------------------------------
-init([]) ->
-  AppSrv = {the_babysitter_srv,{babysitter, start_link,[]}, permanent,2000,worker,dynamic},
+init([Opts]) ->
+  AppSrv = {the_babysitter_srv,{babysitter, start_link, [Opts]}, permanent,2000,worker,dynamic},
   % ChildrenSpecs = {
   %   babysitter_process_sup, 
   %   {supervisor, start_link, [{local, babysitter_process_sup}, babysitter_process_sup, []]},
