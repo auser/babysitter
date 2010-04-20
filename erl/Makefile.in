@@ -36,26 +36,30 @@ ALL_SRC = $(SRC) $(TEST_SRC)
  
 all: $(OBJ)
 	
-%.beam: %.erl
-	$(SILENCE)echo compiling $(notdir $<)
-	$(SILENCE)$(ERLC) $(ERLC_FLAGS) -I./include -o $(EBIN_DIR) $<
+$(OBJ): $(SRC)
+	$(SILENCE)echo compiling $(notdir $@)
+	$(SILENCE)$(ERLC) $(ERLC_FLAGS) -I./include -o $(EBIN_DIR) $^
+
+$(TEST_OBJ): $(TEST_SRC)
+	$(SILENCE)echo compiling $(notdir $@)
+	$(SILENCE)$(ERLC) $(ERLC_FLAGS) -I./include -o $(EBIN_DIR) $^
 
 debug:
 	$(MAKE) DEBUG=-DDEBUG
 	
 test: all $(TEST_OBJ)
-	$(ERL)	-noshell \
+	$(SILENCE) $(ERL)	-noshell \
 					-boot start_sasl \
 					-sname local_test \
 					-pa $(EBIN_DIR) \
 					-s test_suite test \
 					-s init stop
 
-boot:
-	$(ERL) -pa $(EBIN_DIR) -noshell -run make_boot write_scripts babysitter @PACKAGE_VERSION@
-	mv babysitter-@PACKAGE_VERSION@.boot $(EBIN_DIR)
-	mv babysitter-@PACKAGE_VERSION@.rel $(EBIN_DIR)
-	mv babysitter-@PACKAGE_VERSION@.script $(EBIN_DIR)
+boot: all
+	$(SILENCE) $(ERL) -pa $(EBIN_DIR) -noshell -run make_boot write_scripts babysitter @PACKAGE_VERSION@
+	$(SILENCE) mv babysitter-@PACKAGE_VERSION@.boot $(EBIN_DIR)
+	$(SILENCE) mv babysitter-@PACKAGE_VERSION@.rel $(EBIN_DIR)
+	$(SILENCE) mv babysitter-@PACKAGE_VERSION@.script $(EBIN_DIR)
 
 clean:
 	@(rm -rf $(EBIN_DIR)/*.beam erl_crash.dump)
