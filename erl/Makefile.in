@@ -49,7 +49,6 @@ debug:
 	
 test: all $(TEST_OBJ)
 	$(SILENCE) $(ERL)	-noshell \
-					-boot start_sasl \
 					-sname local_test \
 					-pa $(EBIN_DIR) \
 					-s test_suite test \

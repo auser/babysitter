@@ -73,13 +73,13 @@ stop() ->
 init([Options]) ->
   process_flag(trap_exit, true),  
   Exe   = build_port_command(Options),
-  Debug = proplists:get_value(verbose,     Options, default(verbose)),
+  Debug = proplists:get_value(verbose, Options, default(verbose)),
   try
     debug(Debug, "exec: port program: ~s\n", [Exe]),
     Port = erlang:open_port({spawn, Exe}, [binary, exit_status, {packet, 2}, nouse_stdio, hide]),
     {ok, #state{port=Port, debug=Debug}}
   catch _:Reason ->
-    {stop, io:format("Error starting port '~s': ~200p", [Exe, Reason])}
+    {stop, io:format("Error starting port '~p': ~200p", [Exe, Reason])}
   end.
 
 %%--------------------------------------------------------------------
@@ -211,7 +211,7 @@ build_port_command1([{debug, X} = T|Rest], Acc) when is_integer(X) ->
 build_port_command1([{K,V}|Rest], Acc) -> build_port_command1(Rest, Acc).
 
 % Purely to clean this up
-port_command_option({debug, X}) when is_integer(X) -> io:fwrite(" --debug ~i", X);
+port_command_option({debug, X}) when is_integer(X) -> io:fwrite(" --debug ~w", [X]);
 port_command_option({debug, _Else}) -> " -- debug 4";
 port_command_option(_) -> "".
 
