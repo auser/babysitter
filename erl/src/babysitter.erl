@@ -11,8 +11,8 @@
 
 %% API
 -export ([
-  spawn_new/1,
-  stop_process/1
+  spawn_new/1, stop_process/1,
+  list/0
 ]).
 
 -export([start_link/0, start_link/1, stop/0]).
@@ -42,10 +42,13 @@
 %% API
 %%====================================================================
 spawn_new(Options) -> 
-  gen_server:call(?SERVER, {spawn_new, Options}).
+  gen_server:call(?SERVER, {port, {run, Options}}).
 
 stop_process(Arg) ->
   handle_stop_process(Arg).
+
+list() ->
+  gen_server:call(?SERVER, {port, {list}}).
   
 %%--------------------------------------------------------------------
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
@@ -91,8 +94,8 @@ init([Options]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call({spawn_new, Options}, From, State) ->
-  Pid = handle_spawn_new(Options, From, State),
+handle_call({port, Instruction}, From, #state{last_trans=_Last} = State) ->
+  Pid = handle_spawn_new(Instruction, From, State),
   ets:insert(?PID_MONITOR_TABLE, {Pid, From}),
   {reply, Pid, State};
 handle_call(_Request, _From, State) ->
@@ -178,7 +181,7 @@ default() ->
 default(port_program) -> 
     % Get architecture (e.g. i386-linux)
     Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
-    filename:join([Dir, "priv", "bin", "babysitter"]);
+    filename:join([Dir, "..", "priv", "bin", "babysitter"]);
 default(Option) ->
   search_for_application_value(Option).
 
