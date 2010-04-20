@@ -1,0 +1,1 @@
+{release, {"babysitter", "0.1"}, {erts, "5.7.5"}, [{kernel, "2.13.5"}, {stdlib, "1.16.5"}, {sasl, "2.1.9"}, {babysitter, "0.1"}]}.

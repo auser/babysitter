@@ -12,7 +12,7 @@ endif
 all:
 	(echo @PACKAGE_VERSION@ > VERSION)	
 	(cd c_src;$(MAKE))
-	(cd erl;$(MAKE); $(MAKE) boot)
+	(cd erl;$(MAKE) boot)
 
 erl:
 	(cd erl;$(MAKE); $(MAKE) boot)
@@ -31,8 +31,8 @@ deep_clean: clean
 	@(echo "Cleaning babysitter")
 	rm -rf autom4te.cache config.log config.status build
 
-tests: all
-	(cd c_src; $(MAKE) test)
+test: all
+	(cd erl; $(MAKE) test)
  
 install: all
 	(cd c_src; $(MAKE) install)
