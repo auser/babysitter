@@ -94,8 +94,8 @@ init([Options]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call({port, {run, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) ->
-  handle_port_call(T, From, State);
+handle_call({port, {run, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
+handle_call({port, {kill, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.
@@ -115,24 +115,19 @@ handle_cast(_Msg, State) ->
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
 %%--------------------------------------------------------------------
-handle_info({'EXIT', Pid, _Status} = Tuple, State) ->
-  io:format("Os process: ~p died~n", [Pid]),
-  case ets:lookup(?PID_MONITOR_TABLE, Pid) of
-    [{Pid, Caller}] -> 
-      ets:delete(?PID_MONITOR_TABLE, Pid),
-      Caller ! Tuple;
-    _ -> ok
-  end,
-  {noreply, State};
-% Not sure why it's coming back as a list... 
 handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} = State) ->
   Term = erlang:binary_to_term(Bin),
   case Term of
+    {0, {exit_status, OsPid, Status}} ->
+        debug(Debug, "Pid ~w exited with status: {~w,~w}\n", [OsPid, (Status band 16#FF00 bsr 8), Status band 127]),
+        erlang:display(OsPid),
+        notify_ospid_owner(OsPid, Status),
+        {noreply, State};
     {N, Reply} when N =/= 0 ->
       case get_transaction(Trans, N) of
         {true, {Pid,_} = From, Q} ->
-          % NewReply = maybe_add_monitor(Reply, Pid, MonType, Debug),
-          gen_server:reply(From, Reply);
+          NewReply = add_monitor(Reply, Pid, Debug),
+          gen_server:reply(From, NewReply);
         {false, Q} ->
           erlang:display("erp"),
           ok
@@ -141,6 +136,11 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
     Else ->
       erlang:display("Else: ~p~n", Else)
   end;
+handle_info({'EXIT', Pid, Reason}, State) ->
+    % OsPid's Pid owner died. Kill linked OsPid.
+    erlang:display("died"),
+    do_unlink_ospid(Pid, Reason, State),
+    {noreply, State};
 handle_info(Info, State) ->
   erlang:display("Other info: " ++ Info),
   {noreply, State}.
@@ -178,16 +178,16 @@ handle_stop_process(Pid) when is_pid(Pid) ->
   ok.
 
 %% Add a link for Pid to OsPid if requested.
-maybe_add_monitor({ok, OsPid}, Pid, MonType, Debug) when is_integer(OsPid) ->
-    % This is a reply to a run/run_link command. The port program indicates
-    % of creating a new OsPid process.
-    % Spawn a light-weight process responsible for monitoring this OsPid
-    Self = self(),
-    LWP  = spawn_link(fun() -> ospid_init(Pid, OsPid, MonType, Self, Debug) end),
-    ets:insert(exec_mon, [{OsPid, LWP}, {LWP, OsPid}]),
-    {ok, LWP, OsPid};
-maybe_add_monitor(Reply, _Pid, _MonType, _Debug) ->
-    Reply.
+add_monitor({ok, OsPid}, Pid, Debug) when is_integer(OsPid) ->
+  % This is a reply to a run/run_link command. The port program indicates
+  % of creating a new OsPid process.
+  % Spawn a light-weight process responsible for monitoring this OsPid
+  Self = self(),
+  Process = spawn_link(fun() -> ospid_init(Pid, OsPid, Self, Debug) end),
+  ets:insert(?PID_MONITOR_TABLE, [{OsPid, Process}, {Process, OsPid}]),
+  {ok, Process, OsPid};
+add_monitor(Reply, _Pid, _Debug) ->
+  Reply.
 
 %%----------------------------------------------------------------------
 %% @spec (Pid, OsPid::integer(), LinkType, Parent, Debug::boolean()) -> void()
@@ -199,12 +199,9 @@ maybe_add_monitor(Reply, _Pid, _MonType, _Debug) ->
 %% @end
 %% @private
 %%----------------------------------------------------------------------
-ospid_init(Pid, OsPid, LinkType, Parent, Debug) ->
+ospid_init(Pid, OsPid, Parent, Debug) ->
   process_flag(trap_exit, true),
-  case LinkType of
-    link -> link(Pid); % The caller pid that requested to run the OsPid command & link to it. 
-    _    -> ok
-  end,
+  link(Pid),
   ospid_loop({Pid, OsPid, Parent, Debug}).
 
 ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
@@ -229,18 +226,29 @@ ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
       ospid_loop(State)
   end.
 
-% notify_ospid_owner(OsPid, Status) ->
-%   % See if there is a Pid owner of this OsPid. If so, sent the 'DOWN' message.
-%   case ets:lookup(exec_mon, OsPid) of
-%     [{_OsPid, Pid}] ->
-%       unlink(Pid),
-%       Pid ! {'DOWN', OsPid, {exit_status, Status}},
-%       ets:delete(exec_mon, {Pid, OsPid}),
-%       ets:delete(exec_mon, {OsPid, Pid});
-%     [] ->
-%       %error_logger:warning_msg("Owner ~w not found\n", [OsPid]),
-%       ok
-%   end.
+notify_ospid_owner(OsPid, Status) ->
+  % See if there is a Pid owner of this OsPid. If so, sent the 'DOWN' message.
+  case ets:lookup(?PID_MONITOR_TABLE, OsPid) of
+    [{_OsPid, Pid}] ->
+      unlink(Pid),
+      Pid ! {'DOWN', OsPid, {exit_status, Status}},
+      ets:delete(?PID_MONITOR_TABLE, {Pid, OsPid}),
+      ets:delete(?PID_MONITOR_TABLE, {OsPid, Pid});
+    [] ->
+      %error_logger:warning_msg("Owner ~w not found\n", [OsPid]),
+      ok
+  end.
+
+do_unlink_ospid(Pid, _Reason, State) ->
+  case ets:lookup(?PID_MONITOR_TABLE, Pid) of
+    [{_Pid, OsPid}] when is_integer(OsPid) ->
+      debug(State#state.debug, "Pid ~p died. Killing linked OsPid ~w\n", [Pid, OsPid]),
+      ets:delete(?PID_MONITOR_TABLE, {Pid, OsPid}),
+      ets:delete(?PID_MONITOR_TABLE, {OsPid, Pid}),
+      erlang:port_command(State#state.port, term_to_binary({0, {stop, OsPid}}));
+    _ ->
+      ok 
+  end.
 
 status(Status) when is_integer(Status) ->
     case {Status band 16#FF00 bsr 8, (Status band 128) =:= 128, Status band 127} of

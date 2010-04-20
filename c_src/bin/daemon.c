@@ -123,6 +123,7 @@ int decode_and_run_erlang(unsigned char *buf, int len)
     case BS_UNMOUNT:
     case BS_BUNDLE:
     case BS_CLEANUP:
+    case BS_KILL:
       pm_run_process(process);
     default:
     break;
