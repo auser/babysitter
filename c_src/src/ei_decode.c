@@ -153,13 +153,12 @@ int ei_read(int fd, unsigned char** bufr)
 * Data marshalling functions
 **/
 
-int encode_header(ei_x_buff *ptr, int transId, int next_tuple_len)
+int encode_header(ei_x_buff *result, int transId, int next_tuple_len)
 {
-  ei_x_buff result = *ptr;
-  if (ei_x_new_with_version(&result)) return -1;
-  if (ei_x_encode_tuple_header(&result, 2)) return -1;
-  if (ei_x_encode_long(&result, transId)) return -2;
-  if (ei_x_encode_tuple_header(&result, next_tuple_len)) return -2;
+  if (ei_x_new_with_version(result)) return -1;
+  if (ei_x_encode_tuple_header(result, 2)) return -1;
+  if (ei_x_encode_long(result, transId)) return -2;
+  if (ei_x_encode_tuple_header(result, next_tuple_len)) return -2;
   return 0;
 }
 

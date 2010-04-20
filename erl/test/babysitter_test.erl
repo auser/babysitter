@@ -23,9 +23,8 @@ starting_test_() ->
   }.
 
 test_starting() ->
-  babysitter:spawn_new("sleep 3", [{env, "HELLO=world"}]),
-  ArgString = "ps aux | grep sleep | grep -v grep | awk '{print $2}'",
-  O = ?cmd(ArgString),
-  {Int, _Rest} = string:to_integer(O),
-  erlang:display(Int).
+  {ok, Pid} = babysitter:spawn_new("sleep 3", [{env, "HELLO=world"}]),
+  CommandArgString = "ps aux | grep sleep | grep -v grep | awk '{print $2}'",
+  ShouldMatch = lists:flatten([erlang:integer_to_list(Pid), "\n"]),
+  ?assertCmdOutput(ShouldMatch, CommandArgString).
   

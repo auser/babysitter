@@ -95,7 +95,7 @@ init([Options]) ->
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 handle_call({port, {run, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) ->
-  {reply, handle_run(T, From, State), State};
+  handle_port_call(T, From, State);
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.
@@ -126,15 +126,15 @@ handle_info({'EXIT', Pid, _Status} = Tuple, State) ->
   {noreply, State};
 % Not sure why it's coming back as a list... 
 handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} = State) ->
-  Term = binary_to_term(Bin),
-  erlang:display(Term),
+  Term = erlang:binary_to_term(Bin),
   case Term of
     {N, Reply} when N =/= 0 ->
       case get_transaction(Trans, N) of
-        {true, {Pid,_} = From, MonType, Q} ->
-          NewReply = maybe_add_monitor(Reply, Pid, MonType, Debug),
-          gen_server:reply(From, NewReply);
+        {true, {Pid,_} = From, Q} ->
+          % NewReply = maybe_add_monitor(Reply, Pid, MonType, Debug),
+          gen_server:reply(From, Reply);
         {false, Q} ->
+          erlang:display("erp"),
           ok
       end,
       {noreply, State#state{trans=Q}};
@@ -165,11 +165,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-handle_run(T, From, #state{last_trans = LastTrans} = State) ->
+handle_port_call(T, From, #state{last_trans = LastTrans, trans = OldTransQ} = State) ->
   try
-    Next = next_trans(LastTrans),
-    erlang:port_command(State#state.port, term_to_binary({Next, T})),
-    {noreply, State#state{trans = queue:in({Next, From}, State#state.trans)}}
+    TransId = next_trans(LastTrans),
+    erlang:port_command(State#state.port, term_to_binary({TransId, T})),
+    {noreply, State#state{trans = queue:in({TransId, From}, OldTransQ)}}
   catch _:{error, Why} ->
     {reply, {error, Why}, State}
   end.
@@ -249,15 +249,15 @@ status(Status) when is_integer(Status) ->
     end.
 
 
-get_transaction(Q, I) -> 
-  get_transaction(Q, I, Q).
+get_transaction(Q, I) -> get_transaction(Q, I, Q).
 get_transaction(Q, I, OldQ) ->
   case queue:out(Q) of
-    {{value, {I, From, LinkType}}, Q2} ->
-      {true, From, LinkType, Q2};
+    {{value, {I, From}}, Q2} ->
+      {true, From, Q2};
     {empty, _} ->
+      erlang:display("empty q"),
       {false, OldQ};
-    {_, Q2} ->
+    {_E, Q2} ->
       get_transaction(Q2, I, OldQ)
     end.
 
