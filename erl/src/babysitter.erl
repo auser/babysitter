@@ -94,10 +94,11 @@ init([Options]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call({port, Instruction}, From, #state{last_trans=_Last} = State) ->
-  Pid = handle_spawn_new(Instruction, From, State),
+handle_call({port, {run, Options}}, From, #state{last_trans=_Last} = State) ->
+  Pid = handle_spawn_new(Options, From, State),
   ets:insert(?PID_MONITOR_TABLE, {Pid, From}),
   {reply, Pid, State};
+handle_call({port, Instruction}, From, #state{last_trans=_Last} = State) ->
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.
@@ -154,7 +155,6 @@ handle_spawn_new({port, T}, From, #state{last_trans = LastTrans} = State) ->
   try is_port_command(T, State) of
     {ok, Term, Link} ->
       Next = next_trans(LastTrans),
-      io:format("{~p, ~p}~n", [Next, Term]),
       erlang:port_command(State#state.port, term_to_binary({Next, Term})),
       {noreply, State#state{trans = queue:in({Next, From, Link}, State#state.trans)}}
     catch _:{error, Why} ->
