@@ -173,18 +173,15 @@ int encode_header(ei_x_buff *ptr, int transId, int next_tuple_len)
 * @returns
 *   {transId, {Atom::atom(), Result::string()}}
 **/
-int ei_write_atom(int fd, int transId, const char* first, const char* fmt, ...)
+int ei_write_atom(int fd, int transId, const char* first, const char* fmt, va_list vargs)
 {
   ei_x_buff result;
   if (encode_header(&result, transId, 2)) return -1;
-  if (ei_x_encode_atom(&result, first) ) return -3;
+  if (ei_x_encode_atom(&result, first) < 0) return -3;
   // Encode string
-  char str[MAXATOMLEN];
-  va_list vargs;
-  va_start (vargs, fmt);
-  vsnprintf(str, sizeof(str), fmt, vargs);
-  va_end   (vargs);
+  char str[MAX_BUFFER_SZ];
   
+  vsnprintf(str, sizeof(str), fmt, vargs);
   if (ei_x_encode_string_len(&result, str, strlen(str))) return -4;
   
   write_cmd(fd, &result);

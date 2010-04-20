@@ -1,6 +1,5 @@
 TODO LIST
 =========
 
-* Add *back in* limitations for child processes
-* Fix environment variable settings
 * Make pidfile reading thread-safe and atomic
+* Investigate ei_connect for raw integration

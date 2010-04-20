@@ -126,7 +126,6 @@ handle_info({'EXIT', Pid, _Status} = Tuple, State) ->
   {noreply, State};
 % Not sure why it's coming back as a list... 
 handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} = State) ->
-  erlang:display("handle_info: ~p", [Bin]),
   Term = binary_to_term(Bin),
   erlang:display(Term),
   case Term of
@@ -143,7 +142,7 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
       erlang:display("Else: ~p~n", Else)
   end;
 handle_info(Info, State) ->
-  erlang:display(Info),
+  erlang:display("Other info: " ++ Info),
   {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -303,23 +302,15 @@ build_port_command(Opts) ->
 
 % Fold down the option list and collect the options for the port program
 build_port_command1([], Acc) -> Acc;
-build_port_command1([{verbose, V} = T | Rest], Acc) -> build_port_command1(Rest, [port_command_option(T) | Acc]);
+build_port_command1([{verbose, _V} = T | Rest], Acc) -> build_port_command1(Rest, [port_command_option(T) | Acc]);
 build_port_command1([{debug, X} = T|Rest], Acc) when is_integer(X) -> 
   build_port_command1(Rest, [port_command_option(T) | Acc]);
-build_port_command1([{K,V}|Rest], Acc) -> build_port_command1(Rest, Acc).
+build_port_command1([_H|Rest], Acc) -> build_port_command1(Rest, Acc).
 
 % Purely to clean this up
 port_command_option({debug, X}) when is_integer(X) -> io:fwrite(" --debug ~w", [X]);
 port_command_option({debug, _Else}) -> " -- debug 4";
 port_command_option(_) -> "".
-
-% Build the command-line option
-build_cli_option(Switch, Param, Opts) -> 
-  case fetch_value(Param, Opts) of
-    [] -> [];
-    undefined -> [];
-    E -> lists:flatten([" ", Switch, " ", E])
-  end.
 
 % Accept only know execution options
 % Throw the rest away
@@ -332,66 +323,62 @@ build_exec_opts([{stderr, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([_Else|Rest], Acc) -> build_exec_opts(Rest, Acc).
 
 % Fetch values and defaults
-fetch_value(env, Opts) -> opt_or_default(env, [], Opts);
-fetch_value(cd, Opts) -> opt_or_default(cd, undefined, Opts);
-fetch_value(skel, Opts) -> opt_or_default(skel, undefined, Opts);
-fetch_value(start_command, Opts) -> opt_or_default(start_command, "thin -- -R config.ru start", Opts).
+% fetch_value(env, Opts) -> opt_or_default(env, [], Opts);
+% fetch_value(cd, Opts) -> opt_or_default(cd, undefined, Opts);
+% fetch_value(skel, Opts) -> opt_or_default(skel, undefined, Opts);
+% fetch_value(start_command, Opts) -> opt_or_default(start_command, "thin -- -R config.ru start", Opts).
 
-opt_or_default(Param, Default, Opts) ->
-  case proplists:get_value(Param, Opts) of
-    undefined -> Default;
-    V -> V
-  end.
+% opt_or_default(Param, Default, Opts) ->
+%   case proplists:get_value(Param, Opts) of
+%     undefined -> Default;
+%     V -> V
+%   end.
 
 % PRIVATE
 debug(false, _, _) ->     ok;
 debug(true, Fmt, Args) -> io:format(Fmt, Args).
 
-erlang_daemon_command() ->
-  Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
-  filename:join([Dir, "priv", "bin", "babysitter"]).
-
 % Check if the call is a legal maneuver
-is_port_command({start, {run, _Cmd, Options} = T, Link}, State) ->
-  check_cmd_options(Options, State),
-  {ok, T, Link};
-is_port_command({list} = T, _State) -> 
-  {ok, T, undefined};
-is_port_command({stop, OsPid}=T, _State) when is_integer(OsPid) -> 
-  {ok, T, undefined};
-is_port_command({stop, Pid}, _State) when is_pid(Pid) ->
-  case ets:lookup(exec_mon, Pid) of
-    [{Pid, OsPid}]  -> {ok, {stop, OsPid}, undefined};
-    []              -> throw({error, no_process})
-  end;
-is_port_command({kill, OsPid, Sig}=T, _State) when is_integer(OsPid),is_integer(Sig) -> 
-  {ok, T, undefined};
-is_port_command({kill, Pid, Sig}, _State) when is_pid(Pid),is_integer(Sig) -> 
-  case ets:lookup(exec_mon, Pid) of
-    [{Pid, OsPid}]  -> {ok, {kill, OsPid, Sig}, undefined};
-    []              -> throw({error, no_process})
-  end.
-
-% Check on the command options
-check_cmd_options([{cd, Dir}|T], State) when is_list(Dir) ->
-  check_cmd_options(T, State);
-check_cmd_options([{env, Env}|T], State) when is_list(Env) ->
-  check_cmd_options(T, State);
-check_cmd_options([{do_before, Cmd}|T], State) when is_list(Cmd) ->
-  check_cmd_options(T, State);
-check_cmd_options([{do_after, Cmd}|T], State) when is_list(Cmd) ->
-  check_cmd_options(T, State);
-check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->
-  check_cmd_options(T, State);
-check_cmd_options([{Std, I}|T], State) when Std=:=stderr, I=/=Std; Std=:=stdout, I=/=Std ->
-  if I=:=null; I=:=stderr; I=:=stdout; is_list(I); 
-    is_tuple(I), tuple_size(I)=:=2, element(1,I)=:="append", is_list(element(2,I)) ->  
-      check_cmd_options(T, State);
-  true -> 
-    throw({error, io:format("Invalid ~w option ~p", [Std, I])})
-  end;
-check_cmd_options([Other|_], _State) -> throw({error, {invalid_option, Other}});
-check_cmd_options([], _State)        -> ok.
+% is_port_command({start, {run, _Cmd, Options} = T, Link}, State) ->
+%   check_cmd_options(Options, State),
+%   {ok, T, Link};
+% is_port_command({list} = T, _State) -> 
+%   {ok, T, undefined};
+% is_port_command({stop, OsPid}=T, _State) when is_integer(OsPid) -> 
+%   {ok, T, undefined};
+% is_port_command({stop, Pid}, _State) when is_pid(Pid) ->
+%   case ets:lookup(exec_mon, Pid) of
+%     [{Pid, OsPid}]  -> {ok, {stop, OsPid}, undefined};
+%     []              -> throw({error, no_process})
+%   end;
+% is_port_command({kill, OsPid, Sig}=T, _State) when is_integer(OsPid),is_integer(Sig) -> 
+%   {ok, T, undefined};
+% is_port_command({kill, Pid, Sig}, _State) when is_pid(Pid),is_integer(Sig) -> 
+%   case ets:lookup(exec_mon, Pid) of
+%     [{Pid, OsPid}]  -> {ok, {kill, OsPid, Sig}, undefined};
+%     []              -> throw({error, no_process})
+%   end.
+% 
+% % Check on the command options
+% check_cmd_options([{cd, Dir}|T], State) when is_list(Dir) ->
+%   check_cmd_options(T, State);
+% check_cmd_options([{env, Env}|T], State) when is_list(Env) ->
+%   check_cmd_options(T, State);
+% check_cmd_options([{do_before, Cmd}|T], State) when is_list(Cmd) ->
+%   check_cmd_options(T, State);
+% check_cmd_options([{do_after, Cmd}|T], State) when is_list(Cmd) ->
+%   check_cmd_options(T, State);
+% check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->
+%   check_cmd_options(T, State);
+% check_cmd_options([{Std, I}|T], State) when Std=:=stderr, I=/=Std; Std=:=stdout, I=/=Std ->
+%   if I=:=null; I=:=stderr; I=:=stdout; is_list(I); 
+%     is_tuple(I), tuple_size(I)=:=2, element(1,I)=:="append", is_list(element(2,I)) ->  
+%       check_cmd_options(T, State);
+%   true -> 
+%     throw({error, io:format("Invalid ~w option ~p", [Std, I])})
+%   end;
+% check_cmd_options([Other|_], _State) -> throw({error, {invalid_option, Other}});
+% check_cmd_options([], _State)        -> ok.
 
 
 % So that we can get a unique id for each communication

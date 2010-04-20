@@ -116,8 +116,7 @@ int decode_and_run_erlang(unsigned char *buf, int len)
       ps->pid = pid;
       ps->transId = process->transId;
       HASH_ADD_INT(running_children, pid, ps);
-      ei_ok(write_handle, process->transId, "hello");
-      // ei_pid_ok(write_handle, process->transId, pid);
+      ei_pid_ok(write_handle, process->transId, pid);
       break;
     }
     case BS_MOUNT:
