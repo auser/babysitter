@@ -11,7 +11,7 @@
 
 %% API
 -export ([
-  spawn_new/1, stop_process/1,
+  spawn_new/2, stop_process/1,
   list/0
 ]).
 
@@ -41,8 +41,8 @@
 %%====================================================================
 %% API
 %%====================================================================
-spawn_new(Options) -> 
-  gen_server:call(?SERVER, {port, {run, Options}}).
+spawn_new(Command, Options) -> 
+  gen_server:call(?SERVER, {port, {run, Command, Options}}).
 
 stop_process(Arg) ->
   handle_stop_process(Arg).
@@ -94,7 +94,7 @@ init([Options]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call({port, {run, Options}}, From, #state{last_trans=_Last} = State) ->
+handle_call({port, {run, Command, Options}}, From, #state{last_trans=_Last} = State) ->
   {reply, handle_run(Options, From, State), State};
 handle_call(_Request, _From, State) ->
   Reply = ok,
