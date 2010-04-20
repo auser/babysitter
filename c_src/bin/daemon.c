@@ -59,7 +59,7 @@ int parse_the_command_line(int argc, const char** argv)
     } else if (!strncmp(argv[1], "--write_handle", 14) || !strncmp(argv[1], "-w", 2)) {
       arg = argv[2]; argc--; argv++; char * pEnd;
       write_handle = strtol(arg, &pEnd, 10);
-    } else if (!strncmp(argv[1], "--non-standard", 14) || !strncmp(argv[1], "-n", 2)) {
+    } else if (!strncmp(argv[1], "--non-stdio", 14) || !strncmp(argv[1], "-n", 2)) {
       read_handle = 3; write_handle = 4;
     } else if (!strncmp(argv[1], "--non-blocking", 14) || !strncmp(argv[1], "-b", 2)) {
       fcntl(read_handle,  F_SETFL, fcntl(read_handle,  F_GETFL) | O_NONBLOCK);
@@ -116,7 +116,8 @@ int decode_and_run_erlang(unsigned char *buf, int len)
       ps->pid = pid;
       ps->transId = process->transId;
       HASH_ADD_INT(running_children, pid, ps);
-      ei_pid_ok(write_handle, process->transId, pid);
+      ei_ok(write_handle, process->transId, "hello");
+      // ei_pid_ok(write_handle, process->transId, pid);
       break;
     }
     case BS_MOUNT:
@@ -167,11 +168,11 @@ int main (int argc, char const *argv[])
     // clean socket lists
 		FD_ZERO(&rfds);
 		FD_ZERO(&wfds);
-		wnum = -1;
     
     FD_SET(read_handle, &rfds);
+    rnum = read_handle;
     // FD_SET(write_handle, &wfds);
-		rnum = read_handle;
+    wnum = -1;
     
     // Block until something happens with select
     int num_ready_socks = select(
@@ -206,6 +207,8 @@ int main (int argc, char const *argv[])
       } else {
         // Everything went well
       }
+    } else {
+      // Something else
     }
   }
   terminate_all();

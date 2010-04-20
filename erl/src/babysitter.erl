@@ -94,8 +94,8 @@ init([Options]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call({port, {run, Command, Options}}, From, #state{last_trans=_Last} = State) ->
-  {reply, handle_run(Options, From, State), State};
+handle_call({port, {run, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) ->
+  {reply, handle_run(T, From, State), State};
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.
@@ -124,8 +124,26 @@ handle_info({'EXIT', Pid, _Status} = Tuple, State) ->
     _ -> ok
   end,
   {noreply, State};
+% Not sure why it's coming back as a list... 
+handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} = State) ->
+  erlang:display("handle_info: ~p", [Bin]),
+  Term = binary_to_term(Bin),
+  erlang:display(Term),
+  case Term of
+    {N, Reply} when N =/= 0 ->
+      case get_transaction(Trans, N) of
+        {true, {Pid,_} = From, MonType, Q} ->
+          NewReply = maybe_add_monitor(Reply, Pid, MonType, Debug),
+          gen_server:reply(From, NewReply);
+        {false, Q} ->
+          ok
+      end,
+      {noreply, State#state{trans=Q}};
+    Else ->
+      erlang:display("Else: ~p~n", Else)
+  end;
 handle_info(Info, State) ->
-  io:format("Info in babysitter: ~p~n", [Info]),
+  erlang:display(Info),
   {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -148,10 +166,10 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-handle_run(Options, From, #state{last_trans = LastTrans} = State) ->
+handle_run(T, From, #state{last_trans = LastTrans} = State) ->
   try
     Next = next_trans(LastTrans),
-    erlang:port_command(State#state.port, term_to_binary({Next, Options})),
+    erlang:port_command(State#state.port, term_to_binary({Next, T})),
     {noreply, State#state{trans = queue:in({Next, From}, State#state.trans)}}
   catch _:{error, Why} ->
     {reply, {error, Why}, State}
@@ -159,6 +177,90 @@ handle_run(Options, From, #state{last_trans = LastTrans} = State) ->
   
 handle_stop_process(Pid) when is_pid(Pid) ->
   ok.
+
+%% Add a link for Pid to OsPid if requested.
+maybe_add_monitor({ok, OsPid}, Pid, MonType, Debug) when is_integer(OsPid) ->
+    % This is a reply to a run/run_link command. The port program indicates
+    % of creating a new OsPid process.
+    % Spawn a light-weight process responsible for monitoring this OsPid
+    Self = self(),
+    LWP  = spawn_link(fun() -> ospid_init(Pid, OsPid, MonType, Self, Debug) end),
+    ets:insert(exec_mon, [{OsPid, LWP}, {LWP, OsPid}]),
+    {ok, LWP, OsPid};
+maybe_add_monitor(Reply, _Pid, _MonType, _Debug) ->
+    Reply.
+
+%%----------------------------------------------------------------------
+%% @spec (Pid, OsPid::integer(), LinkType, Parent, Debug::boolean()) -> void()
+%% @doc Every OsPid is associated with an Erlang process started with
+%%      this function. The `Parent' is the ?MODULE port manager that
+%%      spawned this process and linked to it. `Pid' is the process
+%%      that ran an OS command associated with OsPid. If that process
+%%      requested a link (LinkType = 'link') we'll link to it.
+%% @end
+%% @private
+%%----------------------------------------------------------------------
+ospid_init(Pid, OsPid, LinkType, Parent, Debug) ->
+  process_flag(trap_exit, true),
+  case LinkType of
+    link -> link(Pid); % The caller pid that requested to run the OsPid command & link to it. 
+    _    -> ok
+  end,
+  ospid_loop({Pid, OsPid, Parent, Debug}).
+
+ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
+  receive
+    {{From, Ref}, ospid} ->
+      From ! {Ref, {ok, OsPid}},
+      ospid_loop(State);
+    {'DOWN', OsPid, {exit_status, Status}} ->
+      debug(Debug, "~w ~w got down message (~w)\n", [self(), OsPid, status(Status)]),
+      % OS process died
+      exit({exit_status, Status});
+    {'EXIT', Pid, Reason} ->
+      % Pid died
+      debug(Debug, "~w ~w got exit from linked ~w: ~p\n", [self(), OsPid, Pid, Reason]),
+      exit({owner_died, Reason});
+    {'EXIT', Parent, Reason} ->
+      % Port program died
+      debug(Debug, "~w ~w got exit from parent ~w: ~p\n", [self(), OsPid, Parent, Reason]),
+      exit({port_closed, Reason});
+    Other ->
+      error_logger:warning_msg("~w - unknown msg: ~p\n", [self(), Other]),
+      ospid_loop(State)
+  end.
+
+% notify_ospid_owner(OsPid, Status) ->
+%   % See if there is a Pid owner of this OsPid. If so, sent the 'DOWN' message.
+%   case ets:lookup(exec_mon, OsPid) of
+%     [{_OsPid, Pid}] ->
+%       unlink(Pid),
+%       Pid ! {'DOWN', OsPid, {exit_status, Status}},
+%       ets:delete(exec_mon, {Pid, OsPid}),
+%       ets:delete(exec_mon, {OsPid, Pid});
+%     [] ->
+%       %error_logger:warning_msg("Owner ~w not found\n", [OsPid]),
+%       ok
+%   end.
+
+status(Status) when is_integer(Status) ->
+    case {Status band 16#FF00 bsr 8, (Status band 128) =:= 128, Status band 127} of
+    {Stat, _, 0}      -> {status, Stat};
+    {_, Core, Signal} -> {signal, Signal, Core}
+    end.
+
+
+get_transaction(Q, I) -> 
+  get_transaction(Q, I, Q).
+get_transaction(Q, I, OldQ) ->
+  case queue:out(Q) of
+    {{value, {I, From, LinkType}}, Q2} ->
+      {true, From, LinkType, Q2};
+    {empty, _} ->
+      {false, OldQ};
+    {_, Q2} ->
+      get_transaction(Q2, I, OldQ)
+    end.
 
 
 %%-------------------------------------------------------------------------

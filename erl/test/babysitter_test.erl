@@ -8,6 +8,8 @@ setup() ->
 teardown(_X) ->
   babysitter:stop(),
   ok.
+  
+
 
 starting_test_() ->
   {spawn,
@@ -15,7 +17,16 @@ starting_test_() ->
       fun setup/0,
       fun teardown/1,
       [
-        ?_assert({noreply, x} =:= babysitter:spawn_new("sleep 10", [{env, "HELLO=world"}]))
+        fun test_starting/0
       ]
     }
   }.
+
+test_starting() ->
+  babysitter:spawn_new("sleep 10", [{env, "HELLO=world"}]),
+  receive
+    X -> X
+  after 1000 ->
+    ok
+  end,
+  ok.

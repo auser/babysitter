@@ -152,11 +152,31 @@ int ei_read(int fd, unsigned char** bufr)
 /**
 * Data marshalling functions
 **/
+
+int encode_header(ei_x_buff *ptr, int transId, int next_tuple_len)
+{
+  ei_x_buff result = *ptr;
+  if (ei_x_new_with_version(&result)) return -1;
+  if (ei_x_encode_tuple_header(&result, 2)) return -1;
+  if (ei_x_encode_long(&result, transId)) return -2;
+  if (ei_x_encode_tuple_header(&result, next_tuple_len)) return -2;
+  return 0;
+}
+
+/**
+* ei_write_atom
+* @params
+*   fd - File descriptor to write to
+*   transId - TransID
+*   first - the atom to send
+*   fmt, ... - The string to write out
+* @returns
+*   {transId, {Atom::atom(), Result::string()}}
+**/
 int ei_write_atom(int fd, int transId, const char* first, const char* fmt, ...)
 {
   ei_x_buff result;
-  if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
-  if (ei_x_encode_long(&result, transId)) return -2;
+  if (encode_header(&result, transId, 2)) return -1;
   if (ei_x_encode_atom(&result, first) ) return -3;
   // Encode string
   char str[MAXATOMLEN];
@@ -175,13 +195,10 @@ int ei_write_atom(int fd, int transId, const char* first, const char* fmt, ...)
 int ei_pid_ok(int fd, int transId, pid_t pid)
 {
   ei_x_buff result;
-  if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
-  if (ei_x_encode_long(&result, transId)) return -2;
-  if (ei_x_encode_tuple_header(&result, 2)) return -3;
-  if (ei_x_encode_atom(&result, "ok") ) return -4;
+  if (encode_header(&result, transId, 2)) return -1;
+  if (ei_x_encode_atom(&result, "ok") ) return -3;
   // Encode pid
   if (ei_x_encode_long(&result, (int)pid)) return -5;
-  
   if (write_cmd(fd, &result) < 0) return -5;
   ei_x_free(&result);
   return 0;
@@ -189,9 +206,7 @@ int ei_pid_ok(int fd, int transId, pid_t pid)
 int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
 {
   ei_x_buff result;
-  if (ei_x_new_with_version(&result) || ei_x_encode_tuple_header(&result, 2)) return -1;
-  if (ei_x_encode_long(&result, transId)) return -2;
-  if (ei_x_encode_tuple_header(&result, 3)) return -3;
+  if (encode_header(&result, transId, 3)) return -1;
   if (ei_x_encode_atom(&result, "exit_status") ) return -4;
   // Encode pid
   if (ei_x_encode_long(&result, (int)pid)) return -5;
@@ -259,7 +274,7 @@ int read_exact(int fd, unsigned char *buf, int len)
 int write_exact(int fd, unsigned char *buf, int len)
 {
   int i, wrote = 0;
-
+  
   do {
     if ((i = write(fd, buf+wrote, len-wrote)) <= 0)
       return i;
