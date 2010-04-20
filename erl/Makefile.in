@@ -20,7 +20,8 @@ ERLDIR = @ERLDIR@
 #Helper Functions
 get_src_from_dir  = $(wildcard $1/*.erl)
 get_src_from_dir_list = $(foreach dir, $1, $(call get_src_from_dir,$(dir)))				        
-src_to_beam = $(subst .c,.o, $(subst .erl,.beam,$1))
+src_to_beam = $(subst ./src, ./ebin, $(subst .erl,.beam,$1))
+# src_to_beam = $(subst .erl,.beam,$1)
 
 SRC = $(call get_src_from_dir_list, $(ERL_SOURCE_DIRS))
 OBJ = $(call src_to_beam,$(SRC))
@@ -57,7 +58,7 @@ boot:
 	mv babysitter-@PACKAGE_VERSION@.script $(EBIN_DIR)
 
 clean:
-	@(rm -rf $(STUFF_TO_CLEAN) erl_crash.dump)
+	@(rm -rf $(EBIN_DIR)/*.beam erl_crash.dump)
  
 install:
 	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)
