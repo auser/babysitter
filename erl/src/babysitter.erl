@@ -95,10 +95,7 @@ init([Options]) ->
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 handle_call({port, {run, Options}}, From, #state{last_trans=_Last} = State) ->
-  Pid = handle_spawn_new(Options, From, State),
-  ets:insert(?PID_MONITOR_TABLE, {Pid, From}),
-  {reply, Pid, State};
-handle_call({port, Instruction}, From, #state{last_trans=_Last} = State) ->
+  {reply, handle_run(Options, From, State), State};
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.
@@ -151,22 +148,18 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-handle_spawn_new({port, T}, From, #state{last_trans = LastTrans} = State) ->
-  try is_port_command(T, State) of
-    {ok, Term, Link} ->
-      Next = next_trans(LastTrans),
-      erlang:port_command(State#state.port, term_to_binary({Next, Term})),
-      {noreply, State#state{trans = queue:in({Next, From, Link}, State#state.trans)}}
-    catch _:{error, Why} ->
-      {reply, {error, Why}, State}
-  end;
-handle_spawn_new(T, _From, _State) ->
-  io:format("handle_spawn_new got: ~w~n", [T]),
-  ok.
-
+handle_run(Options, From, #state{last_trans = LastTrans} = State) ->
+  try
+    Next = next_trans(LastTrans),
+    erlang:port_command(State#state.port, term_to_binary({Next, Options})),
+    {noreply, State#state{trans = queue:in({Next, From}, State#state.trans)}}
+  catch _:{error, Why} ->
+    {reply, {error, Why}, State}
+  end.
+  
 handle_stop_process(Pid) when is_pid(Pid) ->
   ok.
-  
+
 
 %%-------------------------------------------------------------------------
 %% @spec () -> Default::exec_options()

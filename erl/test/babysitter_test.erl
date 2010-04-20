@@ -15,7 +15,7 @@ starting_test_() ->
       fun setup/0,
       fun teardown/1,
       [
-        ?_assert(false =:= false)
+        ?_assert({noreply, x} =:= babysitter:spawn_new([{env, "HELLO=world"}, {command, "sleep 10"}]))
       ]
     }
   }.
