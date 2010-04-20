@@ -23,10 +23,10 @@ starting_test_() ->
   }.
 
 test_starting() ->
-  babysitter:spawn_new("sleep 10", [{env, "HELLO=world"}]),
-  receive
-    X -> X
-  after 1000 ->
-    ok
-  end,
-  ok.
+  babysitter:spawn_new("sleep 3", [{env, "HELLO=world"}]),
+  ArgString = "ps aux | grep sleep | grep -v grep | awk '{print $2}'",
+  O = ?cmd(ArgString),
+  {Int, _Rest} = string:to_integer(O),
+  erlang:display(Int),
+  ?assertCmdOutput(Int ++ "\n", ArgString).
+  
