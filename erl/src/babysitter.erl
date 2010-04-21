@@ -119,8 +119,8 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
           ok
       end,
       {noreply, State#state{trans=Q}};
-    Else ->
-      erlang:display("Else: ~p~n", Else)
+    _Else ->
+      {noreply, State}
   end;
 handle_info({'EXIT', Pid, Reason}, State) ->
     % OsPid's Pid owner died. Kill linked OsPid.
