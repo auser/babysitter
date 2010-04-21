@@ -112,10 +112,6 @@ int decode_and_run_erlang(unsigned char *buf, int len)
   switch (action) {
     case BS_RUN: {
       pid_t pid = pm_run_and_spawn_process(process);  
-      process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
-      ps->pid = pid;
-      ps->transId = process->transId;
-      HASH_ADD_INT(running_children, pid, ps);
       ei_pid_ok(write_handle, process->transId, pid);
       break;
     }

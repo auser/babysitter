@@ -76,6 +76,26 @@ char *test_starting_a_process()
   pid_t pid = pm_run_and_spawn_process(test_process);
   mu_assert(kill(pid, 0) == 0, "process did not start");
   
-  pm_free_process(test_process); return 0;
+  kill(pid, SIGKILL); // Kill it entirely
   
+  pm_free_process(test_process); return 0;
+}
+
+char *test_killing_a_process()
+{
+  process_t *test_process = NULL;
+  process_t *test_process2 = NULL;
+  pm_new_process(&test_process);
+  pm_new_process(&test_process2);
+  
+  mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "/bin/sleep 102"), "copy command failed");
+  pid_t pid = pm_run_and_spawn_process(test_process);
+  test_process2->pid = pid;
+  pm_kill_process(test_process2);
+  
+  mu_assert(kill(pid, 0) != 0, "process did not die");
+  
+  kill(pid, SIGKILL); // Kill it entirely
+  pm_free_process(test_process2);
+  pm_free_process(test_process); return 0;
 }

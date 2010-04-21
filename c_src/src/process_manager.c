@@ -327,6 +327,12 @@ pid_t pm_run_and_spawn_process(process_t *process)
   if (process->before) run_hook(BEFORE_HOOK, process);
   pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
   if (process->after) run_hook(AFTER_HOOK, process);
+  
+  process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
+  ps->pid = pid;
+  ps->transId = process->transId;
+  HASH_ADD_INT(running_children, pid, ps);
+  
   return pid;
 }
 
@@ -340,19 +346,23 @@ int pm_run_process(process_t *process)
 
 int pm_kill_process(process_t *process)
 {
+  pid_t pid = process->pid;
   process_struct *ps;
   
   for( ps = running_children; ps != NULL; ps = ps->hh.next ) {
-    printf("pid: %d\n", ps->pid);
+    if (pid == ps->pid)
+      break;
   }
   // HASH_FIND_INT(running_children, (int)process->pid, ps);
   
   if (ps) {
+    int childExitStatus = -1;
     // Kill here
-    printf("kill on the pid: %d\n", process->pid);
+    kill(pid, SIGINT);
+    waitpid( pid, &childExitStatus, 0);
     return 0;
   } else {
-    printf("not found\n");
+    printf("not found: %d\n", process->pid);
     return -1;
   }
 }
