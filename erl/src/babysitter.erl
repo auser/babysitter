@@ -95,7 +95,7 @@ init([Options]) ->
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 handle_call({port, {run, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
-handle_call({port, {kill, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
+handle_call({port, {kill, OsPid}}, From, #state{last_trans=_Last} = State) -> handle_port_call({kill, OsPid}, From, State);
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.

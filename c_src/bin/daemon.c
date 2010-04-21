@@ -119,11 +119,13 @@ int decode_and_run_erlang(unsigned char *buf, int len)
       ei_pid_ok(write_handle, process->transId, pid);
       break;
     }
+    case BS_KILL:
+      pm_kill_process(process);
+    break;
     case BS_MOUNT:
     case BS_UNMOUNT:
     case BS_BUNDLE:
     case BS_CLEANUP:
-    case BS_KILL:
       pm_run_process(process);
     default:
     break;

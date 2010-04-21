@@ -45,63 +45,74 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
   int ret = -1;
   if ((int)(ret = (enum BabysitterActionT)string_index(babysitter_action_strings, action)) < 0) return err_code--;
   
-  // Get the next string
-  ei_get_type(buf, &index, &type, &size); 
-  char *command = NULL; if ((command = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
-  
-  // Get the command  
-  if (ei_decode_string(buf, &index, command) < 0) return err_code--;
-  pm_malloc_and_set_attribute(&process->command, command);
-  
-  // The second element of the tuple is a list of options
-  if (ei_decode_list_header(buf, &index, &size) < 0) return err_code--;
-    
-  enum OptionT            { CD,   ENV,   NICE,  DO_BEFORE, DO_AFTER } opt;
-  const char* options[] = {"cd", "env", "nice", "do_before", "do_after", NULL};
-  
-  for (i = 0; i < size; i++) {
-    // Decode the tuple of the form {atom, string()|int()};
-    if (ei_decode_tuple_header(buf, &index, &tuple_size) < 0) return err_code--;
-    
-    if ((int)(opt = (enum OptionT)decode_atom_index(buf, &index, options)) < 0) return err_code--;
-    
-    switch (opt) {
-      case CD:
-      case DO_BEFORE:
-      case DO_AFTER:
-      case ENV: {
-        int size;
-        ei_get_type(buf, &index, &type, &size); 
-        char *value = NULL;
-        if ((value = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
-        
-        if (ei_decode_string(buf, &index, value) < 0) {
-          fprintf(stderr, "ei_decode_string error: %d\n", errno);
-          free(value);
-          return err_code--;
-        }
-        if (opt == CD)
-          pm_malloc_and_set_attribute(&process->cd, value);
-        else if (opt == ENV)
-          pm_add_env(&process, value);
-        else if (opt == DO_BEFORE)
-          pm_malloc_and_set_attribute(&process->before, value);
-        else if (opt == DO_AFTER)
-          pm_malloc_and_set_attribute(&process->after, value);
-        
-        free(value);
-      }
-      break;
-      case NICE: {
-        long lval;
-        ei_decode_long(buf, &index, &lval);
-        process->nice = lval;
-      }
-      break;
-      default:
-        return err_code--;
-      break;
+  switch(ret) {
+    case BS_KILL: {
+      ei_get_type(buf, &index, &type, &size);
+      long lval;
+      ei_decode_long(buf, &index, &lval);
+      process->pid = (pid_t)lval;
     }
+    break;
+    default:
+      // Get the next string
+      ei_get_type(buf, &index, &type, &size); 
+      char *command = NULL; if ((command = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
+
+      // Get the command  
+      if (ei_decode_string(buf, &index, command) < 0) return err_code--;
+      pm_malloc_and_set_attribute(&process->command, command);
+
+      // The second element of the tuple is a list of options
+      if (ei_decode_list_header(buf, &index, &size) < 0) return err_code--;
+
+      enum OptionT            { CD,   ENV,   NICE,  DO_BEFORE, DO_AFTER } opt;
+      const char* options[] = {"cd", "env", "nice", "do_before", "do_after", NULL};
+
+      for (i = 0; i < size; i++) {
+        // Decode the tuple of the form {atom, string()|int()};
+        if (ei_decode_tuple_header(buf, &index, &tuple_size) < 0) return err_code--;
+
+        if ((int)(opt = (enum OptionT)decode_atom_index(buf, &index, options)) < 0) return err_code--;
+
+        switch (opt) {
+          case CD:
+          case DO_BEFORE:
+          case DO_AFTER:
+          case ENV: {
+            int size;
+            ei_get_type(buf, &index, &type, &size); 
+            char *value = NULL;
+            if ((value = (char*) calloc(sizeof(char*), size + 1)) == NULL) return err_code--;
+
+            if (ei_decode_string(buf, &index, value) < 0) {
+              fprintf(stderr, "ei_decode_string error: %d\n", errno);
+              free(value);
+              return err_code--;
+            }
+            if (opt == CD)
+              pm_malloc_and_set_attribute(&process->cd, value);
+            else if (opt == ENV)
+              pm_add_env(&process, value);
+            else if (opt == DO_BEFORE)
+              pm_malloc_and_set_attribute(&process->before, value);
+            else if (opt == DO_AFTER)
+              pm_malloc_and_set_attribute(&process->after, value);
+
+            free(value);
+          }
+          break;
+          case NICE: {
+            long lval;
+            ei_decode_long(buf, &index, &lval);
+            process->nice = lval;
+          }
+          break;
+          default:
+            return err_code--;
+          break;
+        }
+      }
+    break;
   }
   *ptr = process;
   return ret;

@@ -323,10 +323,7 @@ int run_hook(hook_t t, process_t *process)
 }
 
 pid_t pm_run_and_spawn_process(process_t *process)
-{
-  // Safe-ify the env
-  process->env[process->env_c] = NULL;
-  
+{  
   if (process->before) run_hook(BEFORE_HOOK, process);
   pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
   if (process->after) run_hook(AFTER_HOOK, process);
@@ -334,14 +331,30 @@ pid_t pm_run_and_spawn_process(process_t *process)
 }
 
 int pm_run_process(process_t *process)
-{
-  // Safe-ify the env
-  process->env[process->env_c] = NULL;
-  
+{  
   if (process->before) run_hook(BEFORE_HOOK, process);
   pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
   if (process->after) run_hook(AFTER_HOOK, process);
   return wait_for_pid(pid);
+}
+
+int pm_kill_process(process_t *process)
+{
+  process_struct *ps;
+  
+  for( ps = running_children; ps != NULL; ps = ps->hh.next ) {
+    printf("pid: %d\n", ps->pid);
+  }
+  // HASH_FIND_INT(running_children, (int)process->pid, ps);
+  
+  if (ps) {
+    // Kill here
+    printf("kill on the pid: %d\n", process->pid);
+    return 0;
+  } else {
+    printf("not found\n");
+    return -1;
+  }
 }
 
 int pm_check_children(void (*child_changed_status)(process_struct *ps), int isTerminated)
