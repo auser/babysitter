@@ -116,7 +116,8 @@ int decode_and_run_erlang(unsigned char *buf, int len)
       break;
     }
     case BS_KILL:
-      pm_kill_process(process);
+      if (pm_kill_process(process)) return -1;
+      ei_pid_status_term(write_handle, process->transId, process->pid, kill(process->pid, 0));
     break;
     case BS_MOUNT:
     case BS_UNMOUNT:
