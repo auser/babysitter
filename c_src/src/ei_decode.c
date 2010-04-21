@@ -47,7 +47,6 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
   
   switch(ret) {
     case BS_KILL: {
-      printf("killing\n");
       ei_get_type(buf, &index, &type, &size);
       long lval;
       ei_decode_long(buf, &index, &lval);
@@ -224,7 +223,6 @@ int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
     return -5;
   }
   ei_x_free(&result);
-  printf("written\n");
   return 0;
 }
 

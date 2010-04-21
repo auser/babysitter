@@ -118,7 +118,6 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
           NewReply = add_monitor(Reply, Pid, Debug),
           gen_server:reply(From, NewReply);
         {false, Q} ->
-          erlang:display("erp"),
           ok
       end,
       {noreply, State#state{trans=Q}};
@@ -180,7 +179,6 @@ get_transaction(Q, I, OldQ) ->
     {{value, {I, From}}, Q2} ->
       {true, From, Q2};
     {empty, _} ->
-      erlang:display("empty q"),
       {false, OldQ};
     {_E, Q2} ->
       get_transaction(Q2, I, OldQ)

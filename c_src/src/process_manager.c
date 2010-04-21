@@ -366,9 +366,8 @@ int pm_kill_process(process_t *process)
   if (ps) {
     int childExitStatus = -1;
     // Kill here
-    printf("killing: %d\n", pid);
     kill(pid, SIGKILL);
-    waitpid( pid, &childExitStatus, 0);
+    waitpid( pid, &childExitStatus, 0 );
     return 0;
   } else {
     return -1;
