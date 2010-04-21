@@ -29,6 +29,8 @@ ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
     {{From, Ref}, ospid} ->
       From ! {Ref, {ok, OsPid}},
       ospid_loop(State);
+    {stop} ->
+      process_owner_died(Pid, normal, State);
     {'DOWN', OsPid, {exit_status, Status}} ->
       ?DBG(Debug, "~w ~w got down message (~w)\n", [self(), OsPid, status(Status)]),
       % OS process died

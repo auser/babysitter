@@ -99,6 +99,11 @@ int terminate_all()
 * @description
 *   Take a raw buffer and turn it into a process_t object
 *   Run the action specified by the decoding and run the status
+* @params
+*   unsigned char* buf - Buffer
+*   int len - Length of the buffer
+* @return
+*   int status - 0 status means success or -1 for failure
 **/
 int decode_and_run_erlang(unsigned char *buf, int len)
 {
@@ -107,7 +112,8 @@ int decode_and_run_erlang(unsigned char *buf, int len)
   
   switch (action) {
     case BS_RUN: {
-      pid_t pid = pm_run_and_spawn_process(process);  
+      pid_t pid;
+      if ((pid = pm_run_and_spawn_process(process)) < 0) return -1;
       ei_pid_ok(write_handle, process->transId, pid);
       break;
     }
@@ -115,10 +121,7 @@ int decode_and_run_erlang(unsigned char *buf, int len)
       if (pm_kill_process(process)) return -1;
       ei_pid_status_term(write_handle, process->transId, process->pid, kill(process->pid, 0));
     break;
-    case BS_MOUNT:
-    case BS_UNMOUNT:
-    case BS_BUNDLE:
-    case BS_CLEANUP:
+    case BS_EXEC:
       pm_run_process(process);
     break;
     default:

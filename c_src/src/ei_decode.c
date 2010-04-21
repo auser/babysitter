@@ -8,7 +8,7 @@
 * {Cmd::string(), [Option]}
 *     Option = {env, Strings} | {cd, Dir} | {do_before, Cmd} | {do_after, Cmd} | {nice, int()}
 **/
-const char* babysitter_action_strings[] = {"bundle", "mount", "run", "kill", "unmount", "cleanup", NULL};
+const char* babysitter_action_strings[] = {"run", "exec", "kill", NULL};
 enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t **ptr)
 {
   int err_code = -1;

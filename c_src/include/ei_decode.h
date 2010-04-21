@@ -15,7 +15,7 @@
 // Defines
 
 // Ei
-enum BabysitterActionT {BS_BUNDLE,BS_MOUNT,BS_RUN,BS_KILL,BS_UNMOUNT,BS_CLEANUP};
+enum BabysitterActionT {BS_RUN,BS_EXEC,BS_KILL};
 enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t **ptr);
 int decode_atom_index(char* buf, int *index, const char* cmds[]);
 
