@@ -138,7 +138,6 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
   end;
 handle_info({'EXIT', Pid, Reason}, State) ->
     % OsPid's Pid owner died. Kill linked OsPid.
-    erlang:display("died"),
     do_unlink_ospid(Pid, Reason, State),
     {noreply, State};
 handle_info(Info, State) ->

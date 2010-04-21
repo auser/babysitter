@@ -323,7 +323,9 @@ int run_hook(hook_t t, process_t *process)
 }
 
 pid_t pm_run_and_spawn_process(process_t *process)
-{  
+{
+  if (process->env) process->env[process->env_c] = NULL;
+  
   if (process->before) run_hook(BEFORE_HOOK, process);
   pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
   if (process->after) run_hook(AFTER_HOOK, process);
@@ -338,6 +340,8 @@ pid_t pm_run_and_spawn_process(process_t *process)
 
 int pm_run_process(process_t *process)
 {  
+  if (process->env) process->env[process->env_c] = NULL;
+    
   if (process->before) run_hook(BEFORE_HOOK, process);
   pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
   if (process->after) run_hook(AFTER_HOOK, process);
@@ -362,7 +366,6 @@ int pm_kill_process(process_t *process)
     waitpid( pid, &childExitStatus, 0);
     return 0;
   } else {
-    printf("not found: %d\n", process->pid);
     return -1;
   }
 }

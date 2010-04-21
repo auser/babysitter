@@ -95,6 +95,10 @@ char *test_killing_a_process()
   
   mu_assert(kill(pid, 0) != 0, "process did not die");
   
+  // Assert a pid that doesn't belong isn't killed too
+  test_process2->pid = 123045;
+  mu_assert(-1 == pm_kill_process(test_process2), "killed a process that doesn't belong to us");
+  
   kill(pid, SIGKILL); // Kill it entirely
   pm_free_process(test_process2);
   pm_free_process(test_process); return 0;
