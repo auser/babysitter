@@ -38,6 +38,6 @@ test_starting_many_processes() ->
   ?assertEqual(Int, 200).
 
 test_receive_notification_on_death_of_a_process() ->
-  {ok, ErlProcess, _Pid} = babysitter:spawn_new("sleep 200.1", [{env, "NAME=ari"}]),
-  ErlProcess ! {hello, "World"},
-  ?assert(false).
+  {ok, _ErlProcess, Pid} = babysitter:spawn_new("sleep 200.1", [{env, "NAME=ari"}]),
+  babysitter:kill_pid(Pid),
+  ?assert(false == "unfinished").

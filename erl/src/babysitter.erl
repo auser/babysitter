@@ -8,10 +8,11 @@
 
 -module (babysitter).
 -behaviour(gen_server).
+-include ("babysitter.hrl").
 
 %% API
 -export ([
-  spawn_new/2, stop_process/1,
+  spawn_new/2, kill_pid/1,
   list/0
 ]).
 
@@ -28,24 +29,12 @@
 ]).
 
 -define(SERVER, ?MODULE).
--define (PID_MONITOR_TABLE, 'babysitter_mon').
-
--record(state, {
-  port,
-  last_trans  = 0,            % Last transaction number sent to port
-  trans       = queue:new(),  % Queue of outstanding transactions sent to port
-  registry    = ets:new(?PID_MONITOR_TABLE, [protected,named_table]), % Pids to notify when an OsPid exits
-  debug       = false
-}).
 
 %%====================================================================
 %% API
 %%====================================================================
-spawn_new(Command, Options) -> 
-  gen_server:call(?SERVER, {port, {run, Command, Options}}).
-
-stop_process(Arg) ->
-  handle_stop_process(Arg).
+spawn_new(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
+kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
 
 list() ->
   gen_server:call(?SERVER, {port, {list}}).
@@ -121,7 +110,7 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
     {0, {exit_status, OsPid, Status}} ->
         debug(Debug, "Pid ~w exited with status: {~w,~w}\n", [OsPid, (Status band 16#FF00 bsr 8), Status band 127]),
         erlang:display(OsPid),
-        notify_ospid_owner(OsPid, Status),
+        os_process:notify_ospid_owner(OsPid, Status),
         {noreply, State};
     {N, Reply} when N =/= 0 ->
       case get_transaction(Trans, N) of
@@ -138,7 +127,7 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
   end;
 handle_info({'EXIT', Pid, Reason}, State) ->
     % OsPid's Pid owner died. Kill linked OsPid.
-    do_unlink_ospid(Pid, Reason, State),
+    os_process:process_owner_died(Pid, Reason, State),
     {noreply, State};
 handle_info(Info, State) ->
   erlang:display("Other info: " ++ Info),
@@ -173,88 +162,17 @@ handle_port_call(T, From, #state{last_trans = LastTrans, trans = OldTransQ} = St
     {reply, {error, Why}, State}
   end.
   
-handle_stop_process(Pid) when is_pid(Pid) ->
-  ok.
-
 %% Add a link for Pid to OsPid if requested.
 add_monitor({ok, OsPid}, Pid, Debug) when is_integer(OsPid) ->
   % This is a reply to a run/run_link command. The port program indicates
   % of creating a new OsPid process.
   % Spawn a light-weight process responsible for monitoring this OsPid
   Self = self(),
-  Process = spawn_link(fun() -> ospid_init(Pid, OsPid, Self, Debug) end),
+  Process = spawn_link(fun() -> os_process:start(Pid, OsPid, Self, Debug) end),
   ets:insert(?PID_MONITOR_TABLE, [{OsPid, Process}, {Process, OsPid}]),
   {ok, Process, OsPid};
 add_monitor(Reply, _Pid, _Debug) ->
   Reply.
-
-%%----------------------------------------------------------------------
-%% @spec (Pid, OsPid::integer(), LinkType, Parent, Debug::boolean()) -> void()
-%% @doc Every OsPid is associated with an Erlang process started with
-%%      this function. The `Parent' is the ?MODULE port manager that
-%%      spawned this process and linked to it. `Pid' is the process
-%%      that ran an OS command associated with OsPid. If that process
-%%      requested a link (LinkType = 'link') we'll link to it.
-%% @end
-%% @private
-%%----------------------------------------------------------------------
-ospid_init(Pid, OsPid, Parent, Debug) ->
-  process_flag(trap_exit, true),
-  link(Pid),
-  ospid_loop({Pid, OsPid, Parent, Debug}).
-
-ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
-  receive
-    {{From, Ref}, ospid} ->
-      From ! {Ref, {ok, OsPid}},
-      ospid_loop(State);
-    {'DOWN', OsPid, {exit_status, Status}} ->
-      debug(Debug, "~w ~w got down message (~w)\n", [self(), OsPid, status(Status)]),
-      % OS process died
-      exit({exit_status, Status});
-    {'EXIT', Pid, Reason} ->
-      % Pid died
-      debug(Debug, "~w ~w got exit from linked ~w: ~p\n", [self(), OsPid, Pid, Reason]),
-      exit({owner_died, Reason});
-    {'EXIT', Parent, Reason} ->
-      % Port program died
-      debug(Debug, "~w ~w got exit from parent ~w: ~p\n", [self(), OsPid, Parent, Reason]),
-      exit({port_closed, Reason});
-    Other ->
-      error_logger:warning_msg("~w - unknown msg: ~p\n", [self(), Other]),
-      ospid_loop(State)
-  end.
-
-notify_ospid_owner(OsPid, Status) ->
-  % See if there is a Pid owner of this OsPid. If so, sent the 'DOWN' message.
-  case ets:lookup(?PID_MONITOR_TABLE, OsPid) of
-    [{_OsPid, Pid}] ->
-      unlink(Pid),
-      Pid ! {'DOWN', OsPid, {exit_status, Status}},
-      ets:delete(?PID_MONITOR_TABLE, {Pid, OsPid}),
-      ets:delete(?PID_MONITOR_TABLE, {OsPid, Pid});
-    [] ->
-      %error_logger:warning_msg("Owner ~w not found\n", [OsPid]),
-      ok
-  end.
-
-do_unlink_ospid(Pid, _Reason, State) ->
-  case ets:lookup(?PID_MONITOR_TABLE, Pid) of
-    [{_Pid, OsPid}] when is_integer(OsPid) ->
-      debug(State#state.debug, "Pid ~p died. Killing linked OsPid ~w\n", [Pid, OsPid]),
-      ets:delete(?PID_MONITOR_TABLE, {Pid, OsPid}),
-      ets:delete(?PID_MONITOR_TABLE, {OsPid, Pid}),
-      erlang:port_command(State#state.port, term_to_binary({0, {stop, OsPid}}));
-    _ ->
-      ok 
-  end.
-
-status(Status) when is_integer(Status) ->
-    case {Status band 16#FF00 bsr 8, (Status band 128) =:= 128, Status band 127} of
-    {Stat, _, 0}      -> {status, Stat};
-    {_, Core, Signal} -> {signal, Signal, Core}
-    end.
-
 
 get_transaction(Q, I) -> get_transaction(Q, I, Q).
 get_transaction(Q, I, OldQ) ->
