@@ -219,7 +219,6 @@ int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
   if (ei_x_encode_long(&result, (int)pid)) return -5;
   if (ei_x_encode_long(&result, (int)status)) return -5;
   if (write_cmd(fd, &result) < 0) {
-    printf("something went wrong with the writing\n");
     return -5;
   }
   ei_x_free(&result);

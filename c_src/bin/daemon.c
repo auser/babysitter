@@ -94,16 +94,12 @@ int terminate_all()
   return 0;
 }
 
-// Fancy printing...
-void print_ellipses(int count)
-{
-  if (count < 1) return;
-  usleep(1000000);
-  printf(".");
-  fflush(stdout);
-  print_ellipses(count - 1);
-}
-
+/**
+* decode_and_run_erlang
+* @description
+*   Take a raw buffer and turn it into a process_t object
+*   Run the action specified by the decoding and run the status
+**/
 int decode_and_run_erlang(unsigned char *buf, int len)
 {
   process_t *process;
@@ -124,6 +120,7 @@ int decode_and_run_erlang(unsigned char *buf, int len)
     case BS_BUNDLE:
     case BS_CLEANUP:
       pm_run_process(process);
+    break;
     default:
     break;
   }  

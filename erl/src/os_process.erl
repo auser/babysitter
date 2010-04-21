@@ -71,7 +71,7 @@ process_owner_died(Pid, _Reason, State) ->
       ?DBG(State#state.debug, "Pid ~p died. Killing linked OsPid ~w\n", [Pid, OsPid]),
       ets:delete(?PID_MONITOR_TABLE, {Pid, OsPid}),
       ets:delete(?PID_MONITOR_TABLE, {OsPid, Pid}),
-      erlang:port_command(State#state.port, term_to_binary({0, {stop, OsPid}}));
+      erlang:port_command(State#state.port, term_to_binary({0, {kill, OsPid}}));
     _ ->
       ok 
   end.

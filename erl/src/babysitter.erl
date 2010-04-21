@@ -35,7 +35,6 @@
 %%====================================================================
 spawn_new(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
 kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
-
 list() ->
   gen_server:call(?SERVER, {port, {list}}).
   
@@ -109,7 +108,6 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
   case Term of
     {0, {exit_status, OsPid, Status}} ->
         debug(Debug, "Pid ~w exited with status: {~w,~w}\n", [OsPid, (Status band 16#FF00 bsr 8), Status band 127]),
-        erlang:display(OsPid),
         os_process:notify_ospid_owner(OsPid, Status),
         {noreply, State};
     {N, Reply} when N =/= 0 ->
@@ -261,26 +259,6 @@ build_exec_opts([_Else|Rest], Acc) -> build_exec_opts(Rest, Acc).
 debug(false, _, _) ->     ok;
 debug(true, Fmt, Args) -> io:format(Fmt, Args).
 
-% Check if the call is a legal maneuver
-% is_port_command({start, {run, _Cmd, Options} = T, Link}, State) ->
-%   check_cmd_options(Options, State),
-%   {ok, T, Link};
-% is_port_command({list} = T, _State) -> 
-%   {ok, T, undefined};
-% is_port_command({stop, OsPid}=T, _State) when is_integer(OsPid) -> 
-%   {ok, T, undefined};
-% is_port_command({stop, Pid}, _State) when is_pid(Pid) ->
-%   case ets:lookup(exec_mon, Pid) of
-%     [{Pid, OsPid}]  -> {ok, {stop, OsPid}, undefined};
-%     []              -> throw({error, no_process})
-%   end;
-% is_port_command({kill, OsPid, Sig}=T, _State) when is_integer(OsPid),is_integer(Sig) -> 
-%   {ok, T, undefined};
-% is_port_command({kill, Pid, Sig}, _State) when is_pid(Pid),is_integer(Sig) -> 
-%   case ets:lookup(exec_mon, Pid) of
-%     [{Pid, OsPid}]  -> {ok, {kill, OsPid, Sig}, undefined};
-%     []              -> throw({error, no_process})
-%   end.
 % 
 % % Check on the command options
 % check_cmd_options([{cd, Dir}|T], State) when is_list(Dir) ->
