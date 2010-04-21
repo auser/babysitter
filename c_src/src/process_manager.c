@@ -351,6 +351,10 @@ int pm_run_process(process_t *process)
 int pm_kill_process(process_t *process)
 {
   pid_t pid = process->pid;
+  
+  // Don't want to send a negative pid
+  if (pid < 1) return -1;
+    
   process_struct *ps;
   
   for( ps = running_children; ps != NULL; ps = ps->hh.next ) {
@@ -362,7 +366,8 @@ int pm_kill_process(process_t *process)
   if (ps) {
     int childExitStatus = -1;
     // Kill here
-    kill(pid, SIGINT);
+    printf("killing: %d\n", pid);
+    kill(pid, SIGKILL);
     waitpid( pid, &childExitStatus, 0);
     return 0;
   } else {
