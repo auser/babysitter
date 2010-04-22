@@ -189,8 +189,9 @@ get_transaction(Q, I, OldQ) ->
 %% @end
 %%-------------------------------------------------------------------------
 default() -> 
-    [{debug, false},    % Debug mode of the port program. 
-     {verbose, false},  % Verbose print of events on the Erlang side.
+    [{debug, false},  
+     {verbose, false},  
+     {config_dir, false}, 
      {port_program, default(port_program)}].
 
 default(port_program) -> 
@@ -224,13 +225,12 @@ build_port_command(Opts) ->
 % Fold down the option list and collect the options for the port program
 build_port_command1([], Acc) -> Acc;
 build_port_command1([{verbose, _V} = T | Rest], Acc) -> build_port_command1(Rest, [port_command_option(T) | Acc]);
-build_port_command1([{debug, X} = T|Rest], Acc) when is_integer(X) -> 
-  build_port_command1(Rest, [port_command_option(T) | Acc]);
+build_port_command1([{debug, X} = T|Rest], Acc) when is_integer(X) -> build_port_command1(Rest, [port_command_option(T) | Acc]);
 build_port_command1([_H|Rest], Acc) -> build_port_command1(Rest, Acc).
 
 % Purely to clean this up
 port_command_option({debug, X}) when is_integer(X) -> io:fwrite(" --debug ~w", [X]);
-port_command_option({debug, _Else}) -> " -- debug 4";
+port_command_option({debug, _Else}) -> " --debug 4";
 port_command_option(_) -> "".
 
 % Accept only know execution options

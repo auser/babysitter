@@ -1,3 +1,7 @@
+%%% os_process
+%% @author Ari Lerner <arilerner@mac.com>
+%% @copyright 2010 Ari Lerner <arilerner@mac.com>
+%% @doc Every OsPid gets associated with this process, started here
 -module (os_process).
 -include ("babysitter.hrl").
 
@@ -10,7 +14,7 @@
 start(Pid, OsPid, Parent, Debug) -> ospid_init(Pid, OsPid, Parent, Debug).
 
 %%----------------------------------------------------------------------
-%% @spec (Pid, OsPid::integer(), LinkType, Parent, Debug::boolean()) -> void()
+%% @spec (Pid, OsPid::integer(), Parent, Debug::boolean()) -> void()
 %% @doc Every OsPid is associated with an Erlang process started with
 %%      this function. The `Parent' is the ?MODULE port manager that
 %%      spawned this process and linked to it. `Pid' is the process
