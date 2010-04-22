@@ -34,8 +34,14 @@ STUFF_TO_CLEAN += $(TEST_OBJ)
 ALL_OBJ = $(OBJ) $(TEST_OBJ)
 ALL_SRC = $(SRC) $(TEST_SRC)
  
-all: $(OBJ)
+all: peg $(OBJ)
 	
+peg: neotoma src/babysitter_parser.erl
+	$(SILENCE) $(ERL) -pa ./../priv/neotoma/ebin -noshell -run neotoma file src/babysitter_parser.peg -s init stop
+
+neotoma:
+	@(cd ../priv/neotoma; $(MAKE))	
+
 $(OBJ): $(SRC)
 	$(SILENCE)echo compiling $(notdir $@)
 	$(SILENCE)$(ERLC) $(ERLC_FLAGS) -I./include -o $(EBIN_DIR) $^

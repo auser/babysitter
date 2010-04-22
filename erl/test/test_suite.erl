@@ -4,5 +4,6 @@
  
 all_test_() ->
   [
-    {module, babysitter_test}
+    {module, babysitter_test},
+    {module, babysitter_parser_test}
   ].
