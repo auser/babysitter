@@ -1,11 +1,9 @@
-%%%-------------------------------------------------------------------
-%%% File    : babysitter.erl
-%%% Author  : Ari Lerner
-%%% Description : 
-%%%
-%%% Created :  Thu Dec 24 15:10:38 PST 2009
-%%%-------------------------------------------------------------------
-
+%%% babysitter
+%% @author Ari Lerner <arilerner@mac.com>
+%% @copyright 2010 Ari Lerner <arilerner@mac.com>
+%% @doc Babysitter monitors and watches OS processes
+%%      Similar to how the supervisors work with the
+%%      erlang processes
 -module (babysitter).
 -behaviour(gen_server).
 -include ("babysitter.hrl").
@@ -33,6 +31,13 @@
 %%====================================================================
 %% API
 %%====================================================================
+%%-------------------------------------------------------------------
+%% @spec (Command::String, Options::proplist()) -> {ok, ErlangPid, OsPid}
+%% @doc 
+%% @end
+%% @{4:@private}
+%%-------------------------------------------------------------------
+
 spawn_new(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
 kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
 list() ->

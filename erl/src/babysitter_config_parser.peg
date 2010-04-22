@@ -1,5 +1,5 @@
 % This is the PEG compiler for babysitter configuration files
-config_element <- ws? elem_list ws? `list_utils:merge_proplists(Node)`;
+config_element <- ws? elem_list ws? `babysitter_list_utils:merge_proplists(Node)`;
 elem_list <- head:elem tail:(ws? elem)* `
   case Node of
     [] -> [];

@@ -1,4 +1,4 @@
--module(babysitter_parser).
+-module(babysitter_config_parser).
 -export([parse/1,file/1]).
 -compile(nowarn_unused_vars).
 -compile({nowarn_unused_function,[p/4, p/5, p_eof/0, p_optional/1, p_not/1, p_assert/1, p_seq/1, p_and/1, p_choose/1, p_zero_or_more/1, p_one_or_more/1, p_label/2, p_string/1, p_anything/0, p_charclass/1, line/1, column/1]}).
@@ -16,7 +16,7 @@ parse(Input) ->
   release_memo(), Result.
 
 'config_element'(Input, Index) ->
-  p(Input, Index, 'config_element', fun(I,D) -> (p_seq([p_optional(fun 'ws'/2), fun 'elem_list'/2, p_optional(fun 'ws'/2)]))(I,D) end, fun(Node, Idx) -> list_utils:merge_proplists(Node) end).
+  p(Input, Index, 'config_element', fun(I,D) -> (p_seq([p_optional(fun 'ws'/2), fun 'elem_list'/2, p_optional(fun 'ws'/2)]))(I,D) end, fun(Node, Idx) -> babysitter_list_utils:merge_proplists(Node) end).
 
 'elem_list'(Input, Index) ->
   p(Input, Index, 'elem_list', fun(I,D) -> (p_seq([p_label('head', fun 'elem'/2), p_label('tail', p_zero_or_more(p_seq([p_optional(fun 'ws'/2), fun 'elem'/2])))]))(I,D) end, fun(Node, Idx) -> 
