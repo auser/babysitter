@@ -1,3 +1,4 @@
+% This is the PEG compiler for the 
 config_element <- ws? elem_list ws? `list_utils:merge_proplists(Node)`;
 
 elem_list <- head:elem tail:(ws? elem)* `
@@ -13,12 +14,12 @@ elem_list <- head:elem tail:(ws? elem)* `
 
 elem <- hook_elem / action_elem ~;
 
-hook_elem <- action '.' (bef / aft) ':' [ \t]* string crlf `
+hook_elem <- action '.' (bef / aft) ':' [ \t]* string (crlf / !.) `
   {lists:nth(1, Node), 
     {lists:nth(3, Node), lists:flatten(lists:nth(6, Node))}
   }
 `;
-action_elem <- action ':' [ \t]* string crlf `
+action_elem <- action ':' [ \t]* string (crlf / !.) `
   {lists:nth(1, Node), 
     {command, lists:flatten(lists:nth(4, Node))}
   }
@@ -31,7 +32,10 @@ ws <- (comment / space)* `{}`;
 bef <- "before" `pre`;
 aft <- "after" `post`;
 
-string <- (!crlf .)* ~;
+string <- bracketed_string / nonbracketed_string ~;
+nonbracketed_string <- (!crlf .)* ~;
+bracketed_string <- '{' str:(!'}' (.))* '}' `proplists:get_value(str, Node)`;
+
 comment <- '#' (!crlf .)* crlf ~;
 space <- [ \t\n\s\r] ~;
 crlf <- "\r\n" / "\n" ~;

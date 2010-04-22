@@ -17,7 +17,7 @@ parse(Input) ->
   release_memo(), Result.
 
 'config_element'(Input, Index) ->
-  p(Input, Index, 'config_element', fun(I,D) -> (p_seq([p_optional(fun 'ws'/2), fun 'elem_list'/2, p_optional(fun 'ws'/2)]))(I,D) end, fun(Node, Idx) -> plist_helper:merge_proplists(Node) end).
+  p(Input, Index, 'config_element', fun(I,D) -> (p_seq([p_optional(fun 'ws'/2), fun 'elem_list'/2, p_optional(fun 'ws'/2)]))(I,D) end, fun(Node, Idx) -> list_utils:merge_proplists(Node) end).
 
 'elem_list'(Input, Index) ->
   p(Input, Index, 'elem_list', fun(I,D) -> (p_seq([p_label('head', fun 'elem'/2), p_label('tail', p_zero_or_more(p_seq([p_optional(fun 'ws'/2), fun 'elem'/2])))]))(I,D) end, fun(Node, Idx) -> 
@@ -35,14 +35,14 @@ parse(Input) ->
   p(Input, Index, 'elem', fun(I,D) -> (p_choose([fun 'hook_elem'/2, fun 'action_elem'/2]))(I,D) end, fun(Node, Idx) -> Node end).
 
 'hook_elem'(Input, Index) ->
-  p(Input, Index, 'hook_elem', fun(I,D) -> (p_seq([fun 'action'/2, p_string("."), p_choose([fun 'bef'/2, fun 'aft'/2]), p_string(":"), p_zero_or_more(p_charclass("[ \t]")), fun 'string'/2, fun 'crlf'/2]))(I,D) end, fun(Node, Idx) -> 
+  p(Input, Index, 'hook_elem', fun(I,D) -> (p_seq([fun 'action'/2, p_string("."), p_choose([fun 'bef'/2, fun 'aft'/2]), p_string(":"), p_zero_or_more(p_charclass("[ \t]")), fun 'string'/2, p_choose([fun 'crlf'/2, p_not(p_anything())])]))(I,D) end, fun(Node, Idx) -> 
   {lists:nth(1, Node), 
     {lists:nth(3, Node), lists:flatten(lists:nth(6, Node))}
   }
  end).
 
 'action_elem'(Input, Index) ->
-  p(Input, Index, 'action_elem', fun(I,D) -> (p_seq([fun 'action'/2, p_string(":"), p_zero_or_more(p_charclass("[ \t]")), fun 'string'/2, fun 'crlf'/2]))(I,D) end, fun(Node, Idx) -> 
+  p(Input, Index, 'action_elem', fun(I,D) -> (p_seq([fun 'action'/2, p_string(":"), p_zero_or_more(p_charclass("[ \t]")), fun 'string'/2, p_choose([fun 'crlf'/2, p_not(p_anything())])]))(I,D) end, fun(Node, Idx) -> 
   {lists:nth(1, Node), 
     {command, lists:flatten(lists:nth(4, Node))}
   }
@@ -61,7 +61,13 @@ parse(Input) ->
   p(Input, Index, 'aft', fun(I,D) -> (p_string("after"))(I,D) end, fun(Node, Idx) -> post end).
 
 'string'(Input, Index) ->
-  p(Input, Index, 'string', fun(I,D) -> (p_zero_or_more(p_seq([p_not(fun 'crlf'/2), p_anything()])))(I,D) end, fun(Node, Idx) -> Node end).
+  p(Input, Index, 'string', fun(I,D) -> (p_choose([fun 'bracketed_string'/2, fun 'nonbracketed_string'/2]))(I,D) end, fun(Node, Idx) -> Node end).
+
+'nonbracketed_string'(Input, Index) ->
+  p(Input, Index, 'nonbracketed_string', fun(I,D) -> (p_zero_or_more(p_seq([p_not(fun 'crlf'/2), p_anything()])))(I,D) end, fun(Node, Idx) -> Node end).
+
+'bracketed_string'(Input, Index) ->
+  p(Input, Index, 'bracketed_string', fun(I,D) -> (p_seq([p_string("{"), p_label('str', p_zero_or_more(p_seq([p_not(p_string("}")), p_anything()]))), p_string("}")]))(I,D) end, fun(Node, Idx) -> proplists:get_value(str, Node) end).
 
 'comment'(Input, Index) ->
   p(Input, Index, 'comment', fun(I,D) -> (p_seq([p_string("#"), p_zero_or_more(p_seq([p_not(fun 'crlf'/2), p_anything()])), fun 'crlf'/2]))(I,D) end, fun(Node, Idx) -> Node end).

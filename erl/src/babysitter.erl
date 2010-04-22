@@ -194,9 +194,9 @@ default() ->
      {port_program, default(port_program)}].
 
 default(port_program) -> 
-    % Get architecture (e.g. i386-linux)
-    Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
-    filename:join([Dir, "..", "priv", "bin", "babysitter"]);
+  % Get architecture (e.g. i386-linux)
+  Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
+  filename:join([Dir, "..", "priv", "bin", "babysitter"]);
 default(Option) ->
   search_for_application_value(Option).
 
