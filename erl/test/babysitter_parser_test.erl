@@ -35,7 +35,6 @@ test_simple_parsing() ->
 test_file_parsing() ->
   Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
   File = filename:join([Dir, "test", "config.conf"]),
-  erlang:display(File),
   X = babysitter_parser:file(File),
   Match = [{mount,{command,"echo \"mounting\""}},{bundle,[{command,"echo \"Bundle java stuff\""},{pre,"echo \"Before bundle\""},{post,"echo \"After bundle\""}]}],
   ?assertEqual(Match, X).
