@@ -6,11 +6,10 @@ c_src/parser/Makefile
 configure
 erl/Makefile
 test/c_src/Makefile
-ebin/*.beam
 erl/ebin/*.beam
-ebin/*.boot
-ebin/*.rel
-ebin/*.script
+erl/ebin/*.boot
+erl/ebin/*.rel
+erl/ebin/*.script
 priv/*.so
 c_src/*.o
 *.o
