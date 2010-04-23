@@ -18,9 +18,9 @@
 
 merge_proplists(Proplists) -> merge_proplists(Proplists, []).
 merge_proplists([], Acc) -> lists:reverse(Acc);
-merge_proplists([{Key, Value} = T|Rest], Acc) ->
+merge_proplists([{Key, Value}|Rest], Acc) ->
   M = case proplists:get_value(Key, Acc) of
-    undefined -> [T|Acc];
+    undefined -> [{Key, [Value]}|Acc];
     V ->
       [{Key, lists:flatten([V, Value])}|proplists:delete(Key, Acc)]
   end,

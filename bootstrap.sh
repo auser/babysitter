@@ -46,9 +46,6 @@ function found_msg () {
   aligned_msg "found" $green
 }
 
-# Build cpputest
-cpputest_git_url="git://github.com/auser/cpputest.git"
-
 # Fix for OSX not finding malloc.h
 if [[ `uname -s` == "Darwin" ]]; then
     export CFLAGS=-I/usr/include/malloc
@@ -57,22 +54,22 @@ fi
 # if [[ !(-d "./build") ]]; then
 #     mkdir ./build
 # fi
-
-# cecho "CppUTest..." $blue no
-# if [ -f "./build/cpputest/lib/libCppUTest.a" ]; then
-#   found_msg
-# else
-#   not_found_msg
-#   cecho "Building CppUTest" $green
-#   pushd build
-#   prefix=`pwd`/cpputest
-#   $GIT clone ${cpputest_git_url}
-#   pushd cpputest
-#   make
-#   popd
-#   rm -rf ${cpputest_tar}
-#   popd
-# fi
+NEOTOMA_DIR="`pwd`/priv/neotoma"
+echo ${NEOTOMA_DIR}
+neotoma_git_url="http://github.com/seancribbs/neotoma.git"
+cecho "Neotoma..." $blue no
+if [ -d "${NEOTOMA_DIR}" ]; then
+  found_msg
+else
+  not_found_msg
+  cecho "Building Neotoma" $green
+  pushd `dirname ${NEOTOMA_DIR}`
+  $GIT clone ${neotoma_git_url}
+  pushd ${NEOTOMA_DIR}
+  make
+  popd
+  popd
+fi
 
 AUTOCONF_VERSION=2.65
 cecho "autoconf..." $blue no

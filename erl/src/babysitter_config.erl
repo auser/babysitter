@@ -56,7 +56,8 @@ read_files([File|Rest], Acc) ->
 %%-------------------------------------------------------------------
 parse_config_file(Filepath) ->
   X = babysitter_config_parser:file(Filepath),
-  erlang:display(X),
+  Config = fill_record_from_proplist(X, #config_rec{}),
+  erlang:display(Config),
   ok.
 
 %%-------------------------------------------------------------------
@@ -65,15 +66,22 @@ parse_config_file(Filepath) ->
 %%      actions from the proplist
 %% @end
 %%-------------------------------------------------------------------
-fill_record_from_proplist(Proplist) ->
-  ok.
-
-extract_into_action_rec(Param, Proplist) ->
-  case proplists:get_value(Param, Proplist) of
-    undefined -> #action_rec{};
-    Value ->
-      Before = proplists:get_value(pre, Value),
-      Command = proplists:get_value(command, Value),
-      After = proplists:get_value(post, Value),
-      #action_rec{pre = Before, command = Command, post = After}
-  end.
+fill_record_from_proplist([], Record) -> Record;
+fill_record_from_proplist([{Key, Value}|Rest], Record) ->
+  ActionRec = extract_into_action_rec(Value),
+  NewConfigRec = case Key of
+    bundle -> Record#config_rec{  bundle = ActionRec  };
+    mount -> Record#config_rec{   mount = ActionRec   };
+    start -> Record#config_rec{   start = ActionRec   };
+    stop -> Record#config_rec{    stop = ActionRec    };
+    unmount -> Record#config_rec{ unmount = ActionRec };
+    cleanup -> Record#config_rec{ cleanup = ActionRec };
+    _Else -> Record
+  end,
+  fill_record_from_proplist(Rest, NewConfigRec).
+  
+extract_into_action_rec(Proplist) ->
+  Before = proplists:get_value(pre, Proplist),
+  Command = proplists:get_value(command, Proplist),
+  After = proplists:get_value(post, Proplist),
+  #action_rec{pre = Before, command = Command, post = After}.
