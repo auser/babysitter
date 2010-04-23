@@ -1,11 +1,9 @@
-%%%-------------------------------------------------------------------
-%%% File    : babysitter.erl
-%%% Author  : Ari Lerner
-%%% Description : 
-%%%
-%%% Created :  Thu Dec 24 15:10:38 PST 2009
-%%%-------------------------------------------------------------------
-
+%%% babysitter
+%% @author Ari Lerner <arilerner@mac.com>
+%% @copyright 2010 Ari Lerner <arilerner@mac.com>
+%% @doc Babysitter monitors and watches OS processes
+%%      Similar to how the supervisors work with the
+%%      erlang processes
 -module (babysitter).
 -behaviour(gen_server).
 -include ("babysitter.hrl").
@@ -33,6 +31,13 @@
 %%====================================================================
 %% API
 %%====================================================================
+%%-------------------------------------------------------------------
+%% @spec (Command::String, Options::proplist()) -> {ok, ErlangPid, OsPid}
+%% @doc 
+%% @end
+%% @{4:@private}
+%%-------------------------------------------------------------------
+
 spawn_new(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
 kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
 list() ->
@@ -189,14 +194,15 @@ get_transaction(Q, I, OldQ) ->
 %% @end
 %%-------------------------------------------------------------------------
 default() -> 
-    [{debug, false},    % Debug mode of the port program. 
-     {verbose, false},  % Verbose print of events on the Erlang side.
+    [{debug, false},  
+     {verbose, false},  
+     {config_dir, false}, 
      {port_program, default(port_program)}].
 
 default(port_program) -> 
-    % Get architecture (e.g. i386-linux)
-    Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
-    filename:join([Dir, "..", "priv", "bin", "babysitter"]);
+  % Get architecture (e.g. i386-linux)
+  Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
+  filename:join([Dir, "..", "priv", "bin", "babysitter"]);
 default(Option) ->
   search_for_application_value(Option).
 
@@ -224,13 +230,12 @@ build_port_command(Opts) ->
 % Fold down the option list and collect the options for the port program
 build_port_command1([], Acc) -> Acc;
 build_port_command1([{verbose, _V} = T | Rest], Acc) -> build_port_command1(Rest, [port_command_option(T) | Acc]);
-build_port_command1([{debug, X} = T|Rest], Acc) when is_integer(X) -> 
-  build_port_command1(Rest, [port_command_option(T) | Acc]);
+build_port_command1([{debug, X} = T|Rest], Acc) when is_integer(X) -> build_port_command1(Rest, [port_command_option(T) | Acc]);
 build_port_command1([_H|Rest], Acc) -> build_port_command1(Rest, Acc).
 
 % Purely to clean this up
 port_command_option({debug, X}) when is_integer(X) -> io:fwrite(" --debug ~w", [X]);
-port_command_option({debug, _Else}) -> " -- debug 4";
+port_command_option({debug, _Else}) -> " --debug 4";
 port_command_option(_) -> "".
 
 % Accept only know execution options

@@ -10,34 +10,37 @@ else
 endif
  
 all:
-	(echo @PACKAGE_VERSION@ > VERSION)	
-	(cd c_src;$(MAKE))
-	(cd erl;$(MAKE) boot)
+	@(echo @PACKAGE_VERSION@ > VERSION)	
+	@(cd c_src;$(MAKE))
+	@(cd erl;$(MAKE) boot)
 
 erl:
-	(cd erl;$(MAKE); $(MAKE) boot)
+	@(cd erl;$(MAKE); $(MAKE) boot)
 
 c:
-	(cd c_src;$(MAKE))
+	@(cd c_src;$(MAKE))
+
+docs:
+	@(cd erl; $(MAKE) docs)
 
 exec:
-	(cd c_src;$(MAKE) exec)
+	@(cd c_src;$(MAKE) exec)
 	
 clean:
-	(cd c_src;$(MAKE) clean)
-	(cd erl;$(MAKE) clean)
+	@(cd c_src;$(MAKE) clean)
+	@(cd erl;$(MAKE) clean)
 
 deep_clean: clean
 	@(echo "Cleaning babysitter")
-	rm -rf autom4te.cache config.log config.status build
+	@(rm -rf autom4te.cache config.log config.status build)
 
 test: all
-	(cd erl; $(MAKE) test)
+	@(cd erl; $(MAKE) test)
  
 install: all
-	(cd c_src; $(MAKE) install)
-	(cd erl; $(MAKE) install)
+	@(cd c_src; $(MAKE) install)
+	@(cd erl; $(MAKE) install)
  
 debug:
-	(cd c_src;$(MAKE) debug)
-	(cd erl;$(MAKE) debug)
+	@(cd c_src;$(MAKE) debug)
+	@(cd erl;$(MAKE) debug)

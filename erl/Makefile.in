@@ -1,10 +1,12 @@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+VSN = $(PACKAGE_VERSION)
 ERLC_FLAGS := -W
 EBIN_DIR := ./ebin
 EMULATOR := beam
 ERL = erl
 ERLC = erlc
+DOC_DIR = ../doc
 SILENCE = @
 
 ERL_SOURCE_DIRS = \
@@ -31,11 +33,22 @@ TEST_SRC = $(call get_src_from_dir_list, $(TEST_DIRS))
 TEST_OBJ = $(call src_to_beam,$(TEST_SRC))
 STUFF_TO_CLEAN += $(TEST_OBJ)
 
+DOC_FILES = $(DOC_DIR)/*.html $(DOC_DIR)/*.png $(DOC_DIR)/*.css $(DOC_DIR)/edoc-info
+
 ALL_OBJ = $(OBJ) $(TEST_OBJ)
 ALL_SRC = $(SRC) $(TEST_SRC)
  
-all: $(OBJ)
+all: peg $(OBJ)
 	
+docs:
+	$(SILENCE) $(ERL) -noshell -run edoc_run application "'$(PACKAGE_NAME)'" '"."' '[{def,{vsn,"$(VSN)"}}, {dir, "$(DOC_DIR)"}]'
+
+peg: neotoma
+	$(SILENCE) $(ERL) -pa ./../priv/neotoma/ebin -noshell -run neotoma file src/babysitter_config_parser.peg -s init stop
+
+neotoma:
+	@(cd ../priv/neotoma; $(MAKE))	
+
 $(OBJ): $(SRC)
 	$(SILENCE)echo compiling $(notdir $@)
 	$(SILENCE)$(ERLC) $(ERLC_FLAGS) -I./include -o $(EBIN_DIR) $^
@@ -61,7 +74,7 @@ boot: all
 	$(SILENCE) mv babysitter-@PACKAGE_VERSION@.script $(EBIN_DIR)
 
 clean:
-	@(rm -rf $(EBIN_DIR)/*.beam erl_crash.dump)
+	@(rm -rf $(EBIN_DIR)/*.beam erl_crash.dump $(DOC_FILES))
  
 install:
 	install -d $(ERLDIR)/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)
