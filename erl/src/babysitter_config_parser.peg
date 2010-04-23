@@ -22,7 +22,7 @@ action_elem <- action ':' [ \t]* string (crlf / !.) `
   }
 `;
 
-action <- "bundle" / "mount" / "run" / "unmount" / "cleanup" `erlang:list_to_atom(lists:flatten(Node))`;
+action <- "bundle" / "mount" / "start" / "stop" / "unmount" / "cleanup" `erlang:list_to_atom(lists:flatten(Node))`;
 ws <- (comment / space)* `{}`;
 % Atoms
 bef <- "before" `pre`;

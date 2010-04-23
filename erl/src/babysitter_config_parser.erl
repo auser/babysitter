@@ -48,7 +48,7 @@ parse(Input) ->
  end).
 
 'action'(Input, Index) ->
-  p(Input, Index, 'action', fun(I,D) -> (p_choose([p_string("bundle"), p_string("mount"), p_string("run"), p_string("unmount"), p_string("cleanup")]))(I,D) end, fun(Node, Idx) -> erlang:list_to_atom(lists:flatten(Node)) end).
+  p(Input, Index, 'action', fun(I,D) -> (p_choose([p_string("bundle"), p_string("mount"), p_string("start"), p_string("stop"), p_string("unmount"), p_string("cleanup")]))(I,D) end, fun(Node, Idx) -> erlang:list_to_atom(lists:flatten(Node)) end).
 
 'ws'(Input, Index) ->
   p(Input, Index, 'ws', fun(I,D) -> (p_zero_or_more(p_choose([fun 'comment'/2, fun 'space'/2])))(I,D) end, fun(Node, Idx) -> {} end).
