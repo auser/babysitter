@@ -13,3 +13,17 @@
   registry    = ets:new(?PID_MONITOR_TABLE, [protected,named_table]), % Pids to notify when an OsPid exits
   debug       = false
 }).
+
+-record (action_rec, {
+  pre,
+  command,
+  post
+}).
+-record (config_rec, {
+  bundle,
+  mount,
+  start,
+  stop,
+  unmount,
+  cleanup
+}).
