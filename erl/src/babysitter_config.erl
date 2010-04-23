@@ -5,7 +5,10 @@
 -module (babysitter_config).
 -include ("babysitter.hrl").
 
--export ([read/1]).
+-export ([
+  read/1,
+  get/2
+]).
 
 -define (BABYSITTER_CONFIG_DB, 'babysitter_config_db').
 -define (CONF_EXTENSION, ".conf").
@@ -17,6 +20,7 @@
 %% @end
 %%-------------------------------------------------------------------
 read(Dir) ->
+  ets:new(?BABYSITTER_CONFIG_DB, [protected,named_table]),
   case filelib:is_dir(Dir) of
     true -> read_dir(Dir);
     false ->
@@ -25,6 +29,9 @@ read(Dir) ->
         false -> throw({badarg, "Argument must be a file or a directory"})
       end
   end.
+
+get(_State, _Action) ->
+  ok.
 
 %%-------------------------------------------------------------------
 %% @spec (Dir::list()) -> {ok, Files::list()}
@@ -44,8 +51,9 @@ read_dir(Dir) ->
 %%-------------------------------------------------------------------
 read_files([], Acc) -> {ok, lists:reverse(Acc)};
 read_files([File|Rest], Acc) ->
-  ok = parse_config_file(File),
-  read_files(Rest, [filename:basename(File)|Acc]).
+  {Filename, Config} = parse_config_file(File),
+  ets:insert(?BABYSITTER_CONFIG_DB, {Filename, Config}),
+  read_files(Rest, [filename:basename(Filename)|Acc]).
 
 %%-------------------------------------------------------------------
 %% @spec (Filepath::string()) ->    ok
@@ -57,8 +65,8 @@ read_files([File|Rest], Acc) ->
 parse_config_file(Filepath) ->
   X = babysitter_config_parser:file(Filepath),
   Config = fill_record_from_proplist(X, #config_rec{}),
-  erlang:display(Config),
-  ok.
+  Filename = filename:basename(Filepath),
+  {Filename, Config}.
 
 %%-------------------------------------------------------------------
 %% @spec (Proplist::list()) -> record()
