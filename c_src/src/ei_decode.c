@@ -227,11 +227,11 @@ int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
 
 int ei_ok(int fd, int transId, const char* fmt, ...)
 {  
-  va_list vargs;
+  va_list vargs = NULL;
   return ei_write_atom(fd, transId, "ok", fmt, vargs);
 }
 int ei_error(int fd, int transId, const char* fmt, ...){
-  va_list vargs;
+  va_list vargs = NULL;
   return ei_write_atom(fd, transId, "error", fmt, vargs);
 }
 
