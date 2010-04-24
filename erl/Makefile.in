@@ -43,7 +43,7 @@ all: peg $(OBJ)
 docs:
 	$(SILENCE) $(ERL) -noshell -run edoc_run application "'$(PACKAGE_NAME)'" '"."' '[{def,{vsn,"$(VSN)"}}, {dir, "$(DOC_DIR)"}]'
 
-peg:
+peg: src/babysitter_config_parser.peg
 	$(SILENCE) $(ERL) -pa ./../priv/neotoma/ebin -noshell -run neotoma file src/babysitter_config_parser.peg -s init stop
 
 $(OBJ): $(SRC)

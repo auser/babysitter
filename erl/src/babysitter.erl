@@ -34,10 +34,10 @@ run(AppType, Action, Options) ->
   % APP_PID_TABLE
   Config = case babysitter_config:get(AppType, Action) of
     {error, _Reason} -> babysitter_config:get(default, Action);
-    {ok, ActionPropList} ->
-      run_action(Action, ActionPropList, Options)
+    {ok, ActionPropList} -> ActionPropList
   end,
   erlang:display(Config),
+  % run_action(Action, ActionPropList, Options)
   ok.
 
 run_action(run, ActionPropList, Options) -> spawn_run(ActionPropList, Options);
