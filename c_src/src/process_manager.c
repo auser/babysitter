@@ -14,20 +14,10 @@ int pm_check_pid_status(pid_t pid)
   int err = kill(pid, 0);
   // switch (err) {
   //   case 0:
-  //     if (notify) handle_ok(transId);
-  //     break;
   //   case EINVAL:
-  //     if (notify) handle_error_str(transId, false, "Invalid signal: %d", signal);
-  //     break;
   //   case ESRCH:
-  //     if (notify) handle_error_str(transId, true, "esrch");
-  //     break;
   //   case EPERM:
-  //     if (notify) handle_error_str(transId, true, "eperm");
-  //     break;
   //   default:
-  //     if (notify) handle_error_str(transId, true, strerror(err));
-  //     break;
   // }
   return err;
 }
@@ -270,7 +260,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     pid = vfork();
   else
     pid = fork();
-    
+  
   switch (pid) {
   case -1: 
     return -1;
@@ -296,7 +286,6 @@ int wait_for_pid(pid_t pid)
 {
   if (kill(pid, 0) == 0) {
     int childExitStatus;
-    printf("waiting for pid: %d...\n", (int)pid);
     waitpid( pid, &childExitStatus, 0);
     // if( !WIFEXITED(childExitStatus) ){
     // } else if (!WIFSIGNALED(childExitStatus)) {
@@ -338,14 +327,15 @@ pid_t pm_run_and_spawn_process(process_t *process)
   return pid;
 }
 
-int pm_run_process(process_t *process)
+pid_t pm_run_process(process_t *process)
 {  
   if (process->env) process->env[process->env_c] = NULL;
     
   if (process->before) run_hook(BEFORE_HOOK, process);
   pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
+  if (wait_for_pid(pid) < 0) return -1;
   if (process->after) run_hook(AFTER_HOOK, process);
-  return wait_for_pid(pid);
+  return pid;
 }
 
 int pm_kill_process(process_t *process)

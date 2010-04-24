@@ -61,7 +61,7 @@ int pm_setup(int read_handle, int write_handle);
 
 /* Mainly private exports */
 pid_t pm_run_and_spawn_process(process_t *process);
-int pm_run_process(process_t *process);
+pid_t pm_run_process(process_t *process);
 int pm_kill_process(process_t *process);
 
 pid_t pm_execute(int wait, const char* command, const char *cd, int nice, const char** env);

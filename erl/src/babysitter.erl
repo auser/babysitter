@@ -10,7 +10,7 @@
 
 %% API
 -export ([
-  spawn_new/2, kill_pid/1,
+  spawn_run/2, run/2, kill_pid/1, status/1,
   list/0
 ]).
 
@@ -38,8 +38,11 @@
 %% @{4:@private}
 %%-------------------------------------------------------------------
 
-spawn_new(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
+spawn_run(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
+% Give a maximum of 100 seconds to preform an action
+run(Command, Options) -> gen_server:call(?SERVER, {port, {exec, Command, Options}}, 10000).
 kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
+status(Pid) -> gen_server:call(?SERVER, {port, {status, Pid}}).
 list() -> gen_server:call(?SERVER, {port, {list}}).
   
 %%--------------------------------------------------------------------
@@ -87,7 +90,9 @@ init([Options]) ->
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 handle_call({port, {run, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
+handle_call({port, {exec, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
 handle_call({port, {kill, OsPid}}, From, #state{last_trans=_Last} = State) -> handle_port_call({kill, OsPid}, From, State);
+handle_call({port, {status, OsPid}}, From, #state{last_trans=_Last} = State) -> handle_port_call({status, OsPid}, From, State);
 handle_call({port, {list}}, From, #state{last_trans=_Last} = State) -> handle_port_call({list}, From, State);
 handle_call(_Request, _From, State) ->
   Reply = ok,
@@ -117,8 +122,8 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
         {noreply, State};
     {N, Reply} when N =/= 0 ->
       case get_transaction(Trans, N) of
-        {true, {Pid,_} = From, Q} ->
-          NewReply = add_monitor(Reply, Pid, Debug),
+        {true, {Pid,_} = From, Q, Link} ->
+          NewReply = add_monitor(Reply, Link, Pid, Debug),
           gen_server:reply(From, NewReply);
         {false, Q} ->
           ok
@@ -127,10 +132,16 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
     _Else ->
       {noreply, State}
   end;
+handle_info({Port, {exit_status, 0}}, #state{port=Port} = State) ->
+  {stop, normal, State};
+handle_info({Port, {exit_status, Status}}, #state{port=Port} = State) ->
+  {stop, {exit_status, Status}, State};
+handle_info({'EXIT', Port, Reason}, #state{port=Port} = State) ->
+  {stop, Reason, State};
 handle_info({'EXIT', Pid, Reason}, State) ->
-    % OsPid's Pid owner died. Kill linked OsPid.
-    os_process:process_owner_died(Pid, Reason, State),
-    {noreply, State};
+  % OsPid's Pid owner died. Kill linked OsPid.
+  os_process:process_owner_died(Pid, Reason, State),
+  {noreply, State};
 handle_info(Info, State) ->
   erlang:display("Other info: " ++ Info),
   {noreply, State}.
@@ -159,13 +170,17 @@ handle_port_call(T, From, #state{last_trans = LastTrans, trans = OldTransQ} = St
   try
     TransId = next_trans(LastTrans),
     erlang:port_command(State#state.port, term_to_binary({TransId, T})),
-    {noreply, State#state{trans = queue:in({TransId, From}, OldTransQ)}}
+    Link = case element(1, T) of
+      run -> true;
+      _ -> false
+    end,
+    {noreply, State#state{trans = queue:in({TransId, From, Link}, OldTransQ)}}
   catch _:{error, Why} ->
     {reply, {error, Why}, State}
   end.
   
 %% Add a link for Pid to OsPid if requested.
-add_monitor({ok, OsPid}, Pid, Debug) when is_integer(OsPid) ->
+add_monitor({ok, OsPid}, true, Pid, Debug) when is_integer(OsPid) ->
   % This is a reply to a run/run_link command. The port program indicates
   % of creating a new OsPid process.
   % Spawn a light-weight process responsible for monitoring this OsPid
@@ -173,14 +188,14 @@ add_monitor({ok, OsPid}, Pid, Debug) when is_integer(OsPid) ->
   Process = spawn_link(fun() -> os_process:start(Pid, OsPid, Self, Debug) end),
   ets:insert(?PID_MONITOR_TABLE, [{OsPid, Process}, {Process, OsPid}]),
   {ok, Process, OsPid};
-add_monitor(Reply, _Pid, _Debug) ->
+add_monitor(Reply, false, _Pid, _Debug) ->
   Reply.
 
 get_transaction(Q, I) -> get_transaction(Q, I, Q).
 get_transaction(Q, I, OldQ) ->
   case queue:out(Q) of
-    {{value, {I, From}}, Q2} ->
-      {true, From, Q2};
+    {{value, {I, From, Link}}, Q2} ->
+      {true, From, Q2, Link};
     {empty, _} ->
       {false, OldQ};
     {_E, Q2} ->
@@ -248,44 +263,9 @@ build_exec_opts([{stdout, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{stderr, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([_Else|Rest], Acc) -> build_exec_opts(Rest, Acc).
 
-% Fetch values and defaults
-% fetch_value(env, Opts) -> opt_or_default(env, [], Opts);
-% fetch_value(cd, Opts) -> opt_or_default(cd, undefined, Opts);
-% fetch_value(skel, Opts) -> opt_or_default(skel, undefined, Opts);
-% fetch_value(start_command, Opts) -> opt_or_default(start_command, "thin -- -R config.ru start", Opts).
-
-% opt_or_default(Param, Default, Opts) ->
-%   case proplists:get_value(Param, Opts) of
-%     undefined -> Default;
-%     V -> V
-%   end.
-
 % PRIVATE
 debug(false, _, _) ->     ok;
 debug(true, Fmt, Args) -> io:format(Fmt, Args).
-
-% 
-% % Check on the command options
-% check_cmd_options([{cd, Dir}|T], State) when is_list(Dir) ->
-%   check_cmd_options(T, State);
-% check_cmd_options([{env, Env}|T], State) when is_list(Env) ->
-%   check_cmd_options(T, State);
-% check_cmd_options([{do_before, Cmd}|T], State) when is_list(Cmd) ->
-%   check_cmd_options(T, State);
-% check_cmd_options([{do_after, Cmd}|T], State) when is_list(Cmd) ->
-%   check_cmd_options(T, State);
-% check_cmd_options([{nice, I}|T], State) when is_integer(I), I >= -20, I =< 20 ->
-%   check_cmd_options(T, State);
-% check_cmd_options([{Std, I}|T], State) when Std=:=stderr, I=/=Std; Std=:=stdout, I=/=Std ->
-%   if I=:=null; I=:=stderr; I=:=stdout; is_list(I); 
-%     is_tuple(I), tuple_size(I)=:=2, element(1,I)=:="append", is_list(element(2,I)) ->  
-%       check_cmd_options(T, State);
-%   true -> 
-%     throw({error, io:format("Invalid ~w option ~p", [Std, I])})
-%   end;
-% check_cmd_options([Other|_], _State) -> throw({error, {invalid_option, Other}});
-% check_cmd_options([], _State)        -> ok.
-
 
 % So that we can get a unique id for each communication
 next_trans(I) when I < 268435455 -> I+1;

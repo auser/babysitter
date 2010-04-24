@@ -28,6 +28,7 @@ ospid_init(Pid, OsPid, Parent, Debug) ->
   link(Pid),
   ospid_loop({Pid, OsPid, Parent, Debug}).
 
+
 ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
   receive
     {{From, Ref}, ospid} ->
@@ -58,6 +59,13 @@ status(Status) when is_integer(Status) ->
     {_, Core, Signal} -> {signal, Signal, Core}
   end.
 
+
+%%-------------------------------------------------------------------
+%% @spec (OsPid::int(), Status::integer()) ->    ok
+%% @doc Notify the process owner parent that the OsPid died
+%% @private
+%% @end
+%%-------------------------------------------------------------------
 notify_ospid_owner(OsPid, Status) ->
   % See if there is a Pid owner of this OsPid. If so, sent the 'DOWN' message.
   case ets:lookup(?PID_MONITOR_TABLE, OsPid) of
@@ -71,6 +79,12 @@ notify_ospid_owner(OsPid, Status) ->
       ok
   end.
 
+%%-------------------------------------------------------------------
+%% @spec (Pid::int(), Reason::string(), State) ->    ok
+%% @doc Notify the parent that the parent process died
+%% @private
+%% @end
+%%-------------------------------------------------------------------
 process_owner_died(Pid, _Reason, State) ->
   case ets:lookup(?PID_MONITOR_TABLE, Pid) of
     [{_Pid, OsPid}] when is_integer(OsPid) ->

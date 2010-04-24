@@ -8,7 +8,7 @@
 * {Cmd::string(), [Option]}
 *     Option = {env, Strings} | {cd, Dir} | {do_before, Cmd} | {do_after, Cmd} | {nice, int()}
 **/
-const char* babysitter_action_strings[] = {"run", "exec", "list", "kill", NULL};
+const char* babysitter_action_strings[] = {"run", "exec", "list", "status", "kill", NULL};
 enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t **ptr)
 {
   int err_code = -1;
@@ -46,6 +46,7 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
   if ((int)(ret = (enum BabysitterActionT)string_index(babysitter_action_strings, action)) < 0) return err_code--;
   
   switch(ret) {
+    case BS_STATUS:
     case BS_KILL: {
       ei_get_type(buf, &index, &type, &size);
       long lval;
@@ -185,7 +186,7 @@ int encode_header(ei_x_buff *result, int transId, int next_tuple_len)
 * @returns
 *   {transId, {Atom::atom(), Result::string()}}
 **/
-int ei_write_atom(int fd, int transId, const char* first, const char* fmt, va_list vargs)
+int ei_write_atom(int fd, int transId, const char* first, const char* fmt, ...)
 {
   ei_x_buff result;
   if (encode_header(&result, transId, 2)) return -1;
@@ -193,7 +194,10 @@ int ei_write_atom(int fd, int transId, const char* first, const char* fmt, va_li
   // Encode string
   char str[MAX_BUFFER_SZ];
   
-  vsnprintf(str, sizeof(str), fmt, vargs);
+  va_list vargs;
+  va_start(vargs, fmt);
+  vsnprintf(str, MAX_BUFFER_SZ, fmt, vargs);
+  va_end(vargs);
   if (ei_x_encode_string_len(&result, str, strlen(str))) return -4;
   
   write_cmd(fd, &result);
@@ -224,20 +228,18 @@ int ei_send_pid_list(int fd, int transId, process_struct *hd, int size)
   if (encode_header(&result, transId, 2)) return -1;
   if (ei_x_encode_atom(&result, "ok") ) return -2;
   if (ei_x_encode_list_header(&result, size)) return -3;
-  for( ps = hd; ps != NULL; ps = ps->hh.next ) {
-    ei_x_encode_long(&result, ps->pid);
-  }
+  for( ps = hd; ps != NULL; ps = ps->hh.next ) ei_x_encode_long(&result, ps->pid);
   if (ei_x_encode_empty_list(&result)) return -4;
   if (write_cmd(fd, &result) < 0) return -5;
   ei_x_free(&result);
   return 0;
 }
 
-int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
+int ei_pid_status_header(int fd, int transId, pid_t pid, int status, const char* header)
 {
   ei_x_buff result;
   if (encode_header(&result, transId, 3)) return -1;
-  if (ei_x_encode_atom(&result, "exit_status") ) return -4;
+  if (ei_x_encode_atom(&result, header) ) return -4;
   // Encode pid
   if (ei_x_encode_long(&result, (int)pid)) return -5;
   if (ei_x_encode_long(&result, (int)status)) return -5;
@@ -246,6 +248,15 @@ int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
   }
   ei_x_free(&result);
   return 0;
+}
+int ei_pid_status(int fd, int transId, pid_t pid, int status)
+{
+  return ei_pid_status_header(fd, transId, pid, status, "status");
+}
+
+int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
+{
+  return ei_pid_status_header(fd, transId, pid, status, "exit_status");
 }
 
 int ei_ok(int fd, int transId, const char* fmt, ...)
