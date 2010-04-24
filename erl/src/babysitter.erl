@@ -9,9 +9,9 @@
 -include ("babysitter.hrl").
 
 %% API
+-export ([run/3]).
 -export ([
-  spawn_run/2, run/2, kill_pid/1, status/1,
-  list/0
+  bs_spawn_run/2, bs_run/2, kill_pid/1, status/1, list/0
 ]).
 
 -export([start_link/0, start_link/1, stop/0]).
@@ -22,7 +22,6 @@
 
 % only for tests
 -export ([
-  build_exec_opts/2,
   build_port_command/1
 ]).
 
@@ -31,16 +30,39 @@
 %%====================================================================
 %% API
 %%====================================================================
+run(AppType, Action, Options) ->
+  % APP_PID_TABLE
+  Config = case babysitter_config:get(AppType, Action) of
+    {error, _Reason} -> babysitter_config:get(default, Action);
+    {ok, ActionPropList} ->
+      run_action(Action, ActionPropList, Options)
+  end,
+  erlang:display(Config),
+  ok.
+
+run_action(run, ActionPropList, Options) -> spawn_run(ActionPropList, Options);
+run_action(_Action, ActionPropList, Options) -> run(ActionPropList, Options).
+
+spawn_run(ActionPropList, Options) ->
+  Before = element(1, ActionPropList),
+  Command = element(2, ActionPropList),
+  After = element(3, ActionPropList),
+  erlang:display(Before),
+  erlang:display(After),
+  ok.
+
+run(ActionPropList, Options) ->
+  ok.
+
 %%-------------------------------------------------------------------
 %% @spec (Command::String, Options::proplist()) -> {ok, ErlangPid, OsPid}
 %% @doc 
 %% @end
 %% @{4:@private}
 %%-------------------------------------------------------------------
-
-spawn_run(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
+bs_spawn_run(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
 % Give a maximum of 100 seconds to preform an action
-run(Command, Options) -> gen_server:call(?SERVER, {port, {exec, Command, Options}}, 10000).
+bs_run(Command, Options) -> gen_server:call(?SERVER, {port, {exec, Command, Options}}, 10000).
 kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
 status(Pid) -> gen_server:call(?SERVER, {port, {status, Pid}}).
 list() -> gen_server:call(?SERVER, {port, {list}}).
@@ -89,8 +111,10 @@ init([Options]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call({port, {run, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
-handle_call({port, {exec, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
+handle_call({port, {run, Command, Options}}, From, #state{last_trans=_Last} = State) -> 
+  handle_port_call({run, Command, build_exec_opts(Options, [])}, From, State);
+handle_call({port, {exec, Command, Options}}, From, #state{last_trans=_Last} = State) -> 
+  handle_port_call({exec, Command, build_exec_opts(Options, [])}, From, State);
 handle_call({port, {kill, OsPid}}, From, #state{last_trans=_Last} = State) -> handle_port_call({kill, OsPid}, From, State);
 handle_call({port, {status, OsPid}}, From, #state{last_trans=_Last} = State) -> handle_port_call({status, OsPid}, From, State);
 handle_call({port, {list}}, From, #state{last_trans=_Last} = State) -> handle_port_call({list}, From, State);

@@ -93,10 +93,13 @@ read_files([File|Rest], Acc) ->
 %% @end
 %%-------------------------------------------------------------------
 parse_config_file(Filepath) ->
-  X = babysitter_config_parser:file(Filepath),
-  Config = fill_record_from_proplist(X, []),
-  Filename = erlang:list_to_atom(filename:basename(Filepath, ?CONF_EXTENSION)),
-  {Filename, Config}.
+  case babysitter_config_parser:file(Filepath) of
+    {fail, Reason} -> {error, Reason};
+    Else ->
+      Config = fill_record_from_proplist(Else, []),
+      Filename = erlang:list_to_atom(filename:basename(Filepath, ?CONF_EXTENSION)),
+      {Filename, Config}
+  end.
 
 %%-------------------------------------------------------------------
 %% @spec (Proplist::list()) -> record()

@@ -98,6 +98,8 @@ if [ "$?" != "0" ]; then
 fi
 cecho "Making... " $green no
 make
+cecho "Running tests... " $green no
+make test
 if [ "$?" != "0" ]; then
   cecho "Error making..." $red
 else

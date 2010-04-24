@@ -25,7 +25,7 @@ starting_test_() ->
 
 read_test() ->
   {ok, Files} = config_read(),
-  ?assertEqual([java, rack], Files).
+  ?assertEqual([default, java, rack], Files).
 
 parsing_non_existent_test() ->
   config_read(),
