@@ -40,8 +40,7 @@
 
 spawn_new(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
 kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
-list() ->
-  gen_server:call(?SERVER, {port, {list}}).
+list() -> gen_server:call(?SERVER, {port, {list}}).
   
 %%--------------------------------------------------------------------
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
@@ -89,6 +88,7 @@ init([Options]) ->
 %%--------------------------------------------------------------------
 handle_call({port, {run, _Command, _Options} = T}, From, #state{last_trans=_Last} = State) -> handle_port_call(T, From, State);
 handle_call({port, {kill, OsPid}}, From, #state{last_trans=_Last} = State) -> handle_port_call({kill, OsPid}, From, State);
+handle_call({port, {list}}, From, #state{last_trans=_Last} = State) -> handle_port_call({list}, From, State);
 handle_call(_Request, _From, State) ->
   Reply = ok,
   {reply, Reply, State}.

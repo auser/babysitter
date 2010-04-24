@@ -115,8 +115,8 @@ int decode_and_run_erlang(unsigned char *buf, int len)
       pid_t pid;
       if ((pid = pm_run_and_spawn_process(process)) < 0) return -1;
       ei_pid_ok(write_handle, process->transId, pid);
-      break;
     }
+    break;
     case BS_KILL:
       if (pm_kill_process(process)) return -1;
       ei_pid_status_term(write_handle, process->transId, process->pid, kill(process->pid, 0));
@@ -124,6 +124,12 @@ int decode_and_run_erlang(unsigned char *buf, int len)
     case BS_EXEC:
       if (pm_run_process(process)) return -1;
       ei_ok(write_handle, process->transId, "done");
+    break;
+    case BS_LIST: {
+      int transId = process->transId;
+      int size = HASH_COUNT(running_children);
+      ei_send_pid_list(write_handle, transId, running_children, size);
+    }
     break;
     default:
     break;

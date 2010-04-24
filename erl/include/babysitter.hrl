@@ -1,4 +1,5 @@
 -define (PID_MONITOR_TABLE, 'babysitter_mon').
+-define (BABYSITTER_CONFIG_DB, babysitter_config_db).
 
 -define (DBG (Bool, Fmt, Args),
   case Bool of
@@ -12,18 +13,4 @@
   trans       = queue:new(),  % Queue of outstanding transactions sent to port
   registry    = ets:new(?PID_MONITOR_TABLE, [protected,named_table]), % Pids to notify when an OsPid exits
   debug       = false
-}).
-
--record (action_rec, {
-  pre,
-  command,
-  post
-}).
--record (config_rec, {
-  bundle,
-  mount,
-  start,
-  stop,
-  unmount,
-  cleanup
 }).

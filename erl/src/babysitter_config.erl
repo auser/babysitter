@@ -7,10 +7,10 @@
 
 -export ([
   read/1,
-  get/2
+  get/2,
+  get_raw_config/1
 ]).
 
--define (BABYSITTER_CONFIG_DB, 'babysitter_config_db').
 -define (CONF_EXTENSION, ".conf").
 
 %%-------------------------------------------------------------------
@@ -20,7 +20,10 @@
 %% @end
 %%-------------------------------------------------------------------
 read(Dir) ->
-  ets:new(?BABYSITTER_CONFIG_DB, [protected,named_table]),
+  case ets:info(?BABYSITTER_CONFIG_DB) of
+    undefined -> ets:new(?BABYSITTER_CONFIG_DB, [named_table]);
+    _ -> ok
+  end,
   case filelib:is_dir(Dir) of
     true -> read_dir(Dir);
     false ->
@@ -30,8 +33,35 @@ read(Dir) ->
       end
   end.
 
-get(_State, _Action) ->
-  ok.
+%%-------------------------------------------------------------------
+%% @spec (Type::string(), Action::string()) ->    {ok, Value}
+%%                                              | {error, no_action}
+%%                                              | {error, not_found}
+%% @doc Fetch a configuration value from the ets table
+%%      
+%% @end
+%%-------------------------------------------------------------------
+get(Type, Action) ->
+  case get_raw_config(Type) of
+    {ok, {Type, Proplists}} -> 
+      case proplists:get_value(Action, Proplists) of
+        undefined -> {error, no_action};
+        V -> {ok, V}
+      end;
+    _Else -> {error, not_found}
+  end.
+
+%%-------------------------------------------------------------------
+%% @spec (State::string()) ->    {ok, Value}
+%% @doc Get the raw stored configuration
+%%      
+%% @end
+%%-------------------------------------------------------------------
+get_raw_config(State) ->
+  case ets:lookup(?BABYSITTER_CONFIG_DB, State) of
+    [Else] when is_tuple(Else) -> {ok, Else};
+    _E -> {error, not_found}
+  end.
 
 %%-------------------------------------------------------------------
 %% @spec (Dir::list()) -> {ok, Files::list()}
@@ -40,7 +70,7 @@ get(_State, _Action) ->
 %% @end
 %%-------------------------------------------------------------------
 read_dir(Dir) ->
-  Files = lists:filter(fun(F) -> filelib:is_file(F) end, filelib:wildcard(lists:flatten([Dir, "/*"]))),
+  Files = lists:filter(fun(F) -> filelib:is_file(F) end, filelib:wildcard(lists:flatten([Dir, "/*", ?CONF_EXTENSION]))),
   read_files(Files, []).
 
 %%-------------------------------------------------------------------
@@ -52,8 +82,8 @@ read_dir(Dir) ->
 read_files([], Acc) -> {ok, lists:reverse(Acc)};
 read_files([File|Rest], Acc) ->
   {Filename, Config} = parse_config_file(File),
-  ets:insert(?BABYSITTER_CONFIG_DB, {Filename, Config}),
-  read_files(Rest, [filename:basename(Filename)|Acc]).
+  ets:insert(?BABYSITTER_CONFIG_DB, [{Filename, Config}]),
+  read_files(Rest, [Filename|Acc]).
 
 %%-------------------------------------------------------------------
 %% @spec (Filepath::string()) ->    ok
@@ -64,8 +94,8 @@ read_files([File|Rest], Acc) ->
 %%-------------------------------------------------------------------
 parse_config_file(Filepath) ->
   X = babysitter_config_parser:file(Filepath),
-  Config = fill_record_from_proplist(X, #config_rec{}),
-  Filename = filename:basename(Filepath),
+  Config = fill_record_from_proplist(X, []),
+  Filename = erlang:list_to_atom(filename:basename(Filepath, ?CONF_EXTENSION)),
   {Filename, Config}.
 
 %%-------------------------------------------------------------------
@@ -77,19 +107,11 @@ parse_config_file(Filepath) ->
 fill_record_from_proplist([], Record) -> Record;
 fill_record_from_proplist([{Key, Value}|Rest], Record) ->
   ActionRec = extract_into_action_rec(Value),
-  NewConfigRec = case Key of
-    bundle -> Record#config_rec{  bundle = ActionRec  };
-    mount -> Record#config_rec{   mount = ActionRec   };
-    start -> Record#config_rec{   start = ActionRec   };
-    stop -> Record#config_rec{    stop = ActionRec    };
-    unmount -> Record#config_rec{ unmount = ActionRec };
-    cleanup -> Record#config_rec{ cleanup = ActionRec };
-    _Else -> Record
-  end,
+  NewConfigRec = [{Key, ActionRec}|Record],
   fill_record_from_proplist(Rest, NewConfigRec).
   
 extract_into_action_rec(Proplist) ->
   Before = proplists:get_value(pre, Proplist),
   Command = proplists:get_value(command, Proplist),
   After = proplists:get_value(post, Proplist),
-  #action_rec{pre = Before, command = Command, post = After}.
+  {Before, Command, After}.

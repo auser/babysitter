@@ -15,13 +15,14 @@
 // Defines
 
 // Ei
-enum BabysitterActionT {BS_RUN,BS_EXEC,BS_KILL};
+enum BabysitterActionT {BS_RUN,BS_EXEC,BS_LIST,BS_KILL};
 enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t **ptr);
 int decode_atom_index(char* buf, int *index, const char* cmds[]);
 
 // Ei responses
 int ei_pid_ok(int fd, int transId, pid_t pid);
 int ei_pid_status_term(int fd, int transId, pid_t pid, int status);
+int ei_send_pid_list(int fd, int transId, process_struct *hd, int size);
 // Responses
 int ei_error(int fd, int transId, const char* fmt, ...);
 int ei_ok(int fd, int transId, const char* fmt, ...);

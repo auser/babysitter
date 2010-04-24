@@ -8,7 +8,7 @@
 * {Cmd::string(), [Option]}
 *     Option = {env, Strings} | {cd, Dir} | {do_before, Cmd} | {do_after, Cmd} | {nice, int()}
 **/
-const char* babysitter_action_strings[] = {"run", "exec", "kill", NULL};
+const char* babysitter_action_strings[] = {"run", "exec", "list", "kill", NULL};
 enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t **ptr)
 {
   int err_code = -1;
@@ -52,6 +52,8 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
       ei_decode_long(buf, &index, &lval);
       process->pid = (pid_t)lval;
     }
+    break;
+    case BS_LIST:
     break;
     default:
       // Get the next string
@@ -210,6 +212,27 @@ int ei_pid_ok(int fd, int transId, pid_t pid)
   ei_x_free(&result);
   return 0;
 }
+
+/**
+* Send a list of pids
+* {transId, [Pid::integer()]}
+**/
+int ei_send_pid_list(int fd, int transId, process_struct *hd, int size)
+{
+  ei_x_buff result;
+  process_struct *ps;
+  if (encode_header(&result, transId, 2)) return -1;
+  if (ei_x_encode_atom(&result, "ok") ) return -2;
+  if (ei_x_encode_list_header(&result, size)) return -3;
+  for( ps = hd; ps != NULL; ps = ps->hh.next ) {
+    ei_x_encode_long(&result, ps->pid);
+  }
+  if (ei_x_encode_empty_list(&result)) return -4;
+  if (write_cmd(fd, &result) < 0) return -5;
+  ei_x_free(&result);
+  return 0;
+}
+
 int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
 {
   ei_x_buff result;
@@ -227,12 +250,12 @@ int ei_pid_status_term(int fd, int transId, pid_t pid, int status)
 
 int ei_ok(int fd, int transId, const char* fmt, ...)
 {  
-  va_list vargs = NULL;
-  return ei_write_atom(fd, transId, "ok", fmt, vargs);
+  va_list *vargs = NULL;
+  return ei_write_atom(fd, transId, "ok", fmt, *vargs);
 }
 int ei_error(int fd, int transId, const char* fmt, ...){
-  va_list vargs = NULL;
-  return ei_write_atom(fd, transId, "error", fmt, vargs);
+  va_list *vargs = NULL;
+  return ei_write_atom(fd, transId, "error", fmt, *vargs);
 }
 
 int decode_atom_index(char* buf, int *index, const char* cmds[])
