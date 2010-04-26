@@ -89,6 +89,8 @@ init([Options]) ->
   process_flag(trap_exit, true),  
   Exe   = build_port_command(Options),
   Debug = proplists:get_value(verbose, Options, default(verbose)),
+  Config = proplists:get_value(config_dir, Options, default(config_dir)),
+  babysitter_config:read(Config),
   try
     debug(Debug, "exec: port program: ~s\n", [Exe]),
     Port = erlang:open_port({spawn, Exe}, [binary, exit_status, {packet, 2}, nouse_stdio, hide]),
@@ -230,7 +232,7 @@ get_transaction(Q, I, OldQ) ->
 default() -> 
     [{debug, false},  
      {verbose, false},  
-     {config_dir, false}, 
+     {config_dir, filename:join([filename:dirname(code:which(?MODULE)), "..", "..", "config", "apps"]) },
      {port_program, default(port_program)}].
 
 default(port_program) -> 
