@@ -9,9 +9,16 @@
 -include ("babysitter.hrl").
 
 %% API
--export ([run/3]).
 -export ([
-  bs_spawn_run/2, bs_run/2, kill_pid/1, status/1, list/0
+  run/3,
+  running/1,
+  status/1,
+  list/0
+]).
+% PRIVATE
+% These are exported for testing reasons only
+-export ([
+  bs_spawn_run/2, bs_run/2, kill_pid/1
 ]).
 
 -export([start_link/0, start_link/1, stop/0]).
@@ -47,6 +54,12 @@ run(AppType, Action, Opts) ->
   case Action of
     start -> bs_spawn_run(Command, Options);
     _E -> bs_run(Command, Options)
+  end.
+
+running(Pid) ->
+  case ets:lookup(?PID_MONITOR_TABLE, Pid) of
+    [{_Key, _X}|_Rest] -> true;
+    _ -> false
   end.
 
 %%-------------------------------------------------------------------
