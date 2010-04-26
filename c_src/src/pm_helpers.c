@@ -17,6 +17,11 @@ int pm_abs_path(const char *path)
     return -1;
 }
 
+char **strip(const char *str)
+{
+  char *
+}
+
 const char *find_binary(const char *file)
 {
   char buf[BUFFER_SZ];

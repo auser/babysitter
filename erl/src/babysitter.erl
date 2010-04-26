@@ -30,29 +30,25 @@
 %%====================================================================
 %% API
 %%====================================================================
-run(AppType, Action, Options) ->
+run(AppType, Action, Opts) ->
   % APP_PID_TABLE
   Config = case babysitter_config:get(AppType, Action) of
     {error, _Reason} -> babysitter_config:get(default, Action);
     {ok, ActionPropList} -> ActionPropList
   end,
-  erlang:display(Config),
-  % run_action(Action, ActionPropList, Options)
-  ok.
-
-run_action(run, ActionPropList, Options) -> spawn_run(ActionPropList, Options);
-run_action(_Action, ActionPropList, Options) -> run(ActionPropList, Options).
-
-spawn_run(ActionPropList, Options) ->
-  Before = element(1, ActionPropList),
-  Command = element(2, ActionPropList),
-  After = element(3, ActionPropList),
-  erlang:display(Before),
-  erlang:display(After),
-  ok.
-
-run(ActionPropList, Options) ->
-  ok.
+  ConfigCommand = element(2, Config),
+  % Certainly cannot run without a command
+  Command = case ConfigCommand of
+    undefined -> element(2, babysitter_config:get(default, Action));
+    E -> E
+  end,
+  Options = convert_config_to_runable_proplist([{do_before, 1}, {do_after, 3}], Config, Opts),
+  
+  erlang:display(Command),
+  case Action of
+    start -> bs_spawn_run(Command, Options);
+    _E -> bs_run(Command, Options)
+  end.
 
 %%-------------------------------------------------------------------
 %% @spec (Command::String, Options::proplist()) -> {ok, ErlangPid, OsPid}
@@ -62,7 +58,7 @@ run(ActionPropList, Options) ->
 %%-------------------------------------------------------------------
 bs_spawn_run(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
 % Give a maximum of 100 seconds to preform an action
-bs_run(Command, Options) -> gen_server:call(?SERVER, {port, {exec, Command, Options}}, 10000).
+bs_run(Command, Options) -> gen_server:call(?SERVER, {port, {exec, Command, Options}}, 30000).
 kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
 status(Pid) -> gen_server:call(?SERVER, {port, {status, Pid}}).
 list() -> gen_server:call(?SERVER, {port, {list}}).
@@ -294,3 +290,17 @@ debug(true, Fmt, Args) -> io:format(Fmt, Args).
 % So that we can get a unique id for each communication
 next_trans(I) when I < 268435455 -> I+1;
 next_trans(_) -> 1.
+
+%%-------------------------------------------------------------------
+%% @spec (Config::proplist()) ->    {ok, Value}
+%% @doc Combine the proplist into a proper option proplist
+%%      
+%% @end
+%% @private
+%%-------------------------------------------------------------------
+convert_config_to_runable_proplist([], _, Acc) -> lists:reverse(Acc);
+convert_config_to_runable_proplist([{Key, Pos}|T], Config, Acc) -> 
+  case element(Pos, Config) of
+    undefined -> convert_config_to_runable_proplist(T, Config, Acc);
+    E -> convert_config_to_runable_proplist(T, Config, [{Key, E}|Acc])
+  end.

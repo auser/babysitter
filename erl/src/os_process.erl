@@ -28,7 +28,6 @@ ospid_init(Pid, OsPid, Parent, Debug) ->
   link(Pid),
   ospid_loop({Pid, OsPid, Parent, Debug}).
 
-
 ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
   receive
     {{From, Ref}, ospid} ->

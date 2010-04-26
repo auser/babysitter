@@ -207,6 +207,7 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     prefix = cp - command;
     cmdname = calloc(prefix, sizeof(char));
     strncpy(cmdname, command, prefix);
+    printf("cp: %s from %s to %d and %s\n", cp, command, prefix, cmdname);
 
     // expand command name to full path
     full_filepath = find_binary(cmdname);
@@ -223,7 +224,7 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     command_argv[3] = NULL;
     command_argc = 3;
     
-    // printf("expanded_command: >>%s<<\n", expanded_command);
+    printf("expanded_command: >>%s<<\n", expanded_command);
   }
   *argc = command_argc;
   *argv = command_argv;
@@ -250,7 +251,9 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   int command_argc = 0;
   int running_script = 0;
   
+  printf("before expand_command\n");
   if (expand_command(command, &command_argc, &command_argv, &running_script)) ;
+  printf("after expand_command\n");
   
   command_argv[command_argc] = 0;
   
@@ -268,7 +271,12 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     pm_setup_signal_handlers();
     if (cd != NULL && cd[0] != '\0')
       chdir(cd);
+    else
+      chdir("/tmp");
     
+    int i = 0;
+    for (i = 0; command_argv[i] != NULL; i++)
+      printf("command_argv[%d] = %s\n", i, command_argv[i]);
     if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
       printf("execve failed because: %s\n", strerror(errno));      
       exit(-1);
@@ -286,7 +294,7 @@ int wait_for_pid(pid_t pid)
 {
   if (kill(pid, 0) == 0) {
     int childExitStatus;
-    waitpid( pid, &childExitStatus, 0);
+    waitpid(pid, &childExitStatus, 0);
     // if( !WIFEXITED(childExitStatus) ){
     // } else if (!WIFSIGNALED(childExitStatus)) {
     // } else if (!WIFSTOPPED(childExitStatus)) {
@@ -332,7 +340,9 @@ pid_t pm_run_process(process_t *process)
   if (process->env) process->env[process->env_c] = NULL;
     
   if (process->before) run_hook(BEFORE_HOOK, process);
+  printf("before pm_execute in pm_run_process\n");
   pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
+  printf("after pm_execute in pm_run_process\n");
   if (wait_for_pid(pid) < 0) return -1;
   if (process->after) run_hook(AFTER_HOOK, process);
   return pid;
