@@ -50,7 +50,6 @@ parsing_dir_test() ->
 
 % Internal functions
 config_read() ->
-  % Dir = filename:dirname(code:which(?MODULE)),
-  % ConfigDir = filename:join([Dir, "..", "..", "config", "apps"]),
-  % babysitter_config:read(ConfigDir).
-   ok.
+  Dir = filename:dirname(code:which(?MODULE)),
+  ConfigDir = filename:join([Dir, "..", "..", "config", "apps"]),
+  babysitter_config:read(ConfigDir).

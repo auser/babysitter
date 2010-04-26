@@ -90,10 +90,10 @@ init([Options]) ->
   Exe   = build_port_command(Options),
   Debug = proplists:get_value(verbose, Options, default(verbose)),
   Config = proplists:get_value(config_dir, Options, default(config_dir)),
-  babysitter_config:read(Config),
   try
     debug(Debug, "exec: port program: ~s\n", [Exe]),
     Port = erlang:open_port({spawn, Exe}, [binary, exit_status, {packet, 2}, nouse_stdio, hide]),
+    babysitter_config:read(Config),
     {ok, #state{port=Port, debug=Debug}}
   catch _:Reason ->
     {stop, io:format("Error starting port '~p': ~200p", [Exe, Reason])}
