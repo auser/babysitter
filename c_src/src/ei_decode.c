@@ -68,8 +68,8 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
       // The second element of the tuple is a list of options
       if (ei_decode_list_header(buf, &index, &size) < 0) return err_code--;
 
-      enum OptionT            { CD,   ENV,   NICE,  DO_BEFORE, DO_AFTER } opt;
-      const char* options[] = {"cd", "env", "nice", "do_before", "do_after", NULL};
+      enum OptionT            { CD,   ENV,   NICE,  DO_BEFORE, DO_AFTER,     STDOUT,    STDERR } opt;
+      const char* options[] = {"cd", "env", "nice", "do_before", "do_after", "stdout", "stderr", NULL};
 
       for (i = 0; i < size; i++) {
         // Decode the tuple of the form {atom, string()|int()};
@@ -108,6 +108,11 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
             long lval;
             ei_decode_long(buf, &index, &lval);
             process->nice = lval;
+          }
+          break;
+          case STDOUT:
+          case STDERR: {
+            // Put this somewhere
           }
           break;
           default:

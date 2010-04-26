@@ -81,7 +81,6 @@ test_status_listing_of_a_process() ->
 test_babysitter_config_actions() ->
   config_read(),
   babysitter:run(rack, bundle, [{env, "NAME=bob"}]),
-  babysitter:run(rack, start, [{env, "NAME=bob"}]),
   ok.
 
 config_read() ->

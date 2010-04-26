@@ -44,7 +44,6 @@ run(AppType, Action, Opts) ->
   end,
   Options = convert_config_to_runable_proplist([{do_before, 1}, {do_after, 3}], Config, Opts),
   
-  erlang:display(Command),
   case Action of
     start -> bs_spawn_run(Command, Options);
     _E -> bs_run(Command, Options)
@@ -279,8 +278,11 @@ build_exec_opts([], Acc) -> Acc;
 build_exec_opts([{cd, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{env, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{nice, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
-build_exec_opts([{stdout, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
-build_exec_opts([{stderr, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
+build_exec_opts([{do_before, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
+build_exec_opts([{do_after, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
+% Get these back in? 
+% build_exec_opts([{stdout, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
+% build_exec_opts([{stderr, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([_Else|Rest], Acc) -> build_exec_opts(Rest, Acc).
 
 % PRIVATE

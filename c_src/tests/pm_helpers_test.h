@@ -28,3 +28,10 @@ char *test_string_index() {
   mu_assert(string_index(options, "dogs") == -1, "string_index returns incorrect index for 'dogs'");
   return 0;
 }
+
+char *test_chomp_stringing() {
+  mu_assert(!strcmp(str_chomp(" hello world "), "hello world"), "str_chomp is bunk");
+  mu_assert(!strcmp(str_chomp("\nhello world "), "hello world"), "str_chomp is bunk");
+  mu_assert(!strcmp(str_chomp("\r\n\thello world\n "), "hello world"), "str_chomp is bunk");
+  return 0;
+}

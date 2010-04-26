@@ -17,6 +17,7 @@ static char * all_tests() {
   mu_run_test(test_string_index);
   mu_run_test(test_starting_a_process);
   mu_run_test(test_killing_a_process);
+  mu_run_test(test_chomp_stringing);
   return 0;
 }
 
@@ -28,6 +29,7 @@ int main(int argc, char **argv) {
   else {
     printf("ALL TESTS PASSED\n");
   }
+  printf("Assertions made: %d\n", assertions_made);
   printf("Tests failed: %d\n", tests_failed);
   printf("Tests run: %d\n", tests_run);
   

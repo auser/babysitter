@@ -17,9 +17,21 @@ int pm_abs_path(const char *path)
     return -1;
 }
 
-char **strip(const char *str)
+char* str_chomp(const char *string)
 {
-  char *
+  char *s, *t, *res;
+  int len = strlen(string);
+  res = (char*)malloc(sizeof(char*) * len);
+  
+  res = strdup(string);
+  for (s = res; isspace (*s); s++) ;
+  
+  if (*s == 0) return (s);
+  
+  t = s + strlen (s) - 1;
+  while (t > s && isspace(*t)) t--;
+  *++t = '\0';
+  return s;
 }
 
 const char *find_binary(const char *file)
