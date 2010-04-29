@@ -34,8 +34,8 @@ INCLUDE_DIRS =\
 EXECUTABLE_DIRS =\
 	./bin
 	
-TARGET_LIB_DIRS = \
-	./lib	
+TARGET_LIB_DIRS =\
+	./lib
 	
 TEST_DIRS = \
 	./tests
