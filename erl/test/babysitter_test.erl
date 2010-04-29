@@ -52,9 +52,9 @@ test_killing_a_process() ->
   {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("sleep 2.6", [{env, "NAME=ari"}]),
   {exit_status, Pid, _Status} = babysitter:kill_pid(Pid),
   CommandArgString = lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep | wc -l | tr -d ' '", [Pid])),
+  timer:sleep(500),
   O = ?cmd(CommandArgString),
   {Int, _} = string:to_integer(O),
-  timer:sleep(100),
   ?assertEqual(0, Int).
   
 test_killing_a_process_with_erlang_process() ->
