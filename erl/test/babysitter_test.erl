@@ -40,13 +40,13 @@ test_exec_one_process() ->
   ?assertCmdOutput("0\n", CommandArgString).
 
 test_starting_many_processes() ->
-  Count = 200,
+  Count = 100,
   Fun = fun() -> babysitter:bs_spawn_run("sleep 2.2", [{env, "NAME=$NAME"}, {env, "NAME=bob"}]) end,
   lists:map(fun(_X) -> Fun() end, lists:seq(1, Count)),
   CommandArgString = "ps aux | grep -v grep | grep 'sleep 2.2' | wc -l | tr -d ' '",
   O = ?cmd(CommandArgString),
   {Int, _} = string:to_integer(O),
-  ?assertEqual(Int, 200).
+  ?assertEqual(Int, 100).
 
 test_killing_a_process() ->
   {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("sleep 2.6", [{env, "NAME=ari"}]),
