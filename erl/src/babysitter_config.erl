@@ -9,7 +9,8 @@
   init/0,
   read/1,
   get/2,
-  get_raw_config/1
+  get_raw_config/1,
+  list_configs/0
 ]).
 
 -define (CONF_EXTENSION, ".conf").
@@ -60,6 +61,17 @@ get(Type, Action) ->
       end;
     _Else -> {error, not_found}
   end.
+  
+%%-------------------------------------------------------------------
+%% @spec () ->    {ok, List::list()}
+%% @doc List all the config
+%%      
+%% @end
+%%-------------------------------------------------------------------
+list_configs() ->
+  List = ets:tab2list(babysitter_config_db),
+  ConfigList = lists:map(fun({Name, _Config}) -> Name end, List),
+  {ok, ConfigList}.
 
 %%-------------------------------------------------------------------
 %% @spec (State::string()) ->    {ok, Value}
