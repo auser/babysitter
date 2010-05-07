@@ -277,8 +277,16 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   }
   default:
     // In parent process
-    if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0)  ;
-    
+    if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) 
+      ;
+    if (running_script && should_wait) {
+      struct stat buffer;
+      if (stat(command_argv[0], &buffer) != 0) {
+        printf("file doesn't exist when it should because: %s\n", strerror(errno));
+      } else {
+        if( remove( command_argv[0] ) != 0 ) perror( "Error deleting file" );
+      }
+    }
     return pid;
   }
 }
