@@ -100,10 +100,10 @@ init([Options]) ->
   process_flag(trap_exit, true),  
   Exe   = build_port_command(Options),
   Debug = proplists:get_value(verbose, Options, default(verbose)),
-  Config = proplists:get_value(config_dir, Options, default(config_dir)),
+  % Config = proplists:get_value(config_dir, Options, default(config_dir)),
   try
-    babysitter_config:init(),
-    babysitter_config:read(Config)
+    babysitter_config:init()
+    % babysitter_config:read(Config)
   catch _:_Reason ->
     ok
   end,
