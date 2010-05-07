@@ -284,7 +284,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
       if (stat(command_argv[0], &buffer) != 0) {
         printf("file doesn't exist when it should because: %s\n", strerror(errno));
       } else {
-        if( remove( command_argv[0] ) != 0 ) perror( "Error deleting file" );
+        // if( remove( command_argv[0] ) != 0 ) perror( "Error deleting file" );
       }
     }
     return pid;
