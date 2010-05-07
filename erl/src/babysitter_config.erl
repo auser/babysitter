@@ -23,7 +23,7 @@
 %%-------------------------------------------------------------------
 init() ->
   case catch ets:info(?BABYSITTER_CONFIG_DB) of
-    undefined -> ets:new(?BABYSITTER_CONFIG_DB, [set, named_table, protected]);
+    undefined -> ets:new(?BABYSITTER_CONFIG_DB, [set, named_table, public]);
     _ -> ok
   end.
 
