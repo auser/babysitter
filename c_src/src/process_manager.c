@@ -248,18 +248,21 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   char **command_argv = {0};
   int command_argc = 0;
   int running_script = 0;
-  
-  char* chomped_string = str_chomp(command);
-  char* safe_chomped_string = str_safe_quote(chomped_string);
-  if (expand_command((const char*)safe_chomped_string, &command_argc, &command_argv, &running_script)) ;
-  command_argv[command_argc] = 0;
-  
+    
   // Now actually RUN it!
   pid_t pid;
   if (should_wait)
     pid = vfork();
   else
     pid = fork();
+  
+  char* chomped_string = str_chomp(command);
+  char* safe_chomped_string = str_safe_quote(chomped_string);
+  if (expand_command((const char*)safe_chomped_string, &command_argc, &command_argv, &running_script)) ;
+  command_argv[command_argc] = 0;
+  
+  if (chomped_string) free(chomped_string); 
+  if (safe_chomped_string) free(safe_chomped_string);
   
   switch (pid) {
   case -1: 
@@ -289,8 +292,6 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
         if( remove( command_argv[0] ) != 0 ) perror( "Error deleting file" );
       }
     }
-    free(chomped_string); 
-    free(safe_chomped_string);
     return pid;
   }
 }
