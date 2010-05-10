@@ -261,9 +261,6 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   if (expand_command((const char*)safe_chomped_string, &command_argc, &command_argv, &running_script)) ;
   command_argv[command_argc] = 0;
   
-  if (chomped_string) free(chomped_string); 
-  if (safe_chomped_string) free(safe_chomped_string);
-  
   switch (pid) {
   case -1: 
     return -1;
@@ -292,6 +289,9 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
         if( remove( command_argv[0] ) != 0 ) perror( "Error deleting file" );
       }
     }
+    // These are free'd later, anyway
+    // if (chomped_string) free(chomped_string); 
+    // if (safe_chomped_string) free(safe_chomped_string);
     return pid;
   }
 }
