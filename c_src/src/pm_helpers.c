@@ -86,7 +86,7 @@ const char *find_binary(const char *file)
     
   } while(*path++ == ':');
   
-  return "\0";
+  return file;
 }
 
 

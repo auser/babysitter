@@ -216,7 +216,7 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     expanded_command = calloc(strlen(full_filepath) + strlen(command + prefix) + 1, sizeof(char));
     strcat(expanded_command, full_filepath); 
     strcat(expanded_command, command + prefix);
-
+    
     command_argv = (char **) malloc(4 * sizeof(char *));
     command_argv[0] = strdup(getenv("SHELL"));
     command_argv[1] = "-c";
@@ -254,8 +254,6 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   if (expand_command((const char*)safe_chomped_string, &command_argc, &command_argv, &running_script)) ;
   command_argv[command_argc] = 0;
   
-  free(chomped_string); free(safe_chomped_string);
-  
   // Now actually RUN it!
   pid_t pid;
   if (should_wait)
@@ -291,6 +289,8 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
         if( remove( command_argv[0] ) != 0 ) perror( "Error deleting file" );
       }
     }
+    free(chomped_string); 
+    free(safe_chomped_string);
     return pid;
   }
 }
