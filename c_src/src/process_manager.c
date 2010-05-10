@@ -249,9 +249,12 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   int command_argc = 0;
   int running_script = 0;
   
-  if (expand_command((const char*)str_chomp(command), &command_argc, &command_argv, &running_script)) ;
-  
+  char* chomped_string = str_chomp(command);
+  char* safe_chomped_string = str_safe_quote(chomped_string);
+  if (expand_command((const char*)safe_chomped_string, &command_argc, &command_argv, &running_script)) ;
   command_argv[command_argc] = 0;
+  
+  free(chomped_string); free(safe_chomped_string);
   
   // Now actually RUN it!
   pid_t pid;

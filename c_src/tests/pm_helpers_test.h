@@ -35,3 +35,8 @@ char *test_chomp_stringing() {
   mu_assert(!strcmp(str_chomp("\r\n\thello world\n "), "hello world"), "str_chomp is bunk");
   return 0;
 }
+
+char *test_safe_quoting_string() {
+  mu_assert(!strcmp(str_safe_quote("hello \"world\""), "hello \"world\""), "str_safe_quote failed?");
+  return 0;
+}
