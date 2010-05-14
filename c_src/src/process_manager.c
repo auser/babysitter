@@ -253,7 +253,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   char* safe_chomped_string = str_safe_quote(chomped_string);
   
   // If there is nothing here, don't run anything :)
-  if (!strncmp(safe_chomped_string, "", 1)) return 1;
+  if (!strncmp(safe_chomped_string, "", strlen(safe_chomped_string))) return 1;
   
   // Now actually RUN it!
   pid_t pid;
