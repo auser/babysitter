@@ -81,6 +81,8 @@ int pm_free_process(process_t *p)
   if (p->before) free(p->before);
   if (p->after) free(p->after);
   if (p->cd) free(p->cd);
+  if (p->stdout) free(p->stdout);
+  if (p->stderr) free(p->stderr);
   
   int i = 0;
   for (i = 0; i < p->env_c; i++) free(p->env[i]);
