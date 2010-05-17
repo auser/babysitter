@@ -250,7 +250,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   int running_script = 0;
   
   // If there is nothing here, don't run anything :)
-  if (!strncmp(command, "", strlen(command))) return 1;
+  if (strlen(command) == 0) return -1;
   
   // Now actually RUN it!
   pid_t pid;
@@ -301,6 +301,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
 
 int wait_for_pid(pid_t pid)
 {
+  if (pid < 0) return pid;
   if (kill(pid, 0) == 0) {
     int childExitStatus;
     waitpid(pid, &childExitStatus, 0);
