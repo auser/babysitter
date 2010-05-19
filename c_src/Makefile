@@ -1,13 +1,15 @@
 SHELL = /bin/sh
  
-top_srcdir = @top_srcdir@
-srcdir = @srcdir@
+top_srcdir = ..
+srcdir = .
 prefix = /usr/local
 exec_prefix = ${prefix}
 bindir = $(exec_prefix)/bin
 infodir = $(prefix)/info
 libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
+ERL_DIR =$(shell erl -noshell -eval 'io:format("~s~n", [code:root_dir()])' -s erlang halt)
+EI_DIR = $(shell erl -noshell -eval 'io:format("~s~n", [code:lib_dir("erl_interface")])' -s erlang halt)
 
 # Set this to '@' for silence
 SILENCE = @
@@ -17,8 +19,8 @@ OUTPUT_DIR = $(ROOT_DIR)/priv
 OUTPUT     = $(OUTPUT_DIR)/bin/babysitter
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
-CFLAGS = @CFLAGS@
-CPPFLAGS += @CPPFLAGS@
+CFLAGS = -O2 -g3 -I $(EI_DIR)/include -I /usr/local/homebrew/Cellar/erlang/R13B04/lib/erlang/usr/include -fPIC
+CPPFLAGS += -O2 -g3 -I $(EI_DIR)/include -I $(ERL_DIR)/usr/include -fPIC
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
 CPPFLAGS += -Wall
@@ -26,7 +28,7 @@ CPPFLAGS += -Werror
 CPPFLAGS += -g
 
 SRC_DIRS = \
-	./src
+	.
 
 INCLUDE_DIRS =\
 	./include
@@ -41,7 +43,7 @@ TEST_DIRS = \
 	./tests
 
 #Flags to pass to ld
-LDFLAGS_COMMON=@LDFLAGS_COMMON@
+LDFLAGS_COMMON=-L$(EI_DIR)/lib -fno-common -Wall
 ifeq ($(shell uname),Linux)
 	ARCH=linux
 	LDFLAGS=$(LDFLAGS_COMMON)
@@ -105,8 +107,8 @@ all: $(ALL_OBJ) $(TARGET_LIBS_OBJ) build_tests build_executable
 	$(SILENCE)./run_tests
 
 build_tests:
-	$(SILENCE)echo "Building tests"
-	$(SILENCE)$(CC) $(INCLUDES) -o run_tests src/process_manager.o src/pm_helpers.o $(LDFLAGS_COMMON) $(LD_LIBRARIES) $(TEST_SRC)
+	$(SILENCE)echo "Building c_src tests"
+	$(SILENCE)$(CC) $(INCLUDES) -o run_tests process_manager.o pm_helpers.o $(LDFLAGS_COMMON) $(LD_LIBRARIES) $(TEST_SRC)
 
 build_executable:
 	$(SILENCE)mkdir -p `dirname $(OUTPUT)`

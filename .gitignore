@@ -11,6 +11,5 @@ priv/bin
 priv/neotoma
 VERSION
 build/
-Makefile
 c_src/run_tests
 tests_ebin
