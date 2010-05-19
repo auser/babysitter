@@ -4,7 +4,6 @@ ebin/*.rel
 ebin/*.script
 priv/*.so
 c_src/*.o
-*.o
 .DS_Store
 priv/lib
 priv/bin
