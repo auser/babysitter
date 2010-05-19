@@ -19,7 +19,7 @@ OUTPUT_DIR = $(ROOT_DIR)/priv
 OUTPUT     = $(OUTPUT_DIR)/bin/babysitter
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
-CFLAGS = -O2 -g3 -I $(EI_DIR)/include -I /usr/local/homebrew/Cellar/erlang/R13B04/lib/erlang/usr/include -fPIC
+CFLAGS = -O2 -g3 -I $(EI_DIR)/include -I $(ERL_DIR)/usr/include -fPIC
 CPPFLAGS += -O2 -g3 -I $(EI_DIR)/include -I $(ERL_DIR)/usr/include -fPIC
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
@@ -31,7 +31,7 @@ SRC_DIRS = \
 	.
 
 INCLUDE_DIRS =\
-	./include
+	.
 
 EXECUTABLE_DIRS =\
 	./bin
