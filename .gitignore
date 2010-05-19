@@ -12,3 +12,4 @@ VERSION
 build/
 c_src/run_tests
 tests_ebin
+deps
