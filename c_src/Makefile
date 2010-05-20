@@ -15,7 +15,7 @@ EI_DIR = $(shell erl -noshell -eval 'io:format("~s~n", [code:lib_dir("erl_interf
 SILENCE = @
 
 #---- Outputs ----#
-OUTPUT_DIR = $(ROOT_DIR)/priv
+OUTPUT_DIR = $(top_srcdir)/priv
 OUTPUT     = $(OUTPUT_DIR)/bin/babysitter
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs

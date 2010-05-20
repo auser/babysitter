@@ -11,8 +11,7 @@ endif
 
 .PHONY: deps
 
-all:
-	make -C c_src
+all: deps
 	./rebar compile
 
 docs:
