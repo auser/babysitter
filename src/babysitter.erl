@@ -260,7 +260,7 @@ default(Option) ->
 base_dir() ->
   case code:priv_dir(babysitter) of
     {error, bad_name} -> filename:join([filename:dirname(code:which(?MODULE)), ".."]);
-    Dir -> filename:join([filename:dirname(Dir), ".."])
+    Dir -> filename:join([filename:dirname(Dir), "..", ".."])
   end.
 
 % Look for it at the environment level first
