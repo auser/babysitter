@@ -253,10 +253,15 @@ default() ->
 
 default(port_program) -> 
   % Get architecture (e.g. i386-linux)
-  Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
-  filename:join([Dir, "priv", "bin", "babysitter"]);
+  filename:join([base_dir(), "priv", "bin", "babysitter"]);
 default(Option) ->
   search_for_application_value(Option).
+
+base_dir() ->
+  case code:priv_dir(babysitter) of
+    {error, bad_name} -> filename:join([filename:dirname(code:which(?MODULE)), ".."]);
+    Dir -> filename:join([filename:dirname(Dir), ".."])
+  end.
 
 % Look for it at the environment level first
 search_for_application_value(Param) ->
