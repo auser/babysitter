@@ -51,7 +51,7 @@ ifeq ($(shell uname),Linux)
 else
 	# -dynamic -undefined suppress -flat_namespace
 	ARCH=macosx
-	LDFLAGS=$(LDFLAGS_COMMON) -flat_namespace -undefined suppress
+	LDFLAGS=$(LDFLAGS_COMMON) -flat_namespace
 	LDBUNDLE_FLAGS=$(LDFLAGS) -bundle
 endif
 LD_LIBRARIES += -lerl_interface -lei
