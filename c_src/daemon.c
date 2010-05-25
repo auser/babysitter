@@ -114,19 +114,19 @@ int decode_and_run_erlang(unsigned char *buf, int len)
   
   switch (action) {
     case BS_RUN:
-      if ((pid = pm_run_and_spawn_process(process)) < 0) ei_error(write_handle, process->transId, "Error: %d", (int)pid);
+      if ((pid = pm_run_and_spawn_process(process)) < 0) ei_error(write_handle, process->transId, "%d", (int)pid);
       ei_pid_ok(write_handle, process->transId, pid);
     break;
     case BS_STATUS:
       ei_pid_status(write_handle, process->transId, process->pid, pm_check_pid_status(process->pid));
     break;
     case BS_KILL:
-      if ((err = pm_kill_process(process))) ei_error(write_handle, process->transId, "Error: %d", (int)err);
+      if ((err = pm_kill_process(process)) < 0) ei_error(write_handle, process->transId, "%d", (int)err);
       ei_pid_status_term(write_handle, process->transId, process->pid, kill(process->pid, 0));
     break;
     case BS_EXEC: {
       pid_t pid;
-      if ((pid = pm_run_process(process)) < 0) ei_error(write_handle, process->transId, "Error: %d", (int)pid);
+      if ((pid = pm_run_process(process)) < 0) ei_error(write_handle, process->transId, "%d", (int)pid);
       ei_pid_ok(write_handle, process->transId, pid);
     }
     break;
