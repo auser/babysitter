@@ -94,19 +94,21 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
               free(value);
               return err_code--;
             }
-            if (opt == CD)
-              pm_malloc_and_set_attribute(&process->cd, value);
-            else if (opt == ENV)
-              pm_add_env(&process, value);
-            else if (opt == DO_BEFORE)
-              pm_malloc_and_set_attribute(&process->before, value);
-            else if (opt == DO_AFTER)
-              pm_malloc_and_set_attribute(&process->after, value);
-            else if (opt == STDOUT)
-              pm_malloc_and_set_attribute(&process->stdout, value);
-            else if (opt == STDERR)
-              pm_malloc_and_set_attribute(&process->stderr, value);
-
+            
+            if (strlen(value) > 0) {
+              if (opt == CD)
+                pm_malloc_and_set_attribute(&process->cd, value);
+              else if (opt == ENV)
+                pm_add_env(&process, value);
+              else if (opt == DO_BEFORE)
+                pm_malloc_and_set_attribute(&process->before, value);
+              else if (opt == DO_AFTER)
+                pm_malloc_and_set_attribute(&process->after, value);
+              else if (opt == STDOUT)
+                pm_malloc_and_set_attribute(&process->stdout, value);
+              else if (opt == STDERR)
+                pm_malloc_and_set_attribute(&process->stderr, value);
+            }
             free(value);
           }
           break;

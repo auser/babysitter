@@ -252,7 +252,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   int running_script = 0;
   
   // If there is nothing here, don't run anything :)
-  if (strlen(command) == 0) return -1;
+  if (strlen(command) == 0) return 0;
   
   // Now actually RUN it!
   pid_t pid;
