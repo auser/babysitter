@@ -45,15 +45,22 @@ run(AppType, Action, Opts) ->
   end,
   ConfigCommand = element(2, Config),
   % Certainly cannot run without a command
+  DefaultCommand = element(2, element(2, babysitter_config:get(default, Action))),
+  erlang:display({default, DefaultCommand, ConfigCommand}),
   Command = case ConfigCommand of
-    undefined -> element(2, element(2, babysitter_config:get(default, Action)));
+    undefined -> DefaultCommand;
+    [] -> DefaultCommand;
     E -> E
   end,
   Options = convert_config_to_runable_proplist([{do_before, 1}, {do_after, 3}], Config, Opts),
   
-  case Action of
-    start -> bs_spawn_run(Command, Options);
-    _E -> bs_run(Command, Options)
+  case Command of
+    [] -> {error, no_command};
+    _ ->
+      case Action of
+        start -> bs_spawn_run(Command, Options);
+        _E -> bs_run(Command, Options)
+      end
   end.
 
 running(Pid) ->
