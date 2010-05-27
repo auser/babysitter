@@ -25,7 +25,7 @@ enum ProcessReturnState {PRS_BEFORE,PRS_AFTER,PRS_COMMAND,PRS_OKAY};
 typedef struct _process_return_t_ {
   int exit_status;  // The exit status at the stage
   pid_t pid;        // The pid of the main process
-  char* output;     // Output of strerror
+  char* stderr;
   enum ProcessReturnState stage;        // At what stage the process exited
 } process_return_t;
 

@@ -139,8 +139,9 @@ int decode_and_run_erlang(unsigned char *buf, int len)
     break;
   }  
   
+  if (ret) pm_free_process_return(ret);
+  
   pm_free_process(process);
-  pm_free_process_return(ret);
   return 0;
 }
 

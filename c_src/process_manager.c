@@ -75,7 +75,8 @@ process_return_t* pm_new_process_return()
   p->pid = 0;
   p->exit_status = 0;
   p->stage = PRS_BEFORE;
-  p->output = NULL;
+  
+  p->stderr = NULL;
   
   return p;
 }
@@ -92,7 +93,7 @@ int pm_process_valid(process_t **ptr)
 
 int pm_free_process_return(process_return_t *p)
 {
-  if (p->output) free(p->output);
+  if (p->stderr) free(p->stderr);
   
   free(p);
   return 0;
@@ -359,7 +360,11 @@ int run_hook(hook_t t, process_t *process, process_return_t *ret)
     ret->pid = pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   }
   ret->exit_status = wait_for_pid(ret->pid);
-  if (ret->exit_status) strncpy(ret->output, strerror(errno), strlen(strerror(errno)));
+  if (errno) {
+    ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
+    strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+  }
+  
   return 0;
 }
 

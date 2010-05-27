@@ -168,7 +168,7 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
       case get_transaction(Trans, N) of
         {true, {Pid,_} = From, Q, Link} ->
           case Reply of
-            {error,_Stage,_OsPid,_ExitStatus} = ErrorReply ->
+            {error,_Stage,_OsPid,_ExitStatus,_StrError} = ErrorReply ->
               gen_server:reply(From, ErrorReply);
             _ ->
               NewReply = add_monitor(Reply, Link, Pid, Debug),

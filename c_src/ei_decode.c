@@ -262,25 +262,14 @@ int ei_pid_status(int fd, int transId, pid_t pid, int status)
   return ei_pid_status_header(fd, transId, pid, status, "ok");
 }
 
-int ei_return_process_status(int fd, int transId, process_return_t *p)
-{
-  return ei_process_status(fd, transId, p->pid, p->exit_status, p->stage);
-}
 /**
 * Write the process back according to the state
 *
 **/
-int ei_process_status(int fd, int transId, pid_t pid, int status, enum ProcessReturnState state)
-{
-  if(state == PRS_OKAY)
-    return ei_pid_status(fd, transId, pid, status);
-  else
-    return ei_process_error_status(fd, transId, pid, status, state);
-}
-int ei_process_error_status(int fd, int transId, pid_t pid, int status, enum ProcessReturnState state)
+int ei_process_error_status(int fd, int transId, pid_t pid, int status, enum ProcessReturnState state, char* err)
 {
   ei_x_buff result;
-  if (encode_header(&result, transId, 4)) return -1;
+  if (encode_header(&result, transId, 5)) return -1;
   if (ei_x_encode_atom(&result, "error") ) return -4;
   switch(state) {
     case PRS_BEFORE:
@@ -299,11 +288,21 @@ int ei_process_error_status(int fd, int transId, pid_t pid, int status, enum Pro
   // Encode pid
   if (ei_x_encode_long(&result, (int)pid)) return -5;
   if (ei_x_encode_long(&result, (int)status)) return -5;
+  if (ei_x_encode_string_len(&result, err, strlen(err))) return -6;
   if (write_cmd(fd, &result) < 0) {
     return -5;
   }
   ei_x_free(&result);
   return 0;
+}
+
+
+int ei_return_process_status(int fd, int transId, process_return_t *p)
+{
+  if(p->stage == PRS_OKAY)
+    return ei_pid_status(fd, transId, p->pid, p->exit_status);
+  else
+    return ei_process_error_status(fd, transId, p->pid, p->exit_status, p->stage, p->stderr);
 }
 
 int ei_pid_status_term(int fd, int transId, pid_t pid, int status)

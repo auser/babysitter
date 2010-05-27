@@ -39,7 +39,7 @@ test_starting_one_process() ->
 test_exec_one_process() ->
   {ok, Pid, Status} = babysitter:bs_run("sleep 1.7", [{env, "TEST=true"}]),
   CommandArgString = lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep |  wc -l | tr -d ' '", [Pid])),
-  ?assertEqual(Status, 0),
+  ?assertEqual(0, Status),
   ?assertCmdOutput("0\n", CommandArgString).
 
 test_starting_many_processes() ->
@@ -94,7 +94,7 @@ test_running_hooks() ->
   babysitter:kill_pid(Pid).
 
 test_failed_hooks() ->
-  {error, State, Pid, _ExitStatus} = babysitter:bs_spawn_run("sleep 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}]),
+  {error, State, Pid, _ExitStatus, _StrError} = babysitter:bs_spawn_run("sleep 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}]),
   ?assert(before == State),
   ?assert(false == babysitter:running(Pid)).
   
