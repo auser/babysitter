@@ -37,7 +37,7 @@ test_starting_one_process() ->
   ?assertCmdOutput(ShouldMatch, CommandArgString).
 
 test_exec_one_process() ->
-  {ok, Pid, Status} = babysitter:bs_run("sleep 1.7", [{env, "TEST=true"}]),
+  {ok, Pid, Status} = babysitter:bs_run("sleep 1.7", [{env, "TEST=2.3"}]),
   CommandArgString = lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep |  wc -l | tr -d ' '", [Pid])),
   ?assertEqual(0, Status),
   ?assertCmdOutput("0\n", CommandArgString).
@@ -94,7 +94,12 @@ test_running_hooks() ->
   babysitter:kill_pid(Pid).
 
 test_failed_hooks() ->
-  {error, State, Pid, _ExitStatus, _StrError} = babysitter:bs_spawn_run("sleep 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}]),
-  ?assert(before == State),
-  ?assert(false == babysitter:running(Pid)).
-  
+  {error, State, Pid1, _ExitStatus, _StrError} = babysitter:bs_spawn_run("sleep 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}]),
+  ?assert(before_command == State),
+  ?assert(false == babysitter:running(Pid1)),
+  {error, State3, Pid3, _ExitStatus, _StrError} = babysitter:bs_run("sleep 201.4", [{env, "NAME=ari"}, {do_after, "omgwtfcommanddoesntexist goes here"}]),
+  ?assert(after_command == State3),
+  ?assert(false == babysitter:running(Pid3)).
+  % {error, State2, Pid2, _ExitStatus, _StrError} = babysitter:bs_run("thisdoesnt exist either", [{env, "NAME=ari"}]),
+  % ?assert(command == State2),
+  % ?assert(false == babysitter:running(Pid2)).

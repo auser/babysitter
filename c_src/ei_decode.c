@@ -273,13 +273,13 @@ int ei_process_error_status(int fd, int transId, pid_t pid, int status, enum Pro
   if (ei_x_encode_atom(&result, "error") ) return -4;
   switch(state) {
     case PRS_BEFORE:
-      if (ei_x_encode_atom(&result, "before") ) return -4;
+      if (ei_x_encode_atom(&result, "before_command") ) return -4;
       break;
     case PRS_COMMAND:
       if (ei_x_encode_atom(&result, "command") ) return -4;
       break;
     case PRS_AFTER:
-      if (ei_x_encode_atom(&result, "after") ) return -4;
+      if (ei_x_encode_atom(&result, "after_command") ) return -4;
       break;
     default:
       if (ei_x_encode_atom(&result, "unknown") ) return -4;

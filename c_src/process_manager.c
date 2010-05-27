@@ -334,7 +334,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
 int wait_for_pid(pid_t pid)
 {
   if (pid < 0) return pid;
-  if (kill(pid, 0) == 0) {
+  // if (kill(pid, 0) == 0) {
     int childExitStatus;
     waitpid(pid, &childExitStatus, 0);
     // if( !WIFEXITED(childExitStatus) ){
@@ -342,10 +342,10 @@ int wait_for_pid(pid_t pid)
     // } else if (!WIFSTOPPED(childExitStatus)) {
     // }
     return childExitStatus;
-  } else {
-    printf("Something very bad happened with the hook\n");
-    return -1;
-  }
+  // } else {
+  //   printf("Something very bad happened with the hook\n");
+  //   return -1;
+  // }
   
 }
 
@@ -383,7 +383,11 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
 
   ret->stage = PRS_COMMAND;
   pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
-  ret->exit_status = ret->pid = pid;
+  ret->pid = pid;
+  if (errno) {
+    ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
+    strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+  }
   if (pid < 0) return ret;
   
   // Run afterhook
@@ -424,7 +428,12 @@ process_return_t* pm_run_process(process_t *process)
   
   ret->pid = pid;
   ret->exit_status = wait_for_pid(pid);
-  if (ret->exit_status < 0) return ret;
+  if (errno) {
+    printf("command: %s errno: %s\n", process->command, strerror(errno));
+    ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
+    strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+    return ret;
+  }
   
   // Run afterhook
   if (process->after) {
