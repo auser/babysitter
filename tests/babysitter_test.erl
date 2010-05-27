@@ -22,6 +22,8 @@ starting_test_() ->
         fun test_killing_a_process/0,
         fun test_killing_a_process_with_erlang_process/0,
         fun test_status_listing_of_a_process/0,
+        fun test_running_hooks/0,
+        fun test_failed_hooks/0,
         % Babysitter fun tests
         fun test_babysitter_config_actions/0
       ]
@@ -35,8 +37,9 @@ test_starting_one_process() ->
   ?assertCmdOutput(ShouldMatch, CommandArgString).
 
 test_exec_one_process() ->
-  {ok, Pid} = babysitter:bs_run("sleep 1.7", [{env, "TEST=true"}]),
+  {ok, Pid, Status} = babysitter:bs_run("sleep 1.7", [{env, "TEST=true"}]),
   CommandArgString = lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep |  wc -l | tr -d ' '", [Pid])),
+  ?assertEqual(Status, 0),
   ?assertCmdOutput("0\n", CommandArgString).
 
 test_starting_many_processes() ->
@@ -75,10 +78,23 @@ test_listing_processes() ->
 
 test_status_listing_of_a_process() ->
   {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("sleep 10.8", [{env, "HELLO=world"}]),
-  ?assertEqual({status, Pid, 0}, babysitter:status(Pid)),
+  ?assertEqual({ok, Pid, 0}, babysitter:status(Pid)),
   babysitter:kill_pid(Pid).
 
 test_babysitter_config_actions() ->
   {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("sleep 201.1", [{env, "NAME=ari"}]),
   ?assert(true == babysitter:running(Pid)),
   babysitter:kill_pid(Pid).
+
+test_running_hooks() ->
+  {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("sleep 201.2", [{env, "NAME=ari"}, {do_before, "echo 'hello world' > /tmp/test_running_hooks_file.tmp"}]),
+  ?assert(true == babysitter:running(Pid)),
+  ?assert(filelib:is_file("/tmp/test_running_hooks_file.tmp")),
+  file:delete("/tmp/test_running_hooks_file.tmp"),
+  babysitter:kill_pid(Pid).
+
+test_failed_hooks() ->
+  {error, State, Pid, _ExitStatus} = babysitter:bs_spawn_run("sleep 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}]),
+  ?assert(before == State),
+  ?assert(false == babysitter:running(Pid)).
+  

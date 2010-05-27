@@ -65,6 +65,21 @@ int pm_new_process(process_t **ptr)
   return 0;
 }
 
+process_return_t* pm_new_process_return()
+{
+  process_return_t *p = (process_return_t *)calloc(1, sizeof(process_return_t));
+  if (!p) {
+    perror("Could not allocated enough memory to make a new process return type\n");
+    return NULL;
+  }
+  p->pid = 0;
+  p->exit_status = 0;
+  p->stage = PRS_BEFORE;
+  p->output = NULL;
+  
+  return p;
+}
+
 /**
 * Check if the process is valid
 **/
@@ -72,6 +87,14 @@ int pm_process_valid(process_t **ptr)
 {
   process_t* p = *ptr;
   if (p->command == NULL) return -1;
+  return 0;
+}
+
+int pm_free_process_return(process_return_t *p)
+{
+  if (p->output) free(p->output);
+  
+  free(p);
   return 0;
 }
 
@@ -162,6 +185,7 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     running_script = 1;
     
     // Make a tempfile in the filename format
+    // printf("writing a tempfile: %s\n", filename);
     if ((fd = mkstemp(filename)) == -1 || (sfp = fdopen(fd, "w+")) == NULL) {
       if (fd != -1) {
         unlink(filename);
@@ -170,6 +194,7 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
       fprintf(stderr, "Could not open tempfile: %s\n", filename);
       return -1;
     }
+    
     size = strlen(command);
     // Print the command into the file
     if (fwrite(command, size, 1, sfp) == -1) {
@@ -250,9 +275,15 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   char **command_argv = {0};
   int command_argc = 0;
   int running_script = 0;
+  int countdown = 200;
   
   // If there is nothing here, don't run anything :)
   if (strlen(command) == 0) return 0;
+  
+  char* chomped_string = str_chomp(command);
+  char* safe_chomped_string = str_safe_quote(chomped_string);
+  if (expand_command((const char*)safe_chomped_string, &command_argc, &command_argv, &running_script)) ;
+  command_argv[command_argc] = 0;
   
   // Now actually RUN it!
   pid_t pid;
@@ -260,12 +291,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     pid = vfork();
   else
     pid = fork();
-  
-  char* chomped_string = str_chomp(command);
-  char* safe_chomped_string = str_safe_quote(chomped_string);
-  if (expand_command((const char*)safe_chomped_string, &command_argc, &command_argv, &running_script)) ;
-  command_argv[command_argc] = 0;
-  
+    
   switch (pid) {
   case -1: 
     return -1;
@@ -285,14 +311,17 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     // In parent process
     if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) 
       ;
-    if (running_script && should_wait) {
+    if (running_script) {
+      while (countdown > 0) {
+        if (kill(pid, 0) != 0) break;
+        usleep(100);
+        countdown--;
+      }
       struct stat buffer;
       if (stat(command_argv[0], &buffer) != 0) {
         printf("file doesn't exist when it should because: %s\n", strerror(errno));
-      } else {
-        usleep(5000); // Race-condition... figure out something better please!
-        if( remove( command_argv[0] ) != 0 ) perror( "Error deleting file" );
       }
+      if( unlink( command_argv[0] ) != 0 ) perror( "Error deleting file" );
     }
     // These are free'd later, anyway
     // if (chomped_string) free(chomped_string); 
@@ -320,42 +349,87 @@ int wait_for_pid(pid_t pid)
 }
 
 typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
-int run_hook(hook_t t, process_t *process)
+int run_hook(hook_t t, process_t *process, process_return_t *ret)
 {
-  pid_t pid = 0;
   if (t == BEFORE_HOOK) {
-    pid = pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env);
+    ret->stage = PRS_BEFORE;
+    ret->pid = pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   } else if (t == AFTER_HOOK) {
-    pid = pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
+    ret->stage = PRS_AFTER;
+    ret->pid = pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   }
-  return wait_for_pid(pid);
+  ret->exit_status = wait_for_pid(ret->pid);
+  if (ret->exit_status) strncpy(ret->output, strerror(errno), strlen(strerror(errno)));
+  return 0;
 }
 
-pid_t pm_run_and_spawn_process(process_t *process)
+process_return_t* pm_run_and_spawn_process(process_t *process)
 {
+  process_return_t* ret = pm_new_process_return();
+  if (ret == NULL) return NULL;
+  // new_process_return
   if (process->env) process->env[process->env_c] = NULL;
   
-  if (process->before) run_hook(BEFORE_HOOK, process);
+  // Run afterhook
+  if (process->before) {
+    run_hook(BEFORE_HOOK, process, ret);
+    if (ret->exit_status != 0) return ret;
+  }
+
+  ret->stage = PRS_COMMAND;
   pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
-  if (process->after) run_hook(AFTER_HOOK, process);
+  ret->exit_status = ret->pid = pid;
+  if (pid < 0) return ret;
   
+  // Run afterhook
+  if (process->after) {
+    run_hook(AFTER_HOOK, process, ret);
+    if (ret->exit_status != 0) return ret;
+  }
+
+  // Yay, we finished properly
+  ret->stage = PRS_OKAY;
   process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
-  ps->pid = pid;
+  ret->pid = ps->pid = pid;
   ps->transId = process->transId;
   HASH_ADD_INT(running_children, pid, ps);
   
-  return pid;
+  ret->exit_status = 0;
+  return ret;
 }
 
-pid_t pm_run_process(process_t *process)
-{  
+/**
+* Run the process
+**/
+process_return_t* pm_run_process(process_t *process)
+{
+  process_return_t* ret = pm_new_process_return();
+  if (ret == NULL) return NULL;
+  
   if (process->env) process->env[process->env_c] = NULL;
-    
-  if (process->before) run_hook(BEFORE_HOOK, process);
+  
+  // Run afterhook
+  if (process->before) {
+    run_hook(BEFORE_HOOK, process, ret);
+    if (ret->exit_status != 0) return ret;
+  }
+  
+  ret->stage = PRS_COMMAND;
   pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
-  if (wait_for_pid(pid) < 0) return -1;
-  if (process->after) run_hook(AFTER_HOOK, process);
-  return pid;
+  
+  ret->pid = pid;
+  ret->exit_status = wait_for_pid(pid);
+  if (ret->exit_status < 0) return ret;
+  
+  // Run afterhook
+  if (process->after) {
+    run_hook(AFTER_HOOK, process, ret);
+    if (ret->exit_status != 0) return ret;
+  }
+  
+  // Yay, we finished properly
+  ret->stage = PRS_OKAY;
+  return ret;
 }
 
 int pm_kill_process(process_t *process)

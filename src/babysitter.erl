@@ -167,8 +167,13 @@ handle_info({Port, {data, Bin}}, #state{port=Port, debug=Debug, trans = Trans} =
     {N, Reply} when N =/= 0 ->
       case get_transaction(Trans, N) of
         {true, {Pid,_} = From, Q, Link} ->
-          NewReply = add_monitor(Reply, Link, Pid, Debug),
-          gen_server:reply(From, NewReply);
+          case Reply of
+            {error,_Stage,_OsPid,_ExitStatus} = ErrorReply ->
+              gen_server:reply(From, ErrorReply);
+            _ ->
+              NewReply = add_monitor(Reply, Link, Pid, Debug),
+              gen_server:reply(From, NewReply)
+          end;
         {false, Q} ->
           ok
       end,
@@ -224,7 +229,7 @@ handle_port_call(T, From, #state{last_trans = LastTrans, trans = OldTransQ} = St
   end.
   
 %% Add a link for Pid to OsPid if requested.
-add_monitor({ok, OsPid}, true, Pid, Debug) when is_integer(OsPid) ->
+add_monitor({ok, OsPid, _Status}, true, Pid, Debug) when is_integer(OsPid) ->
   % This is a reply to a run/run_link command. The port program indicates
   % of creating a new OsPid process.
   % Spawn a light-weight process responsible for monitoring this OsPid

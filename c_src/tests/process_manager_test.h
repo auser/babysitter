@@ -70,17 +70,17 @@ char *test_pm_add_env() {
 char *test_starting_a_process()
 {
   process_t *test_process = NULL;
-  pid_t pid;
+  process_return_t *ret;
   pm_new_process(&test_process);
   
   mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "/bin/sleep 8"), "copy command failed");
-  pid = pm_run_and_spawn_process(test_process);
-  mu_assert(kill(pid, 0) == 0, "process did not start");
+  ret = pm_run_and_spawn_process(test_process);
+  mu_assert(kill(ret->pid, 0) == 0, "process did not start");
   
-  kill(pid, SIGKILL); // Kill it entirely
+  kill(ret->pid, SIGKILL); // Kill it entirely
   
   mu_assert(!pm_malloc_and_set_attribute(&test_process->command, ""), "copy command failed");
-  pid = pm_run_and_spawn_process(test_process);
+  ret = pm_run_and_spawn_process(test_process);
   
   pm_free_process(test_process); return 0;
 }
@@ -89,8 +89,8 @@ char *test_running_a_process_as_a_script()
 {
   process_t *test_process = NULL;
   pm_new_process(&test_process);
-  
   mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "#!/bin/bash\ntouch /tmp/blah"), "copy command failed");
+  
   pm_run_process(test_process);
   
   struct stat buffer;
@@ -106,21 +106,23 @@ char *test_killing_a_process()
 {
   process_t *test_process = NULL;
   process_t *test_process2 = NULL;
+  process_return_t *ret = NULL;
+  
   pm_new_process(&test_process);
   pm_new_process(&test_process2);
   
   mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "/bin/sleep 102"), "copy command failed");
-  pid_t pid = pm_run_and_spawn_process(test_process);
-  test_process2->pid = pid;
+  ret = pm_run_and_spawn_process(test_process);
+  test_process2->pid = ret->pid;
   pm_kill_process(test_process2);
   
-  mu_assert(kill(pid, 0) != 0, "process did not die");
+  mu_assert(kill(ret->pid, 0) != 0, "process did not die");
   
   // Assert a pid that doesn't belong isn't killed too
   test_process2->pid = 123045;
   mu_assert(-1 == pm_kill_process(test_process2), "killed a process that doesn't belong to us");
   
-  kill(pid, SIGKILL); // Kill it entirely
+  kill(ret->pid, SIGKILL); // Kill it entirely
   pm_free_process(test_process2);
   pm_free_process(test_process); return 0;
 }

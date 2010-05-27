@@ -23,6 +23,9 @@ int ei_pid_ok(int fd, int transId, pid_t pid);
 int ei_pid_status_term(int fd, int transId, pid_t pid, int status);
 int ei_send_pid_list(int fd, int transId, process_struct *hd, int size);
 int ei_pid_status(int fd, int transId, pid_t pid, int status);
+int ei_return_process_status(int fd, int transId, process_return_t *p);
+int ei_process_status(int fd, int transId, pid_t pid, int status, enum ProcessReturnState state);
+int ei_process_error_status(int fd, int transId, pid_t pid, int status, enum ProcessReturnState state);
 // Responses
 int ei_error(int fd, int transId, const char* fmt, ...);
 int ei_ok(int fd, int transId, const char* fmt, ...);

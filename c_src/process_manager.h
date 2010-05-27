@@ -21,6 +21,14 @@
 
 #include "print_helpers.h"
 
+enum ProcessReturnState {PRS_BEFORE,PRS_AFTER,PRS_COMMAND,PRS_OKAY};
+typedef struct _process_return_t_ {
+  int exit_status;  // The exit status at the stage
+  pid_t pid;        // The pid of the main process
+  char* output;     // Output of strerror
+  enum ProcessReturnState stage;        // At what stage the process exited
+} process_return_t;
+
 /* Types */
 typedef struct _process_t_ {
   char**  env;
@@ -48,12 +56,15 @@ typedef struct _process_struct_ {
 
 /* Helpers */
 int pm_new_process(process_t **ptr);
+process_return_t* pm_new_process_return();
 
 /* External exports */
 int pm_check_pid_status(pid_t pid);
 int pm_add_env(process_t **ptr, char *str);
 int pm_process_valid(process_t **ptr);
 int pm_free_process(process_t *p);
+int pm_free_process_return(process_return_t *p);
+
 int pm_malloc_and_set_attribute(char **ptr, char *value);
 void pm_set_can_jump();
 void pm_set_can_not_jump();
@@ -62,8 +73,8 @@ void pm_set_can_not_jump();
 int pm_setup(int read_handle, int write_handle);
 
 /* Mainly private exports */
-pid_t pm_run_and_spawn_process(process_t *process);
-pid_t pm_run_process(process_t *process);
+process_return_t* pm_run_and_spawn_process(process_t *process);
+process_return_t* pm_run_process(process_t *process);
 int pm_kill_process(process_t *process);
 
 pid_t pm_execute(int wait, const char* command, const char *cd, int nice, const char** env);

@@ -107,15 +107,15 @@ int terminate_all()
 **/
 int decode_and_run_erlang(unsigned char *buf, int len)
 {
-  process_t *process;
-  pid_t pid;
+  process_t *process = NULL;
+  process_return_t *ret = NULL;
   int err = 0;
   enum BabysitterActionT action = ei_decode_command_call_into_process((char *)buf, &process);
   
   switch (action) {
     case BS_RUN:
-      if ((pid = pm_run_and_spawn_process(process)) < 0) ei_error(write_handle, process->transId, "%d", (int)pid);
-      ei_pid_ok(write_handle, process->transId, pid);
+      ret = pm_run_and_spawn_process(process);
+      ei_return_process_status(write_handle, process->transId, ret);
     break;
     case BS_STATUS:
       ei_pid_status(write_handle, process->transId, process->pid, pm_check_pid_status(process->pid));
@@ -125,9 +125,8 @@ int decode_and_run_erlang(unsigned char *buf, int len)
       ei_pid_status_term(write_handle, process->transId, process->pid, kill(process->pid, 0));
     break;
     case BS_EXEC: {
-      pid_t pid;
-      if ((pid = pm_run_process(process)) < 0) ei_error(write_handle, process->transId, "%d", (int)pid);
-      ei_pid_ok(write_handle, process->transId, pid);
+      ret = pm_run_process(process);
+      ei_return_process_status(write_handle, process->transId, ret);
     }
     break;
     case BS_LIST: {
@@ -141,6 +140,7 @@ int decode_and_run_erlang(unsigned char *buf, int len)
   }  
   
   pm_free_process(process);
+  pm_free_process_return(ret);
   return 0;
 }
 
