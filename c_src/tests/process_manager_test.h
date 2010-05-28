@@ -73,7 +73,7 @@ char *test_starting_a_process()
   process_return_t *ret;
   pm_new_process(&test_process);
   
-  mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "/bin/sleep 8"), "copy command failed");
+  mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "env"), "copy command failed");
   ret = pm_run_and_spawn_process(test_process);
   mu_assert(kill(ret->pid, 0) == 0, "process did not start");
   
@@ -117,10 +117,6 @@ char *test_killing_a_process()
   pm_kill_process(test_process2);
   
   mu_assert(kill(ret->pid, 0) != 0, "process did not die");
-  
-  // Assert a pid that doesn't belong isn't killed too
-  test_process2->pid = 123045;
-  mu_assert(-1 == pm_kill_process(test_process2), "killed a process that doesn't belong to us");
   
   kill(ret->pid, SIGKILL); // Kill it entirely
   pm_free_process(test_process2);

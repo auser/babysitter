@@ -25,6 +25,7 @@ pid_t                   process_pid;
 extern int              dbg;
 int                     read_handle = 0;
 int                     write_handle = 1;
+extern char*            outputFile;
 
 int setup()
 {
@@ -64,6 +65,8 @@ int parse_the_command_line(int argc, const char** argv)
     } else if (!strncmp(argv[1], "--non-blocking", 14) || !strncmp(argv[1], "-b", 2)) {
       fcntl(read_handle,  F_SETFL, fcntl(read_handle,  F_GETFL) | O_NONBLOCK);
       fcntl(write_handle, F_SETFL, fcntl(write_handle, F_GETFL) | O_NONBLOCK);
+    } else if (!strncmp(argv[1], "--redirect_output", 17) || !strncmp(argv[1], "-o", 2)) {
+      outputFile = strdup(argv[2]); argc--; argv++;
     }
     argc--; argv++;
   }

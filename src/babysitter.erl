@@ -75,12 +75,12 @@ running(Pid) ->
 %% @end
 %% @{4:@private}
 %%-------------------------------------------------------------------
-bs_spawn_run(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}).
+bs_spawn_run(Command, Options) -> gen_server:call(?SERVER, {port, {run, Command, Options}}, infinity).
 % Give a maximum of 100 seconds to preform an action
-bs_run(Command, Options) -> gen_server:call(?SERVER, {port, {exec, Command, Options}}, 30000).
-kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}).
-status(Pid) -> gen_server:call(?SERVER, {port, {status, Pid}}).
-list() -> gen_server:call(?SERVER, {port, {list}}).
+bs_run(Command, Options) -> gen_server:call(?SERVER, {port, {exec, Command, Options}}, infinity).
+kill_pid(Pid) -> gen_server:call(?SERVER, {port, {kill, Pid}}, infinity).
+status(Pid) -> gen_server:call(?SERVER, {port, {status, Pid}}, infinity).
+list() -> gen_server:call(?SERVER, {port, {list}}, infinity).
   
 %%--------------------------------------------------------------------
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}

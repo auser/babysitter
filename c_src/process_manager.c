@@ -7,6 +7,7 @@ int                 pm_can_jump = 0;
 int                 terminated = 0;
 int                 signaled   = 0;     // indicates that SIGCHLD was signaled
 int                 dbg = 0;
+char*               outputFile = "/tmp/babysitter.log";
 
 int pm_check_pid_status(pid_t pid)
 {
@@ -239,7 +240,7 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
 
     // expand command name to full path
     full_filepath = find_binary(cmdname);
-
+    
     // build invocable command with args
     expanded_command = calloc(strlen(full_filepath) + strlen(command + prefix) + 1, sizeof(char));
     strcat(expanded_command, full_filepath); 
@@ -277,17 +278,20 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   int command_argc = 0;
   int running_script = 0;
   int countdown = 200;
+  int child_fd[2];
   
   // If there is nothing here, don't run anything :)
-  if (strlen(command) == 0) return 0;
+  if (strlen(command) == 0) return -1;
   
   char* chomped_string = str_chomp(command);
   char* safe_chomped_string = str_safe_quote(chomped_string);
   if (expand_command((const char*)safe_chomped_string, &command_argc, &command_argv, &running_script)) ;
   command_argv[command_argc] = 0;
-  
+      
   // Now actually RUN it!
   pid_t pid;
+  pipe(child_fd); // Create a pipe to the child (do we need this? I doubt it)
+  
   if (should_wait)
     pid = vfork();
   else
@@ -296,12 +300,21 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   switch (pid) {
   case -1: 
     return -1;
-  case 0: {
+  case 0: {    
     pm_setup_signal_handlers();
     if (cd != NULL && cd[0] != '\0')
       chdir(cd);
     else
       chdir("/tmp");
+    
+    // Open outputFile path
+    if ((child_fd[1] = open(outputFile, O_WRONLY|O_CREAT|O_TRUNC, 00644)) == -1) {
+      perror("output.txt");
+      exit(1);
+    }
+    
+    dup2(child_fd[1], 1);
+    dup2(child_fd[1], 2);
     
     if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
       printf("execve failed because: %s\n", strerror(errno));      
@@ -331,21 +344,21 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   }
 }
 
-int wait_for_pid(pid_t pid)
+int wait_for_pid(pid_t pid, int opts)
 {
   if (pid < 0) return pid;
-  if (kill(pid, 0) == 0) {
-    int childExitStatus;
-    waitpid(pid, &childExitStatus, 0);
-    // if( !WIFEXITED(childExitStatus) ){
-    // } else if (!WIFSIGNALED(childExitStatus)) {
-    // } else if (!WIFSTOPPED(childExitStatus)) {
-    // }
-    return childExitStatus;
+  int stat = 0;
+  int childExitStatus;
+  stat = waitpid(pid, &childExitStatus, opts);
+  if (stat == -1) {
+    perror("wait_for_pid");
+    return pid;
   } else {
-    printf("Something very bad happened with the hook\n");
-    return -1;
-  }  
+    if (WIFEXITED(childExitStatus))
+      return WEXITSTATUS(childExitStatus);
+    else
+      return 0; // We have not exited
+  }
 }
 
 typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
@@ -358,12 +371,15 @@ int run_hook(hook_t t, process_t *process, process_return_t *ret)
     ret->stage = PRS_AFTER;
     ret->pid = pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env);
   }
-  ret->exit_status = wait_for_pid(ret->pid);
-  if (errno) {
-    ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
-    strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+  // Check to make sure the hook executed properly
+  ret->exit_status = wait_for_pid(ret->pid, 0);
+  if (ret->exit_status) {
+    if (errno) {
+      ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
+      strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+    }
+    return -1;
   }
-  
   return 0;
 }
 
@@ -376,36 +392,38 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
   
   // Run afterhook
   if (process->before) {
-    run_hook(BEFORE_HOOK, process, ret);
-    if (ret->exit_status != 0) return ret;
+    if (run_hook(BEFORE_HOOK, process, ret)) return ret;
   }
 
   ret->stage = PRS_COMMAND;
-  pid_t pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
-  ret->pid = pid;
+  ret->pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
   
-  waitpid(pid, &ret->exit_status, WNOHANG);
   if (errno) {
     ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
     strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+  }
+  if (ret->pid < 0) {
     return ret;
   }
-  if (pid < 0) return ret;
+  
+  ret->exit_status = wait_for_pid(ret->pid, WNOHANG);
+  if (ret->exit_status) {
+    printf("command: %s pid: %d exit_status: %d - %s\n", process->command, ret->pid, ret->exit_status, ret->stderr);
+    return ret;
+  }
   
   // Run afterhook
   if (process->after) {
-    run_hook(AFTER_HOOK, process, ret);
-    if (ret->exit_status != 0) return ret;
+    if (run_hook(AFTER_HOOK, process, ret)) return ret;
   }
 
   // Yay, we finished properly
   ret->stage = PRS_OKAY;
   process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
-  ret->pid = ps->pid = pid;
+  ps->pid = ret->pid;
   ps->transId = process->transId;
   HASH_ADD_INT(running_children, pid, ps);
   
-  ret->exit_status = 0;
   return ret;
 }
 
@@ -421,26 +439,23 @@ process_return_t* pm_run_process(process_t *process)
   
   // Run afterhook
   if (process->before) {
-    run_hook(BEFORE_HOOK, process, ret);
-    if (ret->exit_status != 0) return ret;
+    if (run_hook(BEFORE_HOOK, process, ret)) return ret;
   }
   
   ret->stage = PRS_COMMAND;
   pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env);
   
   ret->pid = pid;
-  waitpid(pid, &ret->exit_status, WNOHANG);
+  ret->exit_status = wait_for_pid(pid, 0);
   if (errno) {
     ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
     strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
-    return ret;
   }
-  if (ret->exit_status) return ret;
+  if (ret->exit_status < 0) return ret;
   
   // Run afterhook
   if (process->after) {
-    run_hook(AFTER_HOOK, process, ret);
-    if (ret->exit_status != 0) return ret;
+    if (run_hook(AFTER_HOOK, process, ret)) return ret;
   }
   
   // Yay, we finished properly
@@ -455,23 +470,23 @@ int pm_kill_process(process_t *process)
   // Don't want to send a negative pid
   if (pid < 1) return -1;
     
-  process_struct *ps;
+  // process_struct *ps;
   
-  for( ps = running_children; ps != NULL; ps = ps->hh.next ) {
-    if (pid == ps->pid)
-      break;
-  }
+  // for( ps = running_children; ps != NULL; ps = ps->hh.next ) {
+  //   if (pid == ps->pid)
+  //     break;
+  // }
   // HASH_FIND_INT(running_children, (int)process->pid, ps);
   
-  if (ps) {
+  // if (ps) {
     int childExitStatus = -1;
     // Kill here
     kill(pid, SIGKILL);
     waitpid( pid, &childExitStatus, 0 );
     return 0;
-  } else {
-    return -1;
-  }
+  // } else {
+  //   return -1;
+  // }
 }
 
 int pm_check_children(void (*child_changed_status)(process_struct *ps), int isTerminated)
