@@ -451,7 +451,7 @@ process_return_t* pm_run_process(process_t *process)
     ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
     strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
   }
-  if (ret->exit_status < 0) return ret;
+  if (ret->exit_status) return ret;
   
   // Run afterhook
   if (process->after) {

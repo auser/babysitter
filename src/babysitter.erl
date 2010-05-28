@@ -46,7 +46,6 @@ run(AppType, Action, Opts) ->
   ConfigCommand = element(2, Config),
   % Certainly cannot run without a command
   DefaultCommand = element(2, element(2, babysitter_config:get(default, Action))),
-  erlang:display({default, DefaultCommand, ConfigCommand}),
   Command = case ConfigCommand of
     undefined -> DefaultCommand;
     [] -> DefaultCommand;
