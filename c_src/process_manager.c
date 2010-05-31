@@ -9,6 +9,9 @@ int                 signaled   = 0;     // indicates that SIGCHLD was signaled
 int                 dbg = 0;
 char*               outputFile = "/tmp/babysitter.log";
 
+static int safe_chdir(const char *);
+
+
 int pm_check_pid_status(pid_t pid)
 {
   if (pid < 1) return -1; // Illegal
@@ -290,8 +293,9 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
       
   // Now actually RUN it!
   pid_t pid;
-  pipe(child_fd); // Create a pipe to the child (do we need this? I doubt it)
-  
+  if (pipe(child_fd) < 0) // Create a pipe to the child (do we need this? I doubt it)
+    perror("pipe failed");
+
   if (should_wait)
     pid = vfork();
   else
@@ -303,9 +307,9 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   case 0: {    
     pm_setup_signal_handlers();
     if (cd != NULL && cd[0] != '\0')
-      chdir(cd);
+      safe_chdir(cd);
     else
-      chdir("/tmp");
+      safe_chdir("/tmp");
     
     // Open outputFile path
     if ((child_fd[1] = open(outputFile, O_WRONLY|O_CREAT|O_TRUNC, 00644)) == -1) {
@@ -603,4 +607,15 @@ int pm_malloc_and_set_attribute(char **ptr, char *value)
   obj[strlen(value)] = (char)'\0';
   *ptr = obj;
   return 0;
+}
+
+static int safe_chdir(const char *pathname)
+{
+  int res;
+  if ((res = chdir(pathname)) < 0) {
+    printf("chdir failed");
+    exit(-1);
+  }
+
+  return res;
 }
