@@ -94,7 +94,7 @@ test_running_hooks() ->
   babysitter:kill_pid(Pid).
 
 test_failed_hooks() ->
-  {error, State, Pid1, _ExitStatus, _StrError} = Rep = babysitter:bs_spawn_run("sleep 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}]),
+  {error, State, Pid1, _ExitStatus, _StrError} = babysitter:bs_spawn_run("sleep 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}]),
   ?assert(before_command == State),
   ?assert(false == babysitter:running(Pid1)),
   {error, State3, Pid3, _ExitStatus, _StrError} = babysitter:bs_run("sleep 1.1", [{env, "NAME=ari"}, {do_after, "omgwtfcommanddoesntexist goes here"}]),
