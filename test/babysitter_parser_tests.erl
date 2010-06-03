@@ -1,4 +1,4 @@
--module (babysitter_parser_test).
+-module (babysitter_parser_tests).
 -include_lib("eunit/include/eunit.hrl").
 
 setup() ->

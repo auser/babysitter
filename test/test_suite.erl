@@ -4,9 +4,9 @@
  
 all_test_() ->
   [
-    {module, babysitter_test},
-    {module, babysitter_parser_test},
-    {module, babysitter_list_utils_test},
-    {module, babysitter_config_test},
-    {module, babysitter_load_test}
+    {module, babysitter_tests},
+    {module, babysitter_parser_tests},
+    {module, babysitter_list_utils_tests},
+    {module, babysitter_config_tests},
+    {module, babysitter_load_tests}
   ].
