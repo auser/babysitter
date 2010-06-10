@@ -100,13 +100,16 @@ test_running_hooks() ->
   babysitter:kill_pid(Pid).
 
 test_failed_hooks() ->
-  {error, State, Pid1, _ExitStatus, _StrOut, _StrError} = babysitter:bs_spawn_run("test_bin 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH]),
+  {error, State, Pid1, _ExitStatus1, StrOut1, StrError1} = babysitter:bs_spawn_run("test_bin 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH]),
   ?assert(before_command == State),
+  ?assertEqual("No such file or directory", StrError1),
+  ?assertEqual("/bin/bash: omgwtfcommanddoesntexist: command not found\n", StrOut1),
   ?assert(false == babysitter:running(Pid1)),
-  {error, State3, Pid3, _ExitStatus, _StrOut, _StrError} = babysitter:bs_run("sleep 1.1", [{env, "NAME=ari"}, {do_after, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH]),
-  ?assert(after_command == State3),
+  {error, State2, Pid2, _ExitStatus2, _StrOut2, _StrError2} = babysitter:bs_run("test_bin 1.1", [{env, "NAME=ari"}, {do_after, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH]),
+  ?assert(after_command == State2),
+  ?assert(false == babysitter:running(Pid2)),
+  % % Test command output
+  {error, State3, Pid3, _ExitStatus3, _StrOut3, _StrError3} = babysitter:bs_run("thisdoesnt exist either", [{env, "NAME=ari"}, ?TEST_PATH]),
+  ?assert(command == State3),
   ?assert(false == babysitter:running(Pid3)),
-  % Test command output
-  {error, State2, Pid2, _ExitStatus, _StrOut, _StrError} = babysitter:bs_run("thisdoesnt exist either", [{env, "NAME=ari"}, ?TEST_PATH]),
-  ?assert(command == State2),
-  ?assert(false == babysitter:running(Pid2)).
+  passed.

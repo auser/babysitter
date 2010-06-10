@@ -62,7 +62,8 @@ const char *find_binary(const char *file, const char* path)
   if (!pm_abs_path(file)) return file;
   
   // Get the path
-  if (!(path = getenv("PATH"))) path = _PATH_DEFPATH;
+  if (!path)
+    if (!(path = getenv("PATH"))) path = _PATH_DEFPATH;
 	
   len = strlen(file);
   do {

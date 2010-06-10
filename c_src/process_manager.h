@@ -80,7 +80,7 @@ process_return_t* pm_run_and_spawn_process(process_t *process);
 process_return_t* pm_run_process(process_t *process);
 int pm_kill_process(process_t *process);
 
-pid_t pm_execute(int wait, const char* command, const char *cd, int nice, const char** env);
+pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, const char** env, int* stdout);
 int pm_check_children(void (*child_changed_status)(process_struct *ps), int isTerminated);
 int pm_check_pending_processes();
 int pm_next_loop(void (*child_changed_status)(process_struct *ps));
