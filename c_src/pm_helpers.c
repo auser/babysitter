@@ -48,10 +48,10 @@ char* str_safe_quote(const char *str)
   return res;
 }
 
-const char *find_binary(const char *file)
+const char *find_binary(const char *file, const char* path)
 {
   char buf[BUFFER_SZ];
-  const char *p, *path;
+  const char *p;
   int len = 0, lp;
   
   if (file[0] == '\0') {

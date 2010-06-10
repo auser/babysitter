@@ -13,9 +13,10 @@ char *test_pm_abs_path() {
 }
 
 char *test_find_binary() {
-  mu_assert(!strcmp(find_binary("/bin/bash"), "/bin/bash"), "/bin/bash was not an absolute path and could not be found");
-  mu_assert(!strcmp(find_binary("bash"), "/bin/bash"), "/bin/bash was not an absolute path and could not be found");
-  mu_assert(!strcmp(find_binary("made_up_binary"), "made_up_binary"), "made_up_binary was found?!? ");
+  const char *env = "/bin";
+  mu_assert(!strcmp(find_binary("/bin/bash", env), "/bin/bash"), "/bin/bash was not an absolute path and could not be found");
+  mu_assert(!strcmp(find_binary("bash", env), "/bin/bash"), "/bin/bash was not an absolute path and could not be found");
+  mu_assert(!strcmp(find_binary("made_up_binary", env), "made_up_binary"), "made_up_binary was found?!? ");
   return 0;
 }
 

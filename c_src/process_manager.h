@@ -25,7 +25,8 @@ enum ProcessReturnState {PRS_BEFORE,PRS_AFTER,PRS_COMMAND,PRS_OKAY};
 typedef struct _process_return_t_ {
   int exit_status;  // The exit status at the stage
   pid_t pid;        // The pid of the main process
-  char* stderr;
+  char* stdout;     // The stdout from the process
+  char* stderr;     // The stderr from the process
   enum ProcessReturnState stage;        // At what stage the process exited
 } process_return_t;
 
@@ -55,6 +56,8 @@ typedef struct _process_struct_ {
 } process_struct;
 
 /* Helpers */
+#define DUP2CLOSE(oldfd, newfd)	( dup2(oldfd, newfd), close(oldfd) )
+int remap_pipe_stdin_stdout(int rpipe, int wpipe);
 int pm_new_process(process_t **ptr);
 process_return_t* pm_new_process_return();
 
