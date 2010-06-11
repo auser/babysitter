@@ -27,6 +27,7 @@ clean:
 	cd c_src;make clean
 
 test: all
+	@(cd c_src; ./run_tests)
 	@mkdir -p tests_ebin
 	@cd test;erl -make
 	@erl -noshell -I ./include -pa ebin -pa tests_ebin -pa ebin -s test_suite test -s init stop

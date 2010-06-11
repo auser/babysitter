@@ -104,7 +104,6 @@ CFLAGS += $(INCLUDES)
 # Targets
 .PHONY: all
 all: $(ALL_OBJ) $(TARGET_LIBS_OBJ) build_tests build_executable
-	$(SILENCE)./run_tests
 
 build_tests:
 	$(SILENCE)echo "Building c_src tests"
