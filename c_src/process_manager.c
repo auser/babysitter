@@ -353,14 +353,13 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     close(STDIN_FILENO);
     // Replace the stdout/stderr with the child_write fd
     if (dup2(child_stdout, STDOUT_FILENO) < 0) {
-      close(child_stdout);
       perror("dup STDOUT_FILENO");
     }
     if (dup2(child_stderr, STDERR_FILENO) < 0) {
-      close(child_stdout);
       perror("dup STDERR_FILENO");
     }
-    // close(child_stderr);
+    close(child_stdout);
+    close(child_stderr);
     
     if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
       printf("execve failed because: %s\n", strerror(errno));      
