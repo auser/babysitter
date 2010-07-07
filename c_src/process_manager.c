@@ -308,7 +308,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   int command_argc = 0;
   int running_script = 0;
   int countdown = 200;
-  int child_fd[2];
+  // int child_fd[2];
   
   // If there is nothing here, don't run anything :)
   if (strlen(command) == 0) return -1;
@@ -320,13 +320,15 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
       
   // Now actually RUN it!
   pid_t pid;
-  if ( pipe(child_fd) < 0 ) {// Create a pipe to the child (do we need this? I doubt it)
-    perror("pipe failed");
-  }
+  // if ( pipe(child_fd) < 0 ) {// Create a pipe to the child (do we need this? I doubt it)
+  //   perror("pipe failed");
+  // }
   
   // Let's name it so we can get to it later
-  int child_stdout    = child_fd[0];
-  int child_stderr    = child_fd[1];
+  int child_dev_null;
+  if ((child_dev_null = open("/dev/null", O_WRONLY)) < 0) {
+    perror("child dev");
+  };
   
   if (should_wait)
     pid = vfork();
@@ -348,18 +350,19 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     //   perror("output.txt");
     //   exit(1);
     // }
+    // int child_stdin;
+    // if ()
     
     // Parent doesn't write anything to the child, so just close this right away
-    close(STDIN_FILENO);
+    // REDIRECT TO DEV/NULL
     // Replace the stdout/stderr with the child_write fd
-    if (dup2(child_stdout, STDOUT_FILENO) < 0) {
+    if (dup2(STDOUT_FILENO, child_dev_null) < 0) {
       perror("dup STDOUT_FILENO");
     }
-    if (dup2(child_stderr, STDERR_FILENO) < 0) {
+    if (dup2(STDERR_FILENO, child_dev_null) < 0) {
       perror("dup STDERR_FILENO");
     }
-    close(child_stdout);
-    close(child_stderr);
+    close(child_dev_null);
     
     if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
       printf("execve failed because: %s\n", strerror(errno));      
@@ -369,8 +372,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   default:
     // In parent process
     // set the stdout back
-    *stdout = child_stdout; // gets closed later
-    close(child_stderr); // Child write never gets used outside the child
+    close(child_dev_null); // Child write never gets used outside the child
     // close(child_stdout);
     
     if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) 
