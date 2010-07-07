@@ -8,9 +8,8 @@ int                 terminated = 0;
 int                 signaled   = 0;     // indicates that SIGCHLD was signaled
 int                 dbg = 0;
 char*               outputFile = "/tmp/babysitter.log";
-
+int file_des = -1;
 static int safe_chdir(const char *);
-
 
 char* read_from_pipe(int fd) {
   if (fd < 0) return NULL;
@@ -76,6 +75,7 @@ int pm_new_process(process_t **ptr)
   p->after = NULL;
   
   *ptr = p;
+  
   return 0;
 }
 
@@ -330,6 +330,9 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     perror("child dev");
   };
   
+  int child_stdout = (int)*stdout;
+  if (child_stdout < 0) child_stdout = child_dev_null;
+  
   if (should_wait)
     pid = vfork();
   else
@@ -351,18 +354,21 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     //   exit(1);
     // }
     // int child_stdin;
-    // if ()
     
+    if (dup2(STDIN_FILENO, child_dev_null) < 0) {
+      perror("dup, STDIN_FILENO");
+    }
     // Parent doesn't write anything to the child, so just close this right away
     // REDIRECT TO DEV/NULL
     // Replace the stdout/stderr with the child_write fd
-    if (dup2(STDOUT_FILENO, child_dev_null) < 0) {
+    if (dup2(STDOUT_FILENO, child_stdout) < 0) {
       perror("dup STDOUT_FILENO");
     }
-    if (dup2(STDERR_FILENO, child_dev_null) < 0) {
+    if (dup2(STDERR_FILENO, child_stdout) < 0) {
       perror("dup STDERR_FILENO");
     }
     close(child_dev_null);
+    close(child_stdout);
     
     if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
       printf("execve failed because: %s\n", strerror(errno));      
@@ -416,7 +422,7 @@ int wait_for_pid(pid_t pid, int opts)
 typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
 int run_hook(hook_t t, process_t *process, process_return_t *ret)
 {
-  int p = -1;
+  int p = file_des;
   if (t == BEFORE_HOOK) {
     ret->stage = PRS_BEFORE;
     ret->pid = pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env, &p);
@@ -451,7 +457,7 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
     if (run_hook(BEFORE_HOOK, process, ret)) return ret;
   }
   
-  int p = -1; // Pipe
+  int p = file_des; // Pipe
   ret->stage = PRS_COMMAND;
   ret->pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env, &p);
   
@@ -503,7 +509,7 @@ process_return_t* pm_run_process(process_t *process)
     if (run_hook(BEFORE_HOOK, process, ret)) return ret;
   }
   
-  int p = -1; // Pipe
+  int p = file_des; // Pipe
   
   ret->stage = PRS_COMMAND;
   pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env, &p);
