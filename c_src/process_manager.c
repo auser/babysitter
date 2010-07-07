@@ -368,7 +368,7 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
       perror("dup STDERR_FILENO");
     }
     close(child_dev_null);
-    close(child_stdout);
+    if (child_stdout != child_dev_null) close(child_stdout);
     
     if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
       printf("execve failed because: %s\n", strerror(errno));      
