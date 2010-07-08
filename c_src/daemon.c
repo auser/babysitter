@@ -32,7 +32,10 @@ int setup()
   run_as_user = getuid();
   process_pid = getpid();
   pm_setup(read_handle, write_handle);
-    
+  
+  setlogmask (LOG_UPTO (LOG_NOTICE));
+  openlog ("babysitter", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+  
   return 0;
 }
 
@@ -94,6 +97,7 @@ void setup_erl_daemon_signal_handlers()
 
 int terminate_all()
 {
+  closelog ();
   return 0;
 }
 

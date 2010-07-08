@@ -327,7 +327,8 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   // Let's name it so we can get to it later
   int child_dev_null;
   if ((child_dev_null = open("/dev/null", O_WRONLY)) < 0) {
-    perror("child dev");
+    syslog(LOG_ERR, "babysitter (fatal): Could not open /dev/null: errno: %d\n", errno);
+    exit(-1);
   };
   
   int child_stdout = (int)*stdout;
@@ -362,10 +363,12 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
     // REDIRECT TO DEV/NULL
     // Replace the stdout/stderr with the child_write fd
     if (dup2(STDOUT_FILENO, child_stdout) < 0) {
-      perror("dup STDOUT_FILENO");
+      syslog(LOG_ERR, "babysitter (fatal): Could not dup STDOUT_FILENO: errno: %d\n", errno);
+      exit(-1);
     }
     if (dup2(STDERR_FILENO, child_stdout) < 0) {
-      perror("dup STDERR_FILENO");
+      syslog(LOG_ERR, "babysitter (fatal): Could not dup STDERR_FILENO: errno: %d\n", errno);
+      exit(-1);
     }
     close(child_dev_null);
     if (child_stdout != child_dev_null) close(child_stdout);

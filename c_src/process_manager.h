@@ -14,6 +14,7 @@
 #include <sys/time.h>             // For timeval struct
 #include <sys/wait.h>             // For waitpid
 #include <time.h>                 // For time function
+#include <syslog.h>
 
 #include <setjmp.h>
 #include "uthash.h"
