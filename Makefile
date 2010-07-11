@@ -26,10 +26,10 @@ clean:
 	./rebar clean
 	cd c_src;make clean
 
-test: all
+test: all erl_test
 	@(cd c_src; ./run_tests)
 
-erl_test: test
+erl_test:
 	@mkdir -p tests_ebin
 	@cd test;erl -make
 	@erl -noshell -I ./include -pa ebin -pa tests_ebin -pa ebin -s test_suite test -s init stop

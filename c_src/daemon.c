@@ -25,7 +25,6 @@ pid_t                   process_pid;
 extern int              dbg;
 int                     read_handle = 0;
 int                     write_handle = 1;
-extern char*            outputFile;
 
 int setup()
 {
@@ -68,8 +67,6 @@ int parse_the_command_line(int argc, const char** argv)
     } else if (!strncmp(argv[1], "--non-blocking", 14) || !strncmp(argv[1], "-b", 2)) {
       fcntl(read_handle,  F_SETFL, fcntl(read_handle,  F_GETFL) | O_NONBLOCK);
       fcntl(write_handle, F_SETFL, fcntl(write_handle, F_GETFL) | O_NONBLOCK);
-    } else if (!strncmp(argv[1], "--redirect_output", 17) || !strncmp(argv[1], "-o", 2)) {
-      outputFile = strdup(argv[2]); argc--; argv++;
     }
     argc--; argv++;
   }
@@ -79,8 +76,19 @@ int parse_the_command_line(int argc, const char** argv)
 void erl_d_gotsignal(int signal)
 {
   debug(dbg, 1, "erlang daemon got a signal: %d\n", signal);
-  if (signal == SIGTERM || signal == SIGINT || signal == SIGPIPE)
-    terminated = 1;
+  switch(signal) {
+    case SIGHUP:
+      syslog(LOG_WARNING, "Received SIGHUP signal.");
+      break;
+    case SIGTERM:
+    case SIGINT:
+      syslog(LOG_WARNING, "Received SIGINT signal.");
+      terminated = 1;
+    break;
+    default:
+      syslog(LOG_WARNING, "Unhandled signal (%d) %s", strsignal(signal));
+    break;
+  }
 }
 
 void setup_erl_daemon_signal_handlers()
@@ -158,8 +166,12 @@ void child_changed_status(process_struct *ps)
   ei_pid_status_term(write_handle, ps->transId, ps->pid, ps->status);
 }
 
-int main (int argc, char const *argv[])
+int main(int argc, char const *argv[])
 {
+  // Setup the syslog
+  setlogmask(LOG_UPTO(LOG_INFO));
+  openlog("babysitter", LOG_CONS, LOG_USER);
+  
   // Consider making this multi-plexing
   fd_set rfds, wfds;      // temp file descriptor list for select()
   int rnum = 0, wnum = 0;
@@ -208,7 +220,6 @@ int main (int argc, char const *argv[])
       if (pm_check_children(child_changed_status, terminated) < 0) continue;
     } else if (num_ready_socks < 0) {
       perror("select"); 
-      exit(9);
     } else if ( FD_ISSET(read_handle, &rfds) ) {
       // Read from read_handle a command sent by Erlang
       unsigned char* buf;
@@ -223,6 +234,7 @@ int main (int argc, char const *argv[])
         // Something is afoot (failed)
       } else {
         // Everything went well
+        syslog(LOG_WARNING, "Something went wrong in babysitter.");
       }
       free(buf);
     } else {
