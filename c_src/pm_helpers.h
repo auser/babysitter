@@ -31,6 +31,10 @@
 #define PREFIX_LEN 8
 #endif
 
+#ifndef FATAL_ERROR
+#define FATAL_ERROR(m,x) { perror(m); exit(x); }
+#endif
+
 /* prototypes */
 int pm_abs_path(const char *path);
 const char *find_binary(const char *file, const char* path);
