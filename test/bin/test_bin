@@ -1,4 +1,9 @@
 #!/bin/sh
 
+if [ "$1" -eq "-1" ]; then
+  echo "BROKEN" >&2
+  exit 255
+fi
+
 echo "Testing from bin"
 sleep $1

@@ -16,7 +16,7 @@ teardown(_X) ->
   ok.
 
 starting_test_() ->
-  {spawn,
+  {inorder,
     {setup,
       fun setup/0,
       fun teardown/1,
@@ -24,6 +24,7 @@ starting_test_() ->
         fun test_listing_processes/0,
         fun test_starting_one_process/0,
         fun test_exec_one_process/0,
+        fun test_stdout_stderr_redirection/0,
         fun test_starting_many_processes/0,
         fun test_killing_a_process/0,
         fun test_killing_a_process_with_erlang_process/0,
@@ -37,10 +38,11 @@ starting_test_() ->
   }.
 
 test_starting_one_process() ->
-  {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 2.1", [{env, "HELLO=world"}, ?TEST_PATH]),
+  {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 1.1", [{env, "HELLO=world"}, ?TEST_PATH]),
   CommandArgString = lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep |awk '{print $2}'", [Pid])),
   ShouldMatch = lists:flatten([erlang:integer_to_list(Pid), "\n"]),
-  ?assertCmdOutput(ShouldMatch, CommandArgString).
+  ?assertCmdOutput(ShouldMatch, CommandArgString),
+  kill_all_started_processes([Pid]).
 
 test_exec_one_process() ->
   {ok, Pid, Status} = babysitter:bs_run("test_bin 1.7", [{env, "TEST=2.3"}, ?TEST_PATH]),
@@ -58,10 +60,10 @@ test_starting_many_processes() ->
   ?assertEqual(Int, 50).
 
 test_killing_a_process() ->
-  {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 2.6", [{env, "NAME=ari"}, ?TEST_PATH]),
+  {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 1.6", [{env, "NAME=ari"}, ?TEST_PATH]),
   {exit_status, Pid, _Status} = babysitter:kill_pid(Pid),
   CommandArgString = lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep | wc -l | tr -d ' '", [Pid])),
-  timer:sleep(500),
+  timer:sleep(900),
   O = ?cmd(CommandArgString),
   {Int, _} = string:to_integer(O),
   ?assertEqual(0, Int).
@@ -100,10 +102,11 @@ test_running_hooks() ->
   babysitter:kill_pid(Pid).
 
 test_failed_hooks() ->
-  {error, State, Pid1, _ExitStatus1, StrOut1, StrError1} = babysitter:bs_spawn_run("test_bin 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH]),
+  StdErrFile = "/tmp/test_failed_hooks.err",
+  {error, State, Pid1, _ExitStatus1, StrOut1, StrError1} = babysitter:bs_spawn_run("test_bin 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH, {stderr, StdErrFile}]),
   ?assert(before_command == State),
-  ?assertEqual("No such file or directory", StrError1),
-  ?assertEqual("/bin/bash: omgwtfcommanddoesntexist: command not found\n", StrOut1),
+  ?assertEqual("No such file or directory", StrOut1),
+  ?assertEqual("/bin/bash: omgwtfcommanddoesntexist: command not found\n", StrError1),
   ?assert(false == babysitter:running(Pid1)),
   {error, State2, Pid2, _ExitStatus2, _StrOut2, _StrError2} = babysitter:bs_run("test_bin 1.1", [{env, "NAME=ari"}, {do_after, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH]),
   ?assert(after_command == State2),
@@ -112,4 +115,34 @@ test_failed_hooks() ->
   {error, State3, Pid3, _ExitStatus3, _StrOut3, _StrError3} = babysitter:bs_run("thisdoesnt exist either", [{env, "NAME=ari"}, ?TEST_PATH]),
   ?assert(command == State3),
   ?assert(false == babysitter:running(Pid3)),
+  file:delete(StdErrFile),
   passed.
+
+test_stdout_stderr_redirection() ->
+  StdFile = "/tmp/test_bin.out",
+  StdErr  = "/tmp/test_bin.err",
+  delete_file([StdFile, StdErr]),
+  {ok, _Pid1, ExitStatus1} = babysitter:bs_run("test_bin 2.2", [{env, "NAME=ari"}, ?TEST_PATH, {stdout, StdFile}]),
+  ?assert(ExitStatus1 =:= 0),
+  % Confirm the stdout is put out right
+  {ok, Bin} = file:read_file(StdFile),
+  StdoutList = binary_to_list(Bin),
+  ?assert(StdoutList =:= "Testing from bin\n"),
+  % Do stderr too
+  babysitter:bs_run("test_bin -1", [{env, "NAME=ari"}, ?TEST_PATH, {stderr, StdErr}]),
+  {ok, Bin2} = file:read_file(StdErr),
+  StderrList = binary_to_list(Bin2),
+  ?assert(StderrList =:= "BROKEN\n"),
+  passed.
+
+delete_file([]) -> ok;
+delete_file([File|Rest]) ->
+  case filelib:is_file(File) of
+    true -> file:delete(File);
+    false -> ok
+  end,
+  delete_file(Rest).
+
+kill_all_started_processes([]) -> ok;
+kill_all_started_processes([_Pid|Rest]) ->
+  kill_all_started_processes(Rest).
