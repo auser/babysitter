@@ -7,8 +7,6 @@ int                 pm_can_jump = 0;
 int                 terminated = 0;
 int                 signaled   = 0;     // indicates that SIGCHLD was signaled
 int                 dbg = 0;
-char*               outputFile = "/tmp/babysitter.log";
-int file_des = -1;
 static int safe_chdir(const char *);
 
 char* read_from_pipe(int fd) {
@@ -137,10 +135,16 @@ void pm_gotsignal(int signal)
 { 
   switch(signal) {
     case SIGHUP:
+      syslog(LOG_WARNING, "Received SIGHUP signal.");
       break;
     case SIGTERM:
+      syslog(LOG_WARNING, "Received SIGTERM signal.");
+    break;
     case SIGINT:
+      syslog(LOG_WARNING, "Received SIGINT signal.");
+    break;
     default:
+      syslog(LOG_WARNING, "Unhandled signal (%d) %s", strsignal(signal));
     break;
   }
 }
@@ -155,8 +159,9 @@ void pm_gotsigchild(int signal, siginfo_t* si, void* context)
 /**
 * Setup signal handlers for the process
 **/
-void pm_setup_signal_handlers()
+void pm_setup_child()
 {
+  // Set signal handlers first
   struct sigaction sact, sterm;
   sterm.sa_handler = pm_gotsignal;
   sigemptyset(&sterm.sa_mask);
@@ -172,6 +177,9 @@ void pm_setup_signal_handlers()
   sigemptyset(&sact.sa_mask);
   sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
   sigaction(SIGCHLD, &sact, NULL);
+  
+  // Change the file mode mask
+  umask(0);
 }
 
 int pm_setup(int read_handle, int write_handle)
@@ -184,6 +192,27 @@ int pm_setup(int read_handle, int write_handle)
   setmode(write_handle, O_BINARY);
 #endif
   return 0;
+}
+
+char* read_from_file(const char *filename) {
+  FILE *stream;
+  char ch;
+  int cidx = 0;
+  char line[MAX_BUFFER_SZ];
+  char *ret = NULL;
+  
+  if ((stream = fopen(filename, "r")) == NULL)
+    return NULL;
+  
+  while( ((ch = getc(stream)) != EOF) && cidx < MAX_BUFFER_SZ)
+    line[cidx++] = ch;
+  line[cidx] = '\0';
+  
+  fclose( stream );
+  
+  ret = (char*)calloc(1, sizeof(char)*strlen(line));
+  strncpy(ret, line, strlen(line));
+  return ret;
 }
 
 int expand_command(const char* command, int* argc, char ***argv, int *using_a_script, const char** env)
@@ -301,8 +330,9 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
 * @output
     pid_t pid - output pid of the new process
 **/
-pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, const char** env, int* stdout)
-{
+pid_t pm_execute(
+  int should_wait, const char* command, const char *cd, int nice, const char** env, const char* stdout, const char *stderr
+) {
   // Setup execution
   char **command_argv = {0};
   int command_argc = 0;
@@ -323,17 +353,12 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   // if ( pipe(child_fd) < 0 ) {// Create a pipe to the child (do we need this? I doubt it)
   //   perror("pipe failed");
   // }
-  
-  // Let's name it so we can get to it later
+    // Let's name it so we can get to it later
   int child_dev_null;
   if ((child_dev_null = open("/dev/null", O_WRONLY)) < 0) {
     syslog(LOG_ERR, "babysitter (fatal): Could not open /dev/null: errno: %d\n", errno);
-    exit(-1);
   };
-  
-  int child_stdout = (int)*stdout;
-  if (child_stdout < 0) child_stdout = child_dev_null;
-  
+    
   if (should_wait)
     pid = vfork();
   else
@@ -342,39 +367,46 @@ pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice,
   switch (pid) {
   case -1: 
     return -1;
-  case 0: {    
-    pm_setup_signal_handlers();
+  case 0: {
+    // Child process
+    pm_setup_child();
+    
     if (cd != NULL && cd[0] != '\0')
       safe_chdir(cd);
     else
       safe_chdir("/tmp");
         
-    // Open outputFile path
-    // if ((child_stdout = open(outputFile, O_WRONLY|O_CREAT|O_TRUNC, 00644)) == -1) {
-    //   perror("output.txt");
-    //   exit(1);
-    // }
-    // int child_stdin;
+    int child_stdout, child_stderr;
+    // Set everything to dev/null first
+    child_stdout = child_stderr = child_dev_null;
     
-    if (dup2(STDIN_FILENO, child_dev_null) < 0) {
-      perror("dup, STDIN_FILENO");
-    }
+    // If we've passed in a stdout filename, then open it
+    if(stdout)
+      if ((child_stdout = open(stdout, O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0) {
+        perror("child stdout");
+        child_stdout = child_dev_null;
+      }
+    // If we've been passed a stderr filename, then open that
+    if(stderr)
+      if ((child_stderr = open(stderr, O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0) {
+        perror("child stderr");
+        child_stderr = child_dev_null;
+      }
+    
     // Parent doesn't write anything to the child, so just close this right away
     // REDIRECT TO DEV/NULL
     // Replace the stdout/stderr with the child_write fd
-    if (dup2(STDOUT_FILENO, child_stdout) < 0) {
-      syslog(LOG_ERR, "babysitter (fatal): Could not dup STDOUT_FILENO: errno: %d\n", errno);
-      exit(-1);
-    }
-    if (dup2(STDERR_FILENO, child_stdout) < 0) {
-      syslog(LOG_ERR, "babysitter (fatal): Could not dup STDERR_FILENO: errno: %d\n", errno);
-      exit(-1);
-    }
-    close(child_dev_null);
+    if (dup2(child_stdout, STDOUT_FILENO) < 0)
+      FATAL_ERROR("could not dup STDOUT_FILENO", -1);
+      
+    if (dup2(child_stderr, STDERR_FILENO) < 0) 
+      FATAL_ERROR("could not dup STDERR_FILENO", -1);
+
     if (child_stdout != child_dev_null) close(child_stdout);
+    if (child_stderr != child_dev_null) close(child_stderr);
     
     if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
-      printf("execve failed because: %s\n", strerror(errno));      
+      perror("execve");
       exit(-1);
     }
   }
@@ -425,26 +457,33 @@ int wait_for_pid(pid_t pid, int opts)
 typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
 int run_hook(hook_t t, process_t *process, process_return_t *ret)
 {
-  int p = file_des;
   if (t == BEFORE_HOOK) {
     ret->stage = PRS_BEFORE;
-    ret->pid = pm_execute(1, (const char*)process->before, (const char*)process->cd, (int)process->nice, (const char**)process->env, &p);
+    ret->pid = pm_execute(1,  (const char*)process->before, 
+                              (const char*)process->cd, 
+                              (int)process->nice, 
+                              (const char**)process->env, (const char*)process->stdout, (const char*)process->stderr);
   } else if (t == AFTER_HOOK) {
     ret->stage = PRS_AFTER;
-    ret->pid = pm_execute(1, (const char*)process->after, (const char*)process->cd, (int)process->nice, (const char**)process->env, &p);
+    ret->pid = pm_execute(1,  (const char*)process->after, 
+                              (const char*)process->cd, 
+                              (int)process->nice, 
+                              (const char**)process->env, (const char*)process->stdout, (const char*)process->stderr);
   }
   // Check to make sure the hook executed properly
   ret->exit_status = wait_for_pid(ret->pid, 0);
   if (ret->exit_status) {
     if (errno) {
-      ret->stdout = read_from_pipe(p);
-      close(p);
-      ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
-      strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+      if (process->stdout) ret->stdout = read_from_file((const char*)process->stdout);
+
+      if (process->stderr) ret->stderr = read_from_file((const char*)process->stderr);
+      else {
+        ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
+        strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+      }
     }
     return -1;
   }
-  close(p);
   return 0;
 }
 
@@ -460,18 +499,23 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
     if (run_hook(BEFORE_HOOK, process, ret)) return ret;
   }
   
-  int p = file_des; // Pipe
   ret->stage = PRS_COMMAND;
-  ret->pid = pm_execute(0, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env, &p);
+  ret->pid = pm_execute(0,  (const char*)process->command, 
+                            (const char*)process->cd, 
+                            (int)process->nice, 
+                            (const char**)process->env, (const char*)process->stdout, (const char*)process->stderr);
+                          
   
   if (errno) {
-    ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
-    strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+    if (process->stdout) ret->stdout = read_from_file((const char*)process->stdout);
     
-    ret->stdout = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
-    strncpy(ret->stdout, strerror(errno), strlen(strerror(errno)));
+    if (process->stderr) ret->stderr = read_from_file((const char*)process->stderr);
+    else {
+      ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
+      strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+    }
   }
-  close(p);
+  
   if (ret->pid < 0) {
     return ret;
   }
@@ -511,22 +555,25 @@ process_return_t* pm_run_process(process_t *process)
   if (process->before) {
     if (run_hook(BEFORE_HOOK, process, ret)) return ret;
   }
-  
-  int p = file_des; // Pipe
-  
+    
   ret->stage = PRS_COMMAND;
-  pid_t pid = pm_execute(1, (const char*)process->command, process->cd, (int)process->nice, (const char**)process->env, &p);
+  pid_t pid = pm_execute(1,   (const char*)process->command, 
+                              (const char*)process->cd, 
+                              (int)process->nice, 
+                              (const char**)process->env, (const char*)process->stdout, (const char*)process->stderr);
   
   ret->pid = pid;
   ret->exit_status = wait_for_pid(pid, 0);
   
   if (ret->exit_status) {
     if (errno) {
-      ret->stdout = read_from_pipe(p);
-      close(p);
-      
-      ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
-      strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+      if (process->stdout) ret->stdout = read_from_file((const char*)process->stdout);
+
+      if (process->stderr) ret->stderr = read_from_file((const char*)process->stderr);
+      else {
+        ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
+        strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
+      }
     }
     return ret;
   }
@@ -687,8 +734,7 @@ static int safe_chdir(const char *pathname)
 {
   int res;
   if ((res = chdir(pathname)) < 0) {
-    printf("chdir failed");
-    exit(-1);
+    perror("chdir failed");
   }
 
   return res;

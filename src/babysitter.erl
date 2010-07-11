@@ -314,6 +314,8 @@ build_exec_opts([{env, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{nice, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{do_before, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 build_exec_opts([{do_after, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
+build_exec_opts([{stdout, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
+build_exec_opts([{stderr, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 % Get these back in? 
 % build_exec_opts([{stdout, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
 % build_exec_opts([{stderr, _V}=T|Rest], Acc) -> build_exec_opts(Rest, [T|Acc]);
