@@ -33,5 +33,6 @@ int ei_read(int fd, unsigned char** bufr);
 int write_cmd(int fd, ei_x_buff *buff);
 int read_exact(int fd, unsigned char *buf, int len);
 int write_exact(int fd, unsigned char *buf, int len);
+int write_str_to_result(ei_x_buff *result, char *str, char *else_str);
 
 #endif

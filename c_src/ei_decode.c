@@ -68,7 +68,7 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
       // The second element of the tuple is a list of options
       if (ei_decode_list_header(buf, &index, &size) < 0) return err_code--;
 
-      enum OptionT            { CD,   ENV,   NICE,  DO_BEFORE, DO_AFTER,     STDOUT,    STDERR } opt;
+      enum OptionT            { CD,   ENV,   NICE,  DO_BEFORE,    DO_AFTER,   T_STDOUT, T_STDERR } opt;
       const char* options[] = {"cd", "env", "nice", "do_before", "do_after", "stdout", "stderr", NULL};
 
       for (i = 0; i < size; i++) {
@@ -81,8 +81,8 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
           case CD:
           case DO_BEFORE:
           case DO_AFTER:
-          case STDOUT:
-          case STDERR:
+          case T_STDOUT:
+          case T_STDERR:
           case ENV: {
             int size;
             ei_get_type(buf, &index, &type, &size); 
@@ -104,9 +104,9 @@ enum BabysitterActionT ei_decode_command_call_into_process(char *buf, process_t 
                 pm_malloc_and_set_attribute(&process->before, value);
               else if (opt == DO_AFTER)
                 pm_malloc_and_set_attribute(&process->after, value);
-              else if (opt == STDOUT)
+              else if (opt == T_STDOUT)
                 pm_malloc_and_set_attribute(&process->stdout, value);
-              else if (opt == STDERR)
+              else if (opt == T_STDERR)
                 pm_malloc_and_set_attribute(&process->stderr, value);
             }
             free(value);
@@ -288,8 +288,10 @@ int ei_process_error_status(int fd, int transId, pid_t pid, int status, enum Pro
   // Encode pid
   if (ei_x_encode_long(&result, (int)pid)) return -5;
   if (ei_x_encode_long(&result, (int)status)) return -5;
-  if (ei_x_encode_string_len(&result, out, strlen(out))) return -6;
-  if (ei_x_encode_string_len(&result, err, strlen(err))) return -6;
+  
+  write_str_to_result(&result, out, strerror(errno));
+  write_str_to_result(&result, err, strerror(errno));
+
   if (write_cmd(fd, &result) < 0) {
     return -5;
   }
@@ -373,4 +375,14 @@ int write_exact(int fd, unsigned char *buf, int len)
   } while (wrote<len);
 
   return len;
+}
+
+int write_str_to_result(ei_x_buff *result, char *str, char *else_str)
+{
+  if (str) {
+    if (ei_x_encode_string_len(result, str, strlen(str))) return -1;
+  } else {
+    if (ei_x_encode_string_len(result, else_str, strlen(else_str))) return -1;
+  }
+  return 0;
 }
