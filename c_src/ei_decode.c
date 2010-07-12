@@ -289,7 +289,7 @@ int ei_process_error_status(int fd, int transId, pid_t pid, int status, enum Pro
   if (ei_x_encode_long(&result, (int)pid)) return -5;
   if (ei_x_encode_long(&result, (int)status)) return -5;
   
-  write_str_to_result(&result, out, strerror(errno));
+  write_str_to_result(&result, out, "");
   write_str_to_result(&result, err, strerror(errno));
 
   if (write_cmd(fd, &result) < 0) {

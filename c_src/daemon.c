@@ -185,7 +185,7 @@ int main(int argc, char const *argv[])
   struct timeval m_tv;
   m_tv.tv_usec = 0; 
   m_tv.tv_sec = 5;
-    
+  
   /* Do stuff */
   while (!terminated) {    
     debug(dbg, 4, "preparing next loop...\n");

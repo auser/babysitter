@@ -26,7 +26,9 @@ clean:
 	./rebar clean
 	cd c_src;make clean
 
-test: all erl_test
+test: all erl_test c_test
+
+c_test:
 	@(cd c_src; ./run_tests)
 
 erl_test:
