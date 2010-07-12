@@ -29,6 +29,7 @@ starting_test_() ->
         fun test_stopping_a_process/0,
         fun test_starting_many_processes/0,
         fun test_killing_a_process/0,
+        fun test_killing_a_background_process/0,
         fun test_killing_a_process_with_erlang_process/0,
         fun test_status_listing_of_a_process/0,
         fun test_running_hooks/0,
@@ -83,7 +84,17 @@ test_killing_a_process() ->
   O = ?cmd(CommandArgString),
   {Int, _} = string:to_integer(O),
   ?assertEqual(0, Int).
-  
+
+test_killing_a_background_process() ->
+  {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 100.1 &", [{env, "NAME=ari"}, ?TEST_PATH]),
+  {exit_status, Pid, _Status} = babysitter:kill_pid(Pid),
+  CommandArgString = lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep | wc -l | tr -d ' '", [Pid])),
+  timer:sleep(1000),
+  O = ?cmd(CommandArgString),
+  {Int, _} = string:to_integer(O),
+  ?assertEqual(0, Int),
+  passed.  
+
 test_killing_a_process_with_erlang_process() ->
   {ok, ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 201.1", [{env, "NAME=ari"}, ?TEST_PATH]),
   ErlProcess ! {stop},

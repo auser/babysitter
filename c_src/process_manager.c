@@ -137,8 +137,10 @@ void pm_gotsignal(int signal)
     case SIGHUP:
       syslog(LOG_WARNING, "Received SIGHUP signal.");
       break;
+    case SIGKILL:
     case SIGTERM:
       syslog(LOG_WARNING, "Received SIGTERM signal.");
+      exit(0);
     break;
     case SIGINT:
       syslog(LOG_WARNING, "Received SIGINT signal.");
@@ -369,7 +371,7 @@ pid_t pm_execute(
     syslog(LOG_ERR, "babysitter (fatal): Could not open debug.log: errno: %d\n", errno);
   };
 #else
-  if ((child_dev_null = open("/dev/null", O_WRONLY)) < 0) {
+  if ((child_dev_null = open("/dev/null", O_RDWR)) < 0) {
     syslog(LOG_ERR, "babysitter (fatal): Could not open /dev/null: errno: %d\n", errno);
   };
 #endif
