@@ -8,6 +8,7 @@
   end()).
 
 setup() ->
+  % application:start(sasl),
   babysitter:start_link([]),
   ok.
   
@@ -52,7 +53,6 @@ test_exec_one_process() ->
   ?assertCmdOutput("0\n", CommandArgString).
 
 test_stopping_a_process() ->
-  erlang:display({test_stopping_a_process}),
   {ok, ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 40.6", [{env, "NAME=ari"}, ?TEST_PATH]),
   ?assertCmdOutput(
     "1\n", 
@@ -121,7 +121,7 @@ test_failed_hooks() ->
   StdErrFile = "/tmp/test_failed_hooks.err",
   {error, State, Pid1, _ExitStatus1, StrOut1, StrError1} = babysitter:bs_spawn_run("test_bin 201.3", [{env, "NAME=ari"}, {do_before, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH, {stderr, StdErrFile}]),
   ?assert(before_command == State),
-  ?assertEqual("No such file or directory", StrOut1),
+  ?assertEqual("", StrOut1),
   ?assertEqual("/bin/bash: omgwtfcommanddoesntexist: command not found\n", StrError1),
   ?assert(false == babysitter:running(Pid1)),
   {error, State2, Pid2, _ExitStatus2, _StrOut2, _StrError2} = babysitter:bs_run("test_bin 1.1", [{env, "NAME=ari"}, {do_after, "omgwtfcommanddoesntexist goes here"}, ?TEST_PATH]),

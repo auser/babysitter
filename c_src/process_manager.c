@@ -168,6 +168,7 @@ void pm_setup_child()
   sigaddset(&sterm.sa_mask, SIGCHLD);
   sterm.sa_flags = 0;
   sigaction(SIGINT,  &sterm, NULL);
+  sigaction(SIGKILL,  &sterm, NULL);
   sigaction(SIGTERM, &sterm, NULL);
   sigaction(SIGHUP,  &sterm, NULL);
   sigaction(SIGPIPE, &sterm, NULL);
@@ -331,14 +332,13 @@ int expand_command(const char* command, int* argc, char ***argv, int *using_a_sc
     pid_t pid - output pid of the new process
 **/
 pid_t pm_execute(
-  int should_wait, const char* command, const char *cd, int nice, const char** env, const char* stdout, const char *stderr
+  int should_wait, const char* command, const char *cd, int nice, const char** env, int *child_stdin, const char* p_stdout, const char *p_stderr
 ) {
   // Setup execution
   char **command_argv = {0};
   int command_argc = 0;
   int running_script = 0;
   int countdown = 200;
-  // int child_fd[2];
   
   // If there is nothing here, don't run anything :)
   if (strlen(command) == 0) return -1;
@@ -350,14 +350,29 @@ pid_t pm_execute(
       
   // Now actually RUN it!
   pid_t pid;
-  // if ( pipe(child_fd) < 0 ) {// Create a pipe to the child (do we need this? I doubt it)
-  //   perror("pipe failed");
-  // }
+  
+#if USE_PIPES
+
+  int child_fd[2];
+  if ( pipe(child_fd) < 0 ) {// Create a pipe to the child (do we need this? I doubt it)
+    perror("pipe failed");
+  }
+  // Setup the stdin so the parent can communicate!
+  (*child_stdin) = child_fd[0];
+#endif
+
     // Let's name it so we can get to it later
   int child_dev_null;
+  
+#if DEBUG
+  if ((child_dev_null = open("debug.log", O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0) {
+    syslog(LOG_ERR, "babysitter (fatal): Could not open debug.log: errno: %d\n", errno);
+  };
+#else
   if ((child_dev_null = open("/dev/null", O_WRONLY)) < 0) {
     syslog(LOG_ERR, "babysitter (fatal): Could not open /dev/null: errno: %d\n", errno);
   };
+#endif
     
   if (should_wait)
     pid = vfork();
@@ -381,14 +396,14 @@ pid_t pm_execute(
     child_stdout = child_stderr = child_dev_null;
     
     // If we've passed in a stdout filename, then open it
-    if(stdout)
-      if ((child_stdout = open(stdout, O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0) {
+    if(p_stdout)
+      if ((child_stdout = open(p_stdout, O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0) {
         perror("child stdout");
         child_stdout = child_dev_null;
       }
     // If we've been passed a stderr filename, then open that
-    if(stderr)
-      if ((child_stderr = open(stderr, O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0) {
+    if(p_stderr)
+      if ((child_stderr = open(p_stderr, O_WRONLY|O_CREAT|O_TRUNC,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0) {
         perror("child stderr");
         child_stderr = child_dev_null;
       }
@@ -396,15 +411,21 @@ pid_t pm_execute(
     // Parent doesn't write anything to the child, so just close this right away
     // REDIRECT TO DEV/NULL
     // Replace the stdout/stderr with the child_write fd
-    if (dup2(child_stdout, STDOUT_FILENO) < 0)
-      FATAL_ERROR("could not dup STDOUT_FILENO", -1);
-      
-    if (dup2(child_stderr, STDERR_FILENO) < 0) 
-      FATAL_ERROR("could not dup STDERR_FILENO", -1);
+#if USE_PIPES
+    if (dup2(child_fd[0], STDIN_FILENO) < 0)       FATAL_ERROR("could not dup STDIN_FILENO", -1);
+    close(child_fd[1]); // We are using a different stdout
+#endif
+
+#if DEBUG
+#else
+    // Setup the different stdout/stderr
+    if (dup2(child_stdout, STDOUT_FILENO) < 0)  FATAL_ERROR("could not dup STDOUT_FILENO", -1);
+    if (dup2(child_stderr, STDERR_FILENO) < 0)  FATAL_ERROR("could not dup STDERR_FILENO", -1);
 
     if (child_stdout != child_dev_null) close(child_stdout);
     if (child_stderr != child_dev_null) close(child_stderr);
-    
+#endif
+
     if (execve((const char*)command_argv[0], command_argv, (char* const*) env) < 0) {
       perror("execve");
       exit(-1);
@@ -414,7 +435,13 @@ pid_t pm_execute(
     // In parent process
     // set the stdout back
     close(child_dev_null); // Child write never gets used outside the child
-    // close(child_stdout);
+  
+#if USE_PIPES
+    if (dup2(child_fd[1], STDOUT_FILENO) < 0)
+      perror("dup2");
+    
+    close(child_fd[0]);
+#endif
     
     if (nice != INT_MAX && setpriority(PRIO_PROCESS, pid, nice) < 0) 
       ;
@@ -457,31 +484,37 @@ int wait_for_pid(pid_t pid, int opts)
 typedef enum HookT {BEFORE_HOOK, AFTER_HOOK} hook_t;
 int run_hook(hook_t t, process_t *process, process_return_t *ret)
 {
+  int child_stdin;
   if (t == BEFORE_HOOK) {
     ret->stage = PRS_BEFORE;
     ret->pid = pm_execute(1,  (const char*)process->before, 
                               (const char*)process->cd, 
                               (int)process->nice, 
-                              (const char**)process->env, (const char*)process->stdout, (const char*)process->stderr);
+                              (const char**)process->env, 
+                              &child_stdin,
+                              (const char*)process->stdout, (const char*)process->stderr);
   } else if (t == AFTER_HOOK) {
     ret->stage = PRS_AFTER;
     ret->pid = pm_execute(1,  (const char*)process->after, 
                               (const char*)process->cd, 
                               (int)process->nice, 
-                              (const char**)process->env, (const char*)process->stdout, (const char*)process->stderr);
+                              (const char**)process->env, 
+                              &child_stdin,
+                              (const char*)process->stdout, (const char*)process->stderr);
   }
   // Check to make sure the hook executed properly
   ret->exit_status = wait_for_pid(ret->pid, 0);
-  if (ret->exit_status) {
+  if (ret->exit_status != 0) {
     if (errno) {
       if (process->stdout) ret->stdout = read_from_file((const char*)process->stdout);
-
-      if (process->stderr) ret->stderr = read_from_file((const char*)process->stderr);
-      else {
+      if (process->stderr) {
+        ret->stderr = read_from_file((const char*)process->stderr);
+      } else {
         ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
         strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
       }
     }
+    
     return -1;
   }
   return 0;
@@ -490,6 +523,8 @@ int run_hook(hook_t t, process_t *process, process_return_t *ret)
 process_return_t* pm_run_and_spawn_process(process_t *process)
 {
   process_return_t* ret = pm_new_process_return();
+  // Setup the stdin
+  int child_stdin; 
   if (ret == NULL) return NULL;
   // new_process_return
   if (process->env) process->env[process->env_c] = NULL;
@@ -503,14 +538,17 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
   ret->pid = pm_execute(0,  (const char*)process->command, 
                             (const char*)process->cd, 
                             (int)process->nice, 
-                            (const char**)process->env, (const char*)process->stdout, (const char*)process->stderr);
+                            (const char**)process->env, 
+                            &child_stdin,
+                            (const char*)process->stdout, (const char*)process->stderr);
                           
   
   if (errno) {
     if (process->stdout) ret->stdout = read_from_file((const char*)process->stdout);
     
-    if (process->stderr) ret->stderr = read_from_file((const char*)process->stderr);
-    else {
+    if (process->stderr) {
+      ret->stderr = read_from_file((const char*)process->stderr);
+    } else {
       ret->stderr = (char*)calloc(1, sizeof(char)*strlen(strerror(errno)));
       strncpy(ret->stderr, strerror(errno), strlen(strerror(errno)));
     }
@@ -535,6 +573,9 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
   ret->stage = PRS_OKAY;
   process_struct *ps = (process_struct *) calloc(1, sizeof(process_struct));
   ps->pid = ret->pid;
+#if USE_PIPES
+  ps->stdin = child_stdin;
+#endif
   ps->transId = process->transId;
   HASH_ADD_INT(running_children, pid, ps);
   
@@ -547,6 +588,8 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
 process_return_t* pm_run_process(process_t *process)
 {
   process_return_t* ret = pm_new_process_return();
+  // Setup the stdin
+  int child_stdin;
   if (ret == NULL) return NULL;
   
   if (process->env) process->env[process->env_c] = NULL;
@@ -560,7 +603,9 @@ process_return_t* pm_run_process(process_t *process)
   pid_t pid = pm_execute(1,   (const char*)process->command, 
                               (const char*)process->cd, 
                               (int)process->nice, 
-                              (const char**)process->env, (const char*)process->stdout, (const char*)process->stderr);
+                              (const char**)process->env, 
+                              &child_stdin,
+                              (const char*)process->stdout, (const char*)process->stderr);
   
   ret->pid = pid;
   ret->exit_status = wait_for_pid(pid, 0);
@@ -603,6 +648,9 @@ int pm_kill_process(process_t *process)
   // }
   // HASH_FIND_INT(running_children, (int)process->pid, ps);
   
+#if USE_PIPES
+#endif
+    // fprintf(stderr, "pm_kill_process: %d\n", (int)pid);
   // if (ps) {
     int childExitStatus = -1;
     // Kill here
@@ -662,6 +710,7 @@ int pm_next_loop(void (*child_changed_status)(process_struct *ps))
 
   while (!terminated && (HASH_COUNT(exited_children) > 0 || signaled)) pm_check_children(child_changed_status, terminated);
   pm_check_pending_processes(); // Check for pending signals arrived while we were in the signal handler
+  errno = 0;
 
   pm_can_jump = 1;
   if (terminated) return -1;

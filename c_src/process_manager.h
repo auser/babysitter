@@ -22,6 +22,14 @@
 
 #include "print_helpers.h"
 
+#ifndef USE_PIPES
+#define USE_PIPES 0
+#endif
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
 enum ProcessReturnState {PRS_BEFORE,PRS_AFTER,PRS_COMMAND,PRS_OKAY};
 typedef struct _process_return_t_ {
   int exit_status;  // The exit status at the stage
@@ -53,6 +61,7 @@ typedef struct _process_struct_ {
     time_t deadline;            // Deadline to kill the pid
     int status;                 // Status of the pid
     int transId;                // id of the transmission
+    int stdin;                  // Stdin for child
     UT_hash_handle hh;          // makes this structure hashable
 } process_struct;
 
@@ -81,7 +90,7 @@ process_return_t* pm_run_and_spawn_process(process_t *process);
 process_return_t* pm_run_process(process_t *process);
 int pm_kill_process(process_t *process);
 
-pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, const char** env, const char* stdout, const char *stderr);
+pid_t pm_execute(int should_wait, const char* command, const char *cd, int nice, const char** env, int *child_stdin, const char* stdout, const char *stderr);
 int pm_check_children(void (*child_changed_status)(process_struct *ps), int isTerminated);
 int pm_check_pending_processes();
 int pm_next_loop(void (*child_changed_status)(process_struct *ps));
