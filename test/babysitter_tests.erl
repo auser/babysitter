@@ -25,6 +25,7 @@ starting_test_() ->
         fun test_starting_one_process/0,
         fun test_exec_one_process/0,
         fun test_stdout_stderr_redirection/0,
+        fun test_stopping_a_process/0,
         fun test_starting_many_processes/0,
         fun test_killing_a_process/0,
         fun test_killing_a_process_with_erlang_process/0,
@@ -49,6 +50,21 @@ test_exec_one_process() ->
   CommandArgString = lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep |  wc -l | tr -d ' '", [Pid])),
   ?assertEqual(0, Status),
   ?assertCmdOutput("0\n", CommandArgString).
+
+test_stopping_a_process() ->
+  erlang:display({test_stopping_a_process}),
+  {ok, ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 40.6", [{env, "NAME=ari"}, ?TEST_PATH]),
+  ?assertCmdOutput(
+    "1\n", 
+    lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep |  wc -l | tr -d ' '", [Pid]))
+  ),
+  ErlProcess ! {stop},
+  timer:sleep(200),
+  ?assertCmdOutput(
+    "0\n", 
+    lists:flatten(io_lib:format("ps aux | grep ~p | grep -v grep |  wc -l | tr -d ' '", [Pid]))
+  ),
+  passed.
 
 test_starting_many_processes() ->
   Count = 50,

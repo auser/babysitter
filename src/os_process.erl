@@ -34,6 +34,7 @@ ospid_loop({Pid, OsPid, Parent, Debug} = State) ->
       From ! {Ref, {ok, OsPid}},
       ospid_loop(State);
     {stop} ->
+      babysitter:kill_pid(OsPid),
       process_owner_died(Pid, normal, State);
     {'DOWN', OsPid, {exit_status, Status}} ->
       ?DBG(Debug, "~w ~w got down message (~w)\n", [self(), OsPid, status(Status)]),

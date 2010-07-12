@@ -3,13 +3,13 @@
 
 setup() ->
   application:start(sasl),
-  ok = application:start(os_mon),
-  ok = application:start(babysitter),
+  application:start(os_mon),
+  application:start(babysitter),
   ok.
   
 teardown(_) ->
-  ok = application:stop(babysitter),
-  ok = application:stop(os_mon),
+  application:stop(babysitter),
+  application:stop(os_mon),
   application:stop(sasl),
   ok.
 
