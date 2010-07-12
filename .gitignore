@@ -13,3 +13,5 @@ build/
 c_src/run_tests
 tests_ebin
 deps
+c_src/debug.log
+debug.log
