@@ -158,6 +158,11 @@ void pm_gotsigchild(int signal, siginfo_t* si, void* context)
   signaled = 1;
   // process_child_signal(si->si_pid);
 }
+void pm_setup_fork()
+{
+  // int i = getdtablesize();
+  // for (i=getdtablesize();i>=0;--i) close(i);
+}
 /**
 * Setup signal handlers for the process
 **/
@@ -180,9 +185,12 @@ void pm_setup_child()
   sigemptyset(&sact.sa_mask);
   sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
   sigaction(SIGCHLD, &sact, NULL);
+	
+	// Set itself in it's own process group
+  setsid();
   
   // Change the file mode mask
-  umask(0);
+  umask(027);
 }
 
 int pm_setup(int read_handle, int write_handle)
@@ -376,6 +384,9 @@ pid_t pm_execute(
   };
 #endif
     
+  // Setup fork
+  pm_setup_fork();
+  
   if (should_wait)
     pid = vfork();
   else
