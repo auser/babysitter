@@ -5,6 +5,7 @@
 #include "test_helper.h"
 
 char *test_pm_abs_path() {
+  TEST_HEADER("test_pm_abs_path");
   mu_assert(pm_abs_path("./bin/path") == 0, "./bin/path is not an absolute path");
   mu_assert(pm_abs_path("/bin/bash") == 0, "/bin/bash is not an absolute path");
   mu_assert(pm_abs_path("binary") == -1, "binary is an absolute path");
@@ -13,6 +14,7 @@ char *test_pm_abs_path() {
 }
 
 char *test_find_binary() {
+  TEST_HEADER("test_find_binary");
   const char *env = "/bin";
   mu_assert(!strcmp(find_binary("/bin/bash", env), "/bin/bash"), "/bin/bash was not an absolute path and could not be found");
   mu_assert(!strcmp(find_binary("bash", env), "/bin/bash"), "/bin/bash was not an absolute path and could not be found");
@@ -21,6 +23,7 @@ char *test_find_binary() {
 }
 
 char *test_string_index() {
+  TEST_HEADER("test_string_index");
   const char* options[] = {"cd", "env", "kill", "nice", "user", "stdout", "stderr", NULL};
   
   mu_assert(string_index(options, "env") == 1, "string_index returns incorrect index for 'env'");
@@ -31,6 +34,7 @@ char *test_string_index() {
 }
 
 char *test_chomp_stringing() {
+  TEST_HEADER("test_chomp_stringing");
   mu_assert(!strcmp(str_chomp(" hello world "), "hello world"), "str_chomp is bunk");
   mu_assert(!strcmp(str_chomp("\nhello world "), "hello world"), "str_chomp is bunk");
   mu_assert(!strcmp(str_chomp("\r\n\thello world\n "), "hello world"), "str_chomp is bunk");
@@ -38,6 +42,7 @@ char *test_chomp_stringing() {
 }
 
 char *test_safe_quoting_string() {
+  TEST_HEADER("test_safe_quoting_string");
   mu_assert(!strcmp(str_safe_quote("hello \"world\""), "hello \"world\""), "str_safe_quote failed?");
   return 0;
 }

@@ -6,6 +6,7 @@
 #include "test_helper.h"
 
 char *test_new_process() {
+  TEST_HEADER("test_new_process");
   process_t *test_process = NULL;
   pm_new_process(&test_process);
   mu_assert(test_process->env_c == 0, "processes env count is not zero when initialized");
@@ -16,12 +17,14 @@ char *test_new_process() {
 }
 
 char *test_pm_check_pid_status() {
+  TEST_HEADER("test_pm_check_pid_status");
   mu_assert(pm_check_pid_status(-2) == -1, "can send a signal to a process lower than 1");
   mu_assert(pm_check_pid_status(1000) != 0, "can send a signal to a process lower than 1");
   return 0;
 }
 
 char *test_pm_valid_process() {
+  TEST_HEADER("test_pm_valid_process");
   process_t *test_process = NULL;
   pm_new_process(&test_process);
   
@@ -33,6 +36,7 @@ char *test_pm_valid_process() {
 }
 
 char *test_pm_malloc_and_set_attribute() {
+  TEST_HEADER("test_pm_malloc_and_set_attribute");
   process_t *test_process = NULL;
   pm_new_process(&test_process);
   
@@ -43,6 +47,7 @@ char *test_pm_malloc_and_set_attribute() {
 }
 
 char *test_pm_add_env() {
+  TEST_HEADER("test_pm_add_env");
   process_t *test_process = NULL;
   pm_new_process(&test_process);
   
@@ -69,11 +74,12 @@ char *test_pm_add_env() {
 
 char *test_starting_a_process()
 {
+  TEST_HEADER("test_starting_a_process");
   process_t *test_process = NULL;
   process_return_t *ret;
   pm_new_process(&test_process);
   
-  mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "env"), "copy command failed");
+  mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "sleep 10.1"), "copy command failed");
   ret = pm_run_and_spawn_process(test_process);
   mu_assert(kill(ret->pid, 0) == 0, "process did not start");
   
@@ -87,6 +93,7 @@ char *test_starting_a_process()
 
 char *test_running_a_process_as_a_script()
 {
+  TEST_HEADER("test_running_a_process_as_a_script");
   process_t *test_process = NULL;
   pm_new_process(&test_process);
   mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "#!/bin/bash\ntouch /tmp/blah"), "copy command failed");
@@ -102,8 +109,25 @@ char *test_running_a_process_as_a_script()
   pm_free_process(test_process); return 0;
 }
 
+char *test_running_a_process_with_pid_file_output()
+{
+  TEST_HEADER("test_running_a_process_with_pid_file_output");
+  process_t *test_process = NULL;
+  pm_new_process(&test_process);
+  mu_assert(!pm_malloc_and_set_attribute(&test_process->command, "#!/bin/bash\nsleep 100 &\necho $! > $PID_FILE\n"), "copy command failed");
+  process_return_t *ret;
+  
+  ret = pm_run_and_spawn_process(test_process);
+  mu_assert(kill(ret->pid, 0) == 0, "process did not start");
+  kill(ret->pid, SIGKILL); // Kill it entirely
+    
+  pm_free_process(test_process); return 0;
+}
+
+
 char *test_killing_a_process()
 {
+  TEST_HEADER("test_killing_a_process");
   process_t *test_process = NULL;
   process_t *test_process2 = NULL;
   process_return_t *ret = NULL;

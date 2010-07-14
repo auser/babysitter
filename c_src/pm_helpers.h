@@ -3,6 +3,7 @@
 
 #define DEFAULT_PATH "/bin:/usr/bin:/usr/local/bin:/sbin;"
 
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,6 +37,8 @@
 #endif
 
 /* prototypes */
+char* read_from_file(const char *filename);
+pid_t get_pid_from_file_or_retry(const char* filename, int retries);
 int pm_abs_path(const char *path);
 const char *find_binary(const char *file, const char* path);
 int string_index(const char* cmds[], const char *cmd);

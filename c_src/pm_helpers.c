@@ -1,5 +1,51 @@
 #include "pm_helpers.h"
 
+int file_exists(const char * fileName)
+{
+  struct stat buf;
+  int i = stat ( fileName, &buf );
+  if ( i == 0 ) {return 1;}
+  return 0;     
+}
+
+char* read_from_file(const char *filename)
+{
+  FILE *stream;
+  char ch;
+  int cidx = 0;
+  char line[MAX_BUFFER_SZ];
+  char *ret = NULL;
+  
+  if ((stream = fopen(filename, "r")) == NULL)
+    return NULL;
+  
+  while( ((ch = getc(stream)) != EOF) && cidx < MAX_BUFFER_SZ)
+    line[cidx++] = ch;
+  line[cidx] = '\0';
+  
+  fclose( stream );
+  
+  ret = (char*)calloc(1, sizeof(char)*strlen(line));
+  strncpy(ret, line, strlen(line));
+  return ret;
+}
+
+pid_t get_pid_from_file_or_retry(const char* filename, int retries)
+{
+  if(retries < 0) return -1;
+  
+  if( file_exists(filename) ) {
+    char *out = read_from_file(filename);
+    char *end_of_ptr; // We never actually use this
+    pid_t ret;
+    if ((ret = (pid_t)strtol(out, &end_of_ptr, 10)) == 0) return -1;
+    return ret;
+  } else {
+    usleep(20000);
+    return get_pid_from_file_or_retry(filename, retries - 1);
+  }
+}
+
 int string_index(const char* cmds[], const char *cmd)
 {
   int i = 0;

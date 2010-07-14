@@ -185,10 +185,7 @@ void pm_setup_child()
   sigemptyset(&sact.sa_mask);
   sact.sa_flags = SA_SIGINFO | SA_RESTART | SA_NOCLDSTOP | SA_NODEFER;
   sigaction(SIGCHLD, &sact, NULL);
-	
-	// Set itself in it's own process group
-  setsid();
-  
+	  
   // Change the file mode mask
   umask(027);
 }
@@ -203,27 +200,6 @@ int pm_setup(int read_handle, int write_handle)
   setmode(write_handle, O_BINARY);
 #endif
   return 0;
-}
-
-char* read_from_file(const char *filename) {
-  FILE *stream;
-  char ch;
-  int cidx = 0;
-  char line[MAX_BUFFER_SZ];
-  char *ret = NULL;
-  
-  if ((stream = fopen(filename, "r")) == NULL)
-    return NULL;
-  
-  while( ((ch = getc(stream)) != EOF) && cidx < MAX_BUFFER_SZ)
-    line[cidx++] = ch;
-  line[cidx] = '\0';
-  
-  fclose( stream );
-  
-  ret = (char*)calloc(1, sizeof(char)*strlen(line));
-  strncpy(ret, line, strlen(line));
-  return ret;
 }
 
 int expand_command(const char* command, int* argc, char ***argv, int *using_a_script, const char** env)
@@ -539,6 +515,16 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
   // Setup the stdin
   int child_stdin; 
   if (ret == NULL) return NULL;
+  // make a pidfile
+  char pidfile[43];
+  if (tmpnam(pidfile) == NULL) {perror("pidfile");}
+  
+  // char *pidfile = tmpname(strdup("/tmp/babysitter.pidfile.XXXXXXXXX"));
+  char *pidfile_env = (char*) calloc(1, sizeof(char)*43);
+  strncpy(pidfile_env, "PID_FILE=", 10);
+  strncat(pidfile_env, pidfile, 33);
+    // Add the pidfile to the run
+  pm_add_env(&process, pidfile_env);
   // new_process_return
   if (process->env) process->env[process->env_c] = NULL;
   
@@ -555,7 +541,13 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
                             &child_stdin,
                             (const char*)process->stdout, (const char*)process->stderr);
                           
+  pid_t pid_from_pidfile;
+  // If the program wrote to the pidfile, we'll want to use that instead, so check
+  if (( pid_from_pidfile = (pid_t)get_pid_from_file_or_retry(pidfile, 50)) > 0) {
+    ret->pid = pid_from_pidfile;
+  };
   
+  unlink(pidfile); // Clean up after ourselves
   if (errno) {
     if (process->stdout) ret->stdout = read_from_file((const char*)process->stdout);
     
@@ -573,7 +565,7 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
   
   ret->exit_status = wait_for_pid(ret->pid, WNOHANG);
   if (ret->exit_status) {
-    printf("command: %s pid: %d exit_status: %d - %s / %s\n", process->command, ret->pid, ret->exit_status, ret->stdout, ret->stderr);
+    // printf("command: %s pid: %d exit_status: %d - %s / %s\n", process->command, ret->pid, ret->exit_status, ret->stdout, ret->stderr);
     return ret;
   }
   
