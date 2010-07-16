@@ -543,7 +543,7 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
                           
   pid_t pid_from_pidfile;
   // If the program wrote to the pidfile, we'll want to use that instead, so check
-  if (( pid_from_pidfile = (pid_t)get_pid_from_file_or_retry(pidfile, 50)) > 0) {
+  if (( pid_from_pidfile = (pid_t)get_pid_from_file_or_retry(pidfile, 100)) > 0) {
     ret->pid = pid_from_pidfile;
   };
   
