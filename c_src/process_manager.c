@@ -146,7 +146,7 @@ void pm_gotsignal(int signal)
       syslog(LOG_WARNING, "Received SIGINT signal.");
     break;
     default:
-      syslog(LOG_WARNING, "Unhandled signal (%d) %s", strsignal(signal));
+      syslog(LOG_WARNING, "Unhandled signal %d", signal);
     break;
   }
 }

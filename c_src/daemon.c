@@ -86,7 +86,7 @@ void erl_d_gotsignal(int signal)
       terminated = 1;
     break;
     default:
-      syslog(LOG_WARNING, "Unhandled signal (%d) %s", strsignal(signal));
+      syslog(LOG_WARNING, "Unhandled signal %d", signal);
     break;
   }
 }
