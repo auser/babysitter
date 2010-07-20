@@ -69,12 +69,12 @@ test_stopping_a_process() ->
 
 test_starting_many_processes() ->
   Count = 50,
-  Fun = fun() -> babysitter:bs_spawn_run("test_bin 2.2", [{env, "NAME=$NAME"}, {env, "NAME=bob"}, ?TEST_PATH]) end,
+  Fun = fun() -> babysitter:bs_spawn_run("test_bin 10.2", [{env, "NAME=$NAME"}, {env, "NAME=bob"}, ?TEST_PATH]) end,
   lists:map(fun(_X) -> Fun() end, lists:seq(1, Count)),
-  CommandArgString = "ps aux | grep -v grep | grep 'test_bin 2.2' | wc -l | tr -d ' '",
+  CommandArgString = "ps aux | grep -v grep | grep 'test_bin 10.2' | wc -l | tr -d ' '",
   O = ?cmd(CommandArgString),
   {Int, _} = string:to_integer(O),
-  ?assertEqual(Int, 50).
+  ?assertEqual(50, Int).
 
 test_killing_a_process() ->
   {ok, _ErlProcess, Pid} = babysitter:bs_spawn_run("test_bin 1.6", [{env, "NAME=ari"}, ?TEST_PATH]),

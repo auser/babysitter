@@ -41,7 +41,7 @@ pid_t get_pid_from_file_or_retry(const char* filename, int retries)
     if ((ret = (pid_t)strtol(out, &end_of_ptr, 10)) == 0) return -1;
     return ret;
   } else {
-    usleep(20000);
+    usleep(10000);
     return get_pid_from_file_or_retry(filename, retries - 1);
   }
 }

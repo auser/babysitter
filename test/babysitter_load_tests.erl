@@ -14,7 +14,7 @@ teardown(_) ->
   ok.
 
 test_starting_node_test_() ->
-  {spawn,
+  {inorder,
     {foreach,
       fun setup/0,
       fun teardown/1,
