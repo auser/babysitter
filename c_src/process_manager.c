@@ -516,13 +516,15 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
   int child_stdin; 
   if (ret == NULL) return NULL;
   // make a pidfile
-  char pidfile[43];
-  if (tmpnam(pidfile) == NULL) {perror("pidfile");}
+  char pidfile[] = "/tmp/babysitter.XXXXXXXXX";
+  int pid_file_fd;
+  if ((pid_file_fd = mkstemp(pidfile)) < 0) {perror("pidfile");}
   
   // char *pidfile = tmpname(strdup("/tmp/babysitter.pidfile.XXXXXXXXX"));
-  char *pidfile_env = (char*) calloc(1, sizeof(char)*43);
+  char *pidfile_env = (char*) calloc(1, sizeof(char)*(strlen(pidfile) + 10));
   strncpy(pidfile_env, "PID_FILE=", 10);
   strncat(pidfile_env, pidfile, 33);
+  
     // Add the pidfile to the run
   pm_add_env(&process, pidfile_env);
   // new_process_return
@@ -530,7 +532,10 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
   
   // Run afterhook
   if (process->before) {
-    if (run_hook(BEFORE_HOOK, process, ret)) return ret;
+    if (run_hook(BEFORE_HOOK, process, ret)) {
+      unlink(pidfile);
+      return ret;
+    }
   }
   
   ret->stage = PRS_COMMAND;
@@ -547,7 +552,9 @@ process_return_t* pm_run_and_spawn_process(process_t *process)
     ret->pid = pid_from_pidfile;
   };
   
+  close(pid_file_fd);
   unlink(pidfile); // Clean up after ourselves
+  
   if (errno) {
     if (process->stdout) ret->stdout = read_from_file((const char*)process->stdout);
     
