@@ -10,6 +10,7 @@ libdir = $(prefix)/lib/gnudl
 mandir = $(prefix)/man/man1
 ERL_DIR =$(shell erl -noshell -eval 'io:format("~s~n", [code:root_dir()])' -s erlang halt)
 EI_DIR = $(shell erl -noshell -eval 'io:format("~s~n", [code:lib_dir("erl_interface")])' -s erlang halt)
+ERL_ARCH=$(shell erl -noinput +B -eval 'io:format("~B",[8 * erlang:system_info(wordsize)]),halt(0).')
 
 # Set this to '@' for silence
 SILENCE = @
@@ -20,12 +21,13 @@ OUTPUT     = $(OUTPUT_DIR)/bin/babysitter
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
 CFLAGS = -O2 -g3 -I $(EI_DIR)/include -I $(ERL_DIR)/usr/include -fPIC
-CPPFLAGS += -O2 -g3 -I $(EI_DIR)/include -I $(ERL_DIR)/usr/include -fPIC
+CPPFLAGS += -I $(EI_DIR)/include -I $(ERL_DIR)/usr/include
 
 #CFLAGS are set to override malloc and free to get memory leak detection in C programs
+CPPFLAGS += -O3 -fPIC
 CPPFLAGS += -Wall
 CPPFLAGS += -Werror
-CPPFLAGS += -g
+CPPFLAGS += -g3
 
 SRC_DIRS = \
 	.
@@ -43,7 +45,7 @@ TEST_DIRS = \
 	./tests
 
 #Flags to pass to ld
-LDFLAGS_COMMON=-L$(EI_DIR)/lib -fno-common -Wall
+LDFLAGS_COMMON=-L$(EI_DIR)/lib -fno-common -Wall -pthread
 ifeq ($(shell uname),Linux)
 	ARCH=linux
 	LDFLAGS=$(LDFLAGS_COMMON)
@@ -54,6 +56,11 @@ else
 	LDFLAGS=$(LDFLAGS_COMMON) -flat_namespace
 	LDBUNDLE_FLAGS=$(LDFLAGS) -bundle
 endif
+
+ifeq ($ERL_ARCH,32)
+	CPPFLAGS += -m32
+endif
+
 LD_LIBRARIES += -lerl_interface -lei
 
 # DONT TOUCH BELOW HERE!
