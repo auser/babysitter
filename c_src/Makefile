@@ -37,10 +37,10 @@ INCLUDE_DIRS =\
 
 EXECUTABLE_DIRS =\
 	./bin
-	
+
 TARGET_LIB_DIRS = \
 	./lib	
-	
+
 TEST_DIRS = \
 	./tests
 
@@ -57,8 +57,10 @@ else
 	LDBUNDLE_FLAGS=$(LDFLAGS) -bundle
 endif
 
+# If we are compiling on a 32 bit machine
 ifeq ($ERL_ARCH,32)
 	CPPFLAGS += -m32
+	LDFLAGS  += -m32
 endif
 
 LD_LIBRARIES += -lerl_interface -lei
